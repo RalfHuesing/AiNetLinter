@@ -17,7 +17,9 @@ internal sealed record AssemblyNavigationSummaryRequest(
     int SearchedAssemblyCount,
     bool AssembliesTruncated,
     IEnumerable<string> Diagnostics,
-    bool ResultsTruncated = false);
+    bool ResultsTruncated = false,
+    bool RequestedIncludeReferences = false,
+    string EffectiveSearchMode = "root_only");
 
 internal static class AssemblyNavigationSupport
 {
@@ -35,13 +37,15 @@ internal static class AssemblyNavigationSupport
     {
         var distinct = DistinctDiagnostics(request.Diagnostics);
         return new(
-            true,
+            request.RequestedIncludeReferences,
             request.TotalAssemblyCount,
             request.SearchedAssemblyCount,
             request.AssembliesTruncated,
             !request.AssembliesTruncated && !request.ResultsTruncated && distinct.Count == 0 ? "complete" : "partial",
             distinct,
-            ResultsTruncated: request.ResultsTruncated);
+            ResultsTruncated: request.ResultsTruncated,
+            RequestedIncludeReferences: request.RequestedIncludeReferences,
+            EffectiveSearchMode: request.EffectiveSearchMode);
     }
 
     internal static AssemblyNavigationSummary MergeSummaries(
@@ -64,7 +68,11 @@ internal static class AssemblyNavigationSupport
                 ? "complete"
                 : "partial",
             diagnostics,
-            ResultsTruncated: resultsTruncated);
+            ResultsTruncated: resultsTruncated,
+            RequestedIncludeReferences: first.RequestedIncludeReferences || second.RequestedIncludeReferences,
+            EffectiveSearchMode: first.EffectiveSearchMode == second.EffectiveSearchMode
+                ? first.EffectiveSearchMode
+                : "bounded_reference_closure");
     }
 
     internal static IReadOnlyList<string> DistinctDiagnostics(IEnumerable<string> diagnostics) =>

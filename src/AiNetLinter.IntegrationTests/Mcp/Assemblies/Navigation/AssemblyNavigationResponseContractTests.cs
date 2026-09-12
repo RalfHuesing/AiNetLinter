@@ -70,6 +70,46 @@ public sealed class AssemblyNavigationResponseContractTests
             "Abhängigkeit nicht auflösbar: NavigationMissingDependency6");
     }
 
+    [Fact]
+    public async Task AssemblyNoHitHandoff_UsesSafeSymbolLabelInsteadOfRawRequestId()
+    {
+        using var temp = TestTempDirectory.Create("assembly-navigation-handoff-no-hit-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "NavigationHandoffNoHit",
+            "namespace Probe; public sealed class Target { public int Read() => 42; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Target")!;
+        var method = type.GetMembers("Read").OfType<Microsoft.CodeAnalysis.IMethodSymbol>().Single();
+        var handoffId = AnalysisSymbolIdentity.ForAssembly(
+                lease.CanonicalPath,
+                lease.Context.Origin.ContentHash,
+                lease.Context.Generation)
+            .FormatHandoff(method)!;
+
+        var references = await AssemblyFindReferencesTool.ExecuteAsync(
+            lease,
+            new AssemblyFindReferencesRequest(handoffId, 50, 1, false),
+            CancellationToken.None);
+        var impact = await GetImpactTool.ExecuteAsync(
+            lease,
+            new GetImpactInput(null, handoffId, 50, 1),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, references.IsError);
+        Assert.NotEqual(true, impact.IsError);
+        foreach (var result in new[] { references, impact })
+        {
+            var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+            Assert.Contains("Keine Aufrufstellen gefunden", text, StringComparison.Ordinal);
+            Assert.Contains("Probe.Target.Read", text, StringComparison.Ordinal);
+            Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
+        }
+    }
+
 }
 
 internal static class AssemblyNavigationResponseAssertions

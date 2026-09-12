@@ -34,7 +34,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
                 ["symbolIdentifier"] = "Greeter.Greet"
             });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }
@@ -51,7 +51,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "find_references", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
@@ -77,7 +77,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "get_call_tree", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
@@ -89,7 +89,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
@@ -179,7 +179,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "get_symbol_body", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifiers", textContent.Text, StringComparison.Ordinal);
@@ -191,7 +191,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "get_file_skeleton", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("filePaths", textContent.Text, StringComparison.Ordinal);
@@ -203,7 +203,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "search_pattern", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }
@@ -255,7 +255,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "find_duplicates", new Dictionary<string, object?> { ["mode"] = "refactoring-drift" });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
@@ -317,7 +317,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.format", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
@@ -411,7 +411,7 @@ public sealed partial class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.minSeverity", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }

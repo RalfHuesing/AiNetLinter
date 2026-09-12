@@ -2,9 +2,7 @@
 
 using System;
 using System.Linq;
-using System.Text;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Xunit;
 
@@ -69,64 +67,6 @@ public sealed partial class AssemblyAnalysisToolTests
     }
 
     [Fact]
-    public void FinalWireTrim_AssemblySearchKeepsUsableEnvelopeAndPaging()
-    {
-        var result = McpToolResults.Text(
-            "assembly search",
-            new
-            {
-                assemblySearch = new
-                {
-                    searchKind = "text",
-                    pattern = "needle",
-                    root = ".",
-                    scope = "assembly-source-root",
-                    results = Enumerable.Range(0, 80)
-                        .Select(index => new
-                        {
-                            id = $"asm-search:{index:D3}",
-                            filePath = $"src/very-long-file-name-{index:D3}.cs",
-                            line = index + 1,
-                            matchRanges = new[] { new { column = 1, length = 6 } },
-                            lineText = new string('x', 500),
-                            contextBefore = new[] { new string('b', 300) },
-                            contextAfter = new[] { new string('a', 300) },
-                        })
-                        .ToArray(),
-                    totalCount = 80,
-                    returnedCount = 80,
-                    isTruncated = false,
-                    completeness = "complete",
-                    truncatedBy = Array.Empty<string>(),
-                    continuationToken = (string?)null,
-                    matchedFileCount = 80,
-                    returnedFileCount = 80,
-                    detailHint = (string?)null,
-                },
-            });
-
-        var projected = AssemblyAnalysisResponse.ApplyWireBudget(
-            result,
-            AssemblyAnalysisResponseLimits.MinimumResponseBytes,
-            0);
-
-        Assert.NotEqual(true, projected.IsError);
-        var search = projected.StructuredContent!.Value.GetProperty("assemblySearch");
-        var returned = search.GetProperty("results").GetArrayLength();
-        Assert.True(returned > 0);
-        Assert.True(returned < 80);
-        Assert.Equal(80, search.GetProperty("totalCount").GetInt32());
-        Assert.Equal(returned, search.GetProperty("returnedCount").GetInt32());
-        Assert.Equal(returned, search.GetProperty("returnedFileCount").GetInt32());
-        Assert.True(search.GetProperty("isTruncated").GetBoolean());
-        Assert.Contains("responseBudget", search.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal(returned.ToString(), search.GetProperty("continuationToken").GetString());
-        Assert.True(search.GetProperty("completeness").GetString() is "truncated" or "partial");
-        Assert.True(projected.StructuredContent!.Value.GetProperty("wireBudget").GetProperty("totalBytes").GetInt32()
-            <= AssemblyAnalysisResponseLimits.MinimumResponseBytes);
-    }
-
-    [Fact]
     public void FileFilter_SupportsGlobPatternsAndNegation()
     {
         var csFilter = AssemblyFileFilter.Create("*.cs", "fileFilter");
@@ -181,47 +121,6 @@ public sealed partial class AssemblyAnalysisToolTests
             "needle",
             Array.Empty<string>(),
             Array.Empty<string>());
-
-    [Fact]
-    public void ApplyWireBudget_PreservesReadableTextInsteadOfDeletingIt()
-    {
-        var text = "# Klasse MyType\n| Kind | Name | Lines |\n| Method | DoWork | 1-10 |\n";
-        var result = McpToolResults.Text(
-            text,
-            new
-            {
-                types = Enumerable.Range(0, 50).Select(index => new { id = $"T{index}", name = $"Type{index}" }).ToArray(),
-                members = Enumerable.Range(0, 50).Select(index => new { id = $"M{index}", name = $"Member{index}" }).ToArray(),
-            });
-
-        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
-        var projectedText = AssemblyAnalysisTestSupport.TextOf(projected);
-
-        Assert.Contains("# Klasse MyType", projectedText, StringComparison.Ordinal);
-        Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", projectedText, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void TrimUtf8_HandlesMultiByteAndEdgeCasesWithoutException()
-    {
-        // Multi-byte string (100 'ä' = 200 Bytes in UTF-8, aber nur 100 Zeichen lang)
-        var umlautText = new string('ä', 100);
-        // Das Zeichenlimit wird vor dem UTF-8-Trimmen auf eine gueltige Zeichenposition begrenzt.
-        var trimmedUmlaut = AssemblyAnalysisResponse.TrimUtf8(umlautText, 150);
-        Assert.EndsWith("…", trimmedUmlaut, StringComparison.Ordinal);
-        Assert.True(Encoding.UTF8.GetByteCount(trimmedUmlaut) <= 150);
-
-        // Sehr kleine Budgets
-        Assert.Equal(string.Empty, AssemblyAnalysisResponse.TrimUtf8("Hallo", 0));
-        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 1));
-        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 2));
-        Assert.Equal("…", AssemblyAnalysisResponse.TrimUtf8("Hallo", 3));
-
-        // Surrogate pair
-        var emojiText = "A\U0001F600B"; // 4 Bytes fuer Emoji
-        var trimmedEmoji = AssemblyAnalysisResponse.TrimUtf8(emojiText, 6);
-        Assert.True(Encoding.UTF8.GetByteCount(trimmedEmoji) <= 6);
-    }
 
     [Fact]
     public void AssemblySearch_AutoDetectsRegexAndPromotes()

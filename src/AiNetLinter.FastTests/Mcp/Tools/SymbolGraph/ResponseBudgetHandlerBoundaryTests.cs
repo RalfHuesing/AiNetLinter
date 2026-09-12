@@ -87,6 +87,36 @@ public sealed class ResponseBudgetHandlerBoundaryTests
         AssertFinalBudget(FindImplementationsTool.ApplyFinalResponseBudget, implementations);
     }
 
+    [Fact]
+    public async Task FindSymbol_FinalBudgetErrorPublishesAnExecutableMinimumResponseBytes()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var original = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(), ["Processor"], kind: null, maxResults: 50, CancellationToken.None);
+        var root = JsonNode.Parse(original.StructuredContent!.Value.GetRawText())!.AsObject();
+        root["navigation"] = new JsonObject
+        {
+            ["status"] = new JsonObject { ["operation"] = new string('n', 800) },
+        };
+        var navigated = McpToolResults.Text(
+            Assert.IsType<TextContentBlock>(Assert.Single(original.Content)).Text,
+            root);
+
+        var constrained = FindSymbolTool.ApplyFinalResponseBudget(navigated, 512);
+        var error = constrained.StructuredContent!.Value;
+
+        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", error.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", error.GetProperty("fieldPath").GetString());
+        var minimumResponseBytes = error.GetProperty("minimumResponseBytes").GetInt32();
+        Assert.True(minimumResponseBytes > 512);
+
+        var retry = FindSymbolTool.ApplyFinalResponseBudget(navigated, minimumResponseBytes);
+        Assert.False(retry.StructuredContent!.Value.TryGetProperty("code", out _));
+        Assert.True(
+            Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(retry.Content)).Text)
+            + Encoding.UTF8.GetByteCount(retry.StructuredContent!.Value.GetRawText()) <= minimumResponseBytes);
+    }
+
     private static void AssertFinalBudget(Func<CallToolResult, int, CallToolResult> apply, CallToolResult original)
     {
         var root = JsonNode.Parse(original.StructuredContent!.Value.GetRawText())!.AsObject();

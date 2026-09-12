@@ -67,10 +67,6 @@ internal static class FeatureContextFormatter
         {
             sb.AppendLine($"- **Member ({decl.Members.Count}):** {string.Join("; ", decl.Members)}");
         }
-        if (!string.IsNullOrEmpty(decl.DocCommentId))
-        {
-            sb.AppendLine($"- **DocCommentId:** `{decl.DocCommentId}`");
-        }
         sb.AppendLine();
     }
 
@@ -127,10 +123,6 @@ internal static class FeatureContextFormatter
             sb.AppendLine($"- *(Betroffener Abschnitt: impact; Zeige {callers.CallSites.Count} von {callers.TotalCallers} statischen Referenzen — Begrenzung: {string.Join(", ", callers.TruncatedBy ?? [])})*");
             sb.AppendLine($"- **TruncatedBy:** `{string.Join(", ", callers.TruncatedBy ?? [])}`");
         }
-        if (!string.IsNullOrWhiteSpace(callers.NextStep))
-        {
-            sb.AppendLine($"- **Nächster sicherer Schritt:** {callers.NextStep}");
-        }
         sb.AppendLine();
     }
 
@@ -182,10 +174,6 @@ internal static class FeatureContextFormatter
         {
             sb.AppendLine($"- **TruncatedBy:** `{string.Join(", ", tests.TruncatedBy ?? [])}`");
         }
-        if (!string.IsNullOrWhiteSpace(tests.NextStep))
-        {
-            sb.AppendLine($"- **Nächster sicherer Schritt:** {tests.NextStep}");
-        }
         sb.AppendLine();
     }
 
@@ -201,7 +189,6 @@ internal static class FeatureContextFormatter
         if (v.Status is FeatureContextStatus.NotConfigured or FeatureContextStatus.NotDecidable or FeatureContextStatus.Partial or FeatureContextStatus.Error or FeatureContextStatus.NotApplicable)
         {
             sb.AppendLine($"- Violations nicht bewertet; der Abschnitt liefert keine Aussage über die Anzahl (ReasonCode: `{v.ReasonCode}`).");
-            if (!string.IsNullOrWhiteSpace(v.NextStep)) sb.AppendLine($"- **Nächster sicherer Schritt:** {v.NextStep}");
             sb.AppendLine();
             return;
         }
@@ -222,7 +209,6 @@ internal static class FeatureContextFormatter
             if (v.IsTruncated)
             {
                 sb.AppendLine($"- *(Betroffener Abschnitt: violations; zeige {v.Violations.Count} von {v.TotalViolationsOnFile} Verstoessen — Begrenzung: {string.Join(", ", v.TruncatedBy ?? [])})*");
-                sb.AppendLine($"- **Nächster sicherer Schritt:** {v.NextStep}");
             }
         }
         sb.AppendLine();

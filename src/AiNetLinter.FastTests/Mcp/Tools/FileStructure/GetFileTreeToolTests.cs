@@ -29,11 +29,14 @@ public sealed class GetFileTreeToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("get_file_tree: root=. view=files", text, StringComparison.Ordinal);
+        Assert.Contains("2 physische Dateien gescannt", text, StringComparison.Ordinal);
         Assert.Contains("README.md", text, StringComparison.Ordinal);
         Assert.NotNull(result.StructuredContent);
         var payload = result.StructuredContent!.Value.GetProperty("fileTree");
         Assert.Equal("files", payload.GetProperty("view").GetString());
         Assert.Equal(2, payload.GetProperty("summary").GetProperty("matchedFileCount").GetInt32());
+        Assert.Equal(2, payload.GetProperty("completeness").GetProperty("shownPhysicalFileCount").GetInt32());
+        Assert.False(payload.TryGetProperty("population", out _));
     }
 
     [Fact]
@@ -69,7 +72,7 @@ public sealed class GetFileTreeToolTests
             GetFileTreeTestData.Input() with { View = "summary" },
             CancellationToken.None);
 
-        Assert.Contains("2 Dateien aggregiert", TextOf(result), StringComparison.Ordinal);
+        Assert.Contains("2 physische Dateien aggregiert", TextOf(result), StringComparison.Ordinal);
         Assert.DoesNotContain("Keine Dateitreffer", TextOf(result), StringComparison.Ordinal);
     }
 

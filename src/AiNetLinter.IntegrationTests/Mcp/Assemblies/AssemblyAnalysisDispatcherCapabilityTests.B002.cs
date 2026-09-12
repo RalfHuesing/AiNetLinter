@@ -17,7 +17,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {
     [Fact]
-    public async Task AssemblyRoute_FilteredEmptyResultReportsActualWireTruncation()
+    public async Task AssemblyRoute_FilteredEmptyResultUsesPostNavigationBudgetWithoutGenericWireFields()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-b002-wire-");
         var references = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxReferenceSessions + 8)
@@ -33,9 +33,10 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             references,
             FailingReferenceFactory);
 
-        var result = await fixture.ExecuteExtensionsAsync(
-            maxResponseBytes: 4096,
-            extensionName: "NoSuchExtension");
+        var result = await fixture.ExecuteExtensionsAsync(new ExtensionExecutionOptions(
+            MaxResponseBytes: 4096,
+            ExtensionName: "NoSuchExtension",
+            ApplyPostNavigationResponseBudget: true));
 
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value;
@@ -43,12 +44,9 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         {
             Assert.Empty(extensions.EnumerateArray());
         }
-        Assert.True(payload.GetProperty("wireTruncated").GetBoolean(), payload.GetRawText());
-        Assert.True(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean(), payload.GetRawText());
-        Assert.Contains(
-            "responseBudget",
-            payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
+        AssertFinalCombinedBudget(result, 4096);
+        AssertPartialStatusConsistency(result);
+        Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("B002WireMissingDependency", StringComparison.Ordinal));
     }
 
     [Theory]
@@ -71,12 +69,12 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             FailingReferenceFactory);
 
         var result = operation == "inspect_assembly"
-            ? await fixture.ExecuteInspectAsync(
-                maxResponseBytes: 16384,
-                typeName: "NoSuchType")
-            : await fixture.ExecuteExtensionsAsync(
-                maxResponseBytes: 16384,
-                extensionName: "NoSuchExtension");
+            ? await fixture.ExecuteInspectAsync(new InspectionExecutionOptions(
+                MaxResponseBytes: 16384,
+                TypeName: "NoSuchType"))
+            : await fixture.ExecuteExtensionsAsync(new ExtensionExecutionOptions(
+                MaxResponseBytes: 16384,
+                ExtensionName: "NoSuchExtension"));
 
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value;
@@ -86,7 +84,12 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Empty(items.EnumerateArray());
         Assert.Equal(0, payload.GetProperty(totalName).GetInt32());
         var navigation = payload.GetProperty("navigation");
-        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Equal(JsonValueKind.Null, navigation.GetProperty("next").ValueKind);
+        AssertPartialStatusConsistency(result);
+        Assert.Equal("partial", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(JsonValueKind.Object, navigation.GetProperty("next").ValueKind);
+        Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("B002MissingDependency00", StringComparison.Ordinal));
+        if (operation != "find_assembly_extensions") return;
+        var session = Assert.Single(payload.GetProperty("referenceSessions").EnumerateArray());
+        Assert.Equal("partial", session.GetProperty("sessionStatus").GetString());
     }
 }

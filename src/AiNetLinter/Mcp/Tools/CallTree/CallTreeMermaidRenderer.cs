@@ -61,14 +61,7 @@ internal static class CallTreeMermaidRenderer
 
     private static string FormatLabel(MetricsTreeNode node)
     {
-        var handoff = node.Id is not null
-            ? $"handoff=true; id={node.Id}"
-            : node.SymbolKind is not null
-                ? "handoff=false; followUpTools=[]"
-                : string.Empty;
-        return string.IsNullOrEmpty(handoff)
-            ? $"{node.Name} — {node.DisplayLine}"
-            : $"{node.Name} — {node.DisplayLine} [{handoff}]";
+        return $"{node.Name} — {node.DisplayLine}";
     }
 
     // Mermaid-Labels in eckigen Klammern vertragen kein Anfuehrungszeichen/keinen Zeilenumbruch —

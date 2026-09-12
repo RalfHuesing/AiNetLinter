@@ -475,6 +475,16 @@ weitergegeben werden sollen. Ein valider Projekt-Target-Block genügt auch währ
 eines laufenden oder fehlgeschlagenen Solution-Loads, weil die Enumeration unabhängig
 vom Roslyn-Snapshot arbeitet.
 
+`get_file_tree` beschreibt eine physische Dateipopulation (`summary.scannedFileCount`),
+`get_index_scope` zusätzlich die Roslyn-Dokumentpopulation
+(`population.roslynDocumentCount`). Ausschluss- und Skip-Counts sind nach Ursache
+und Einheit getrennt und dürfen nicht zusammengezählt werden. Zielgebundene
+Antworten folgen Contract v2: `navigation.status.operation` und
+`navigation.status.completeness` sind getrennt; bei
+`RESPONSE_BUDGET_TOO_SMALL` den gemeldeten `minimumResponseBytes` mit identischem
+Request und Snapshot wiederholen. Text, Structured Content und Navigation zählen
+gemeinsam zum UTF-8-Budget.
+
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 
 Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen
@@ -493,8 +503,8 @@ Konkret:
 - Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`
 - Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "class")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "class")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
-- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen.
-- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. Die Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar.
+- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
+- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur `structuredContent.id` als Handoff übernehmen, nicht eine Text-ID.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
 - Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)

@@ -156,15 +156,29 @@ internal static class ServerMaintenanceToolRegistrations
                 : McpNavigationProjection.WithSourceSnapshot(target, snapshot.Server);
         }
 
-        if (result.StructuredContent is not { ValueKind: System.Text.Json.JsonValueKind.Object } payload
-            || !payload.TryGetProperty("assemblies", out var assemblies)
+        if (result.StructuredContent is not { ValueKind: System.Text.Json.JsonValueKind.Object } payload)
+        {
+            return target;
+        }
+
+        if (payload.TryGetProperty("assembly", out var targetAssembly)
+            && targetAssembly.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            return WithAssemblySnapshot(target, targetAssembly);
+        }
+
+        if (!payload.TryGetProperty("assemblies", out var assemblies)
             || assemblies.ValueKind != System.Text.Json.JsonValueKind.Array
             || assemblies.GetArrayLength() == 0)
         {
             return target;
         }
 
-        var assembly = assemblies[0];
+        return WithAssemblySnapshot(target, assemblies[0]);
+    }
+
+    private static AnalysisTarget WithAssemblySnapshot(AnalysisTarget target, System.Text.Json.JsonElement assembly)
+    {
         if (!assembly.TryGetProperty("contentHash", out var contentHash)
             || contentHash.ValueKind != System.Text.Json.JsonValueKind.String
             || string.IsNullOrWhiteSpace(contentHash.GetString()))

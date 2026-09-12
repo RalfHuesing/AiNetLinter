@@ -75,7 +75,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
             "find_references",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "NonExistent.Symbol" });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -305,7 +305,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
             "get_type_hierarchy",
             new Dictionary<string, object?> { ["symbolIdentifier"] = "UnknownClass123" });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -327,7 +327,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
             "get_file_skeleton",
             new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/wwwroot/Page.xaml" } });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }

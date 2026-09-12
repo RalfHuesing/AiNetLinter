@@ -23,7 +23,7 @@ public sealed class McpServerToolBehaviorD002E2ETests
     }
 
     [Fact]
-    public async Task GetFileTree_NonExistentRoot_ReturnsResourceNotFoundWithErrorNavigation()
+    public async Task GetFileTree_NonExistentRoot_ReturnsResourceNotFoundWithContractErrorNavigation()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_file_tree",
@@ -32,13 +32,13 @@ public sealed class McpServerToolBehaviorD002E2ETests
                 ["root"] = "D002-Root-That-Does-Not-Exist"
             });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("RESOURCE_NOT_FOUND", text, StringComparison.Ordinal);
 
         Assert.NotNull(result.StructuredContent);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("resource_not_found", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
     }
 }

@@ -106,13 +106,6 @@ internal static class MetricsTreeRenderer
 
     private static string FormatNode(MetricsTreeNode node)
     {
-        var handoff = node.Id is not null
-            ? $"handoff=true; id=`{node.Id}`"
-            : node.SymbolKind is not null
-                ? "handoff=false; followUpTools=[]"
-                : string.Empty;
-        return string.IsNullOrEmpty(handoff)
-            ? $"{node.Name} — {node.DisplayLine}"
-            : $"{node.Name} — {node.DisplayLine} [{handoff}]";
+        return $"{node.Name} — {node.DisplayLine}";
     }
 }

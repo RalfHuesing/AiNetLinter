@@ -240,11 +240,11 @@ public sealed partial class GetTestContextToolTests
             kind: "class",
             maxResults: 50,
             CancellationToken.None);
-        var handoffId = discovery.StructuredContent!.Value
+        var handoffId = Assert.IsType<string>(discovery.StructuredContent!.Value
             .GetProperty("results")[0]
             .GetProperty("matches")[0]
             .GetProperty("id")
-            .GetString();
+            .GetString());
         Assert.StartsWith("s:", handoffId, System.StringComparison.Ordinal);
 
         var result = await GetTestContextTool.ExecuteAsync(
@@ -258,7 +258,9 @@ public sealed partial class GetTestContextToolTests
             McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Equal("CoreLib.Calculator", payload!.TargetSymbol);
+        Assert.Equal(handoffId, payload.Id);
         Assert.Equal(2, payload.TotalMatchingTests);
+        Assert.DoesNotContain(handoffId, Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]

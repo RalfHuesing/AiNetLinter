@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
@@ -22,6 +23,65 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 // @covers AssemblyFindReferencesTool
 public sealed class AssemblyHandoffLifecycleIntegrationTests
 {
+    [Fact]
+    public async Task AssemblyHandoff_TransitiveOwnerReopensAfterEvictionAndRestartWithoutRootClosure()
+    {
+        using var temp = TestTempDirectory.Create("assembly-handoff-transitive-owner-");
+        var leafPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TransitiveOwnerLeaf",
+            "namespace Probe; public sealed class Leaf { public int Value => 1; }");
+        var ownerPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TransitiveOwnerB",
+            "namespace Probe; public sealed class Target { public int Read() => new Leaf().Value; }",
+            leafPath);
+        var bridgePath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TransitiveOwnerA",
+            "namespace Probe; public sealed class Bridge { public int Read() => new Target().Read(); }",
+            ownerPath);
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TransitiveOwnerRoot",
+            "namespace Probe; public sealed class Root { public int Read() => new Bridge().Read(); }",
+            bridgePath);
+
+        string handoffId;
+        var clock = new ManualTimeProvider();
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            IdleTtl: TimeSpan.FromMinutes(1),
+            Clock: clock));
+        await using var registry = new AssemblyAnalysisRegistry(resourceRegistry: resources);
+
+        var owner = await registry.LeaseAsync(ownerPath);
+        Assert.Null(owner.Error);
+        using (var ownerLease = owner.Lease!)
+        {
+            handoffId = AnalysisSymbolIdentity.ForAssembly(
+                    ownerLease.CanonicalPath,
+                    ownerLease.Context.Origin.ContentHash,
+                    ownerLease.Context.Generation)
+                .FormatHandoff(LeaseSymbol(ownerLease, "Read"))!;
+        }
+
+        clock.Advance(TimeSpan.FromMinutes(2));
+        var afterEviction = await registry.LeaseAsync(rootPath);
+        Assert.Null(afterEviction.Error);
+        using (var rootLease = afterEviction.Lease!)
+        {
+            await AssertTransitiveOwnerScopesAsync(rootLease, handoffId, bridgePath, ownerPath, leafPath);
+        }
+
+        await using var restartedRegistry = new AssemblyAnalysisRegistry();
+        var afterRestart = await restartedRegistry.LeaseAsync(rootPath);
+        Assert.Null(afterRestart.Error);
+        using (var rootLease = afterRestart.Lease!)
+        {
+            await AssertTransitiveOwnerScopesAsync(rootLease, handoffId, bridgePath, ownerPath, leafPath);
+        }
+    }
+
     [Fact]
     public async Task AssemblyHandoff_SurvivesEvictionAndRestartButRejectsChangedOrForeignTarget()
     {
@@ -67,6 +127,11 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
                 new AssemblyFindReferencesRequest(handoffId, 10, 1, false),
                 CancellationToken.None);
             Assert.False(afterEvictionResult.IsError == true, Text(afterEvictionResult));
+            var bodyAfterEviction = await GetSymbolBodyTool.ExecuteAsync(
+                reloadedLease,
+                new GetSymbolBodyRequest([handoffId]),
+                CancellationToken.None);
+            Assert.False(bodyAfterEviction.IsError == true, Text(bodyAfterEviction));
         }
 
         await using (var restartedRegistry = new AssemblyAnalysisRegistry())
@@ -79,6 +144,11 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
                 new AssemblyFindReferencesRequest(handoffId, 10, 1, false),
                 CancellationToken.None);
             Assert.False(afterRestart.IsError == true, Text(afterRestart));
+            var bodyAfterRestart = await GetSymbolBodyTool.ExecuteAsync(
+                restartedLease,
+                new GetSymbolBodyRequest([handoffId]),
+                CancellationToken.None);
+            Assert.False(bodyAfterRestart.IsError == true, Text(bodyAfterRestart));
 
             var foreign = await restartedRegistry.LeaseAsync(foreignPath);
             Assert.Null(foreign.Error);
@@ -118,6 +188,58 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
         result.Content.OfType<TextContentBlock>().SingleOrDefault()?.Text
         ?? result.ToString()
         ?? string.Empty;
+
+    private static async Task AssertTransitiveOwnerScopesAsync(
+        AssemblyAnalysisLease rootLease,
+        string handoffId,
+        string bridgePath,
+        string ownerPath,
+        string leafPath)
+    {
+        var ownerOnly = await AssemblyFindReferencesTool.ExecuteAsync(
+            rootLease,
+            new AssemblyFindReferencesRequest(handoffId, 10, 1, false),
+            CancellationToken.None);
+
+        Assert.False(ownerOnly.IsError == true, Text(ownerOnly));
+        AssertNavigation(ownerOnly, "symbol_owner_only");
+        var ownerLease = Assert.Single(rootLease.ReferenceLeasesSnapshot());
+        Assert.Equal(Path.GetFullPath(ownerPath), ownerLease.CanonicalPath, ignoreCase: true);
+        Assert.Empty(ownerLease.ReferenceLeasesSnapshot());
+        Assert.DoesNotContain(
+            ReferenceLeaseDescendants(rootLease),
+            lease => string.Equals(lease.CanonicalPath, Path.GetFullPath(bridgePath), StringComparison.OrdinalIgnoreCase));
+
+        var closure = await AssemblyFindReferencesTool.ExecuteAsync(
+            rootLease,
+            new AssemblyFindReferencesRequest(handoffId, 10, 1, true),
+            CancellationToken.None);
+
+        Assert.False(closure.IsError == true, Text(closure));
+        AssertNavigation(closure, "bounded_reference_closure");
+        Assert.Contains(
+            ReferenceLeaseDescendants(rootLease),
+            lease => string.Equals(lease.CanonicalPath, Path.GetFullPath(leafPath), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static System.Collections.Generic.IEnumerable<AssemblyAnalysisLease> ReferenceLeaseDescendants(
+        AssemblyAnalysisLease lease)
+    {
+        foreach (var child in lease.ReferenceLeasesSnapshot())
+        {
+            yield return child;
+            foreach (var descendant in ReferenceLeaseDescendants(child)) yield return descendant;
+        }
+    }
+
+    private static void AssertNavigation(CallToolResult result, string effectiveSearchMode)
+    {
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal(effectiveSearchMode, navigation.GetProperty("effectiveSearchMode").GetString());
+        Assert.Equal(
+            effectiveSearchMode == "bounded_reference_closure",
+            navigation.GetProperty("requestedIncludeReferences").GetBoolean());
+    }
 
     private sealed class ManualTimeProvider : TimeProvider
     {

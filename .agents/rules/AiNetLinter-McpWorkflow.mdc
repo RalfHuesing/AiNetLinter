@@ -14,6 +14,40 @@ Bei jeder C#-Aufgabe (Symbole, Typen, Aufrufketten, Referenzen, Impact, Regelver
   - Im Repository AiNetLinter: `C:/Daten/Entwicklung/Ralf/AiNetLinter/AiNetLinter.slnx`.
 - **ServerName**: `AiNetLinter` (via `call_mcp_tool`).
 
+## Antwortvertrag und sichere Folgeaufrufe
+
+- Zielgebundene Antworten folgen Contract v2: `navigation.status.operation`
+  (Ausführung) und `navigation.status.completeness` (Antwortvollständigkeit)
+  sind getrennte Achsen; Analysequalität bleibt fachlich im Payload.
+- Bei `RESPONSE_BUDGET_TOO_SMALL` `minimumResponseBytes` mit identischem Request
+  und Snapshot als `maxResponseBytes` wiederholen. Der Wert umfasst finalen Text,
+  Structured Content und Navigation in UTF-8.
+- Ausschließlich die kanonische Handoff-ID aus `structuredContent.id` für
+  Folgeaufrufe verwenden. Markdown, `docCommentId` und Anzeigenamen nicht parsen.
+- Für Assembly-Routen bedeutet `includeReferences=false`: Root-ID nur Root,
+  Referenz-Handoff-ID nur deren Owner. Erst `true` erlaubt die bounded Closure;
+  `requestedIncludeReferences` und effektiven Suchmodus prüfen.
+- Zielgebundenes `get_server_health` enthält nur das adressierte Target;
+  Daemonaggregate gibt es ausschließlich ohne `targetPath`. Bei File-/Index-Scopes
+  physische Dateien und Roslyn-Dokumente sowie Ausschlussursachen nicht vermischen.
+
+## MCP-Grenzen und Resources
+
+- `report_observability_feedback` ist ungebunden und akzeptiert keinen Target-Block.
+  `get_server_health` arbeitet ohne `targetPath` global, mit Target ausschließlich
+  für dieses Target.
+- Assembly-Targets (`.dll`/`.exe`) werden metadata-only und ohne Ausführung
+  analysiert. Fehlt eine Consumer-Basis für Anwendbarkeit, ist `not_decidable`
+  ein fachlicher Status, kein leerer Erfolg.
+- `ainetlinter://overview{?targetPath}` und
+  `ainetlinter://rules{?targetPath}` ergänzen den Targetstatus beziehungsweise
+  die Regelquelle. Sie ersetzen weder Tool-Schemas noch den Toolaufruf.
+- Zielgebundenes `structuredContent.navigation` enthält mindestens
+  `contractVersion`, `target`, `snapshot`, `status`, `scope` und `next`.
+- Falls ein semantischer MCP-Aufruf nicht passt oder präzise Text-/Dateiarbeit
+  nötig ist, ist ein lokaler Datei-/Zeilenleser zulässig; für Semantik bleibt
+  der MCP-Aufruf erste Wahl.
+
 ---
 
 ## Die 4 Phasen des Agenten-Workflows

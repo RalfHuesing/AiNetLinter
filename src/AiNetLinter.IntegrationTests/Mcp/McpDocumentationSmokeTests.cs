@@ -150,13 +150,11 @@ public sealed class McpDocumentationSmokeTests
         Assert.True(getImpactEnd > getImpactStart,
             "Der getrennte Assembly-Vertrag für get_impact ist nicht begrenzt.");
         var getImpactAssemblySection = docText.Substring(getImpactStart, getImpactEnd - getImpactStart);
-        Assert.Contains("keinen `includeReferences`-Parameter", getImpactAssemblySection, StringComparison.Ordinal);
-        Assert.Contains("ExpandAssemblyReferences=true", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("`includeReferences=false` bleibt root-only", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("`includeReferences=true` verwendet die bounded Closure", getImpactAssemblySection, StringComparison.Ordinal);
         Assert.Contains("callSites", getImpactAssemblySection, StringComparison.Ordinal);
         Assert.Contains("analysis", getImpactAssemblySection, StringComparison.Ordinal);
-        Assert.DoesNotContain("includeReferences=false", getImpactAssemblySection, StringComparison.Ordinal);
-        Assert.DoesNotContain("includeReferences=true", getImpactAssemblySection, StringComparison.Ordinal);
-        Assert.Contains("nicht als `get_impact`-Antwortvertrag", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("deren Owner geöffnet", getImpactAssemblySection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -191,8 +189,8 @@ public sealed class McpDocumentationSmokeTests
         Assert.DoesNotContain("`get_impact`", findReferencesSection, StringComparison.Ordinal);
         Assert.Contains("`get_impact(symbolIdentifier: ..., depth: 2)`", getImpactSection, StringComparison.Ordinal);
         Assert.Contains("ausschließlich `symbolIdentifier`", getImpactSection, StringComparison.Ordinal);
-        Assert.Contains("Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar", getImpactSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("includeReferences", getImpactSection, StringComparison.Ordinal);
+        Assert.Contains("`includeReferences=false` bleibt root- beziehungsweise owner-only", getImpactSection, StringComparison.Ordinal);
+        Assert.Contains("`true` öffnet die bounded Referenz-Closure", getImpactSection, StringComparison.Ordinal);
     }
 
     [Fact]

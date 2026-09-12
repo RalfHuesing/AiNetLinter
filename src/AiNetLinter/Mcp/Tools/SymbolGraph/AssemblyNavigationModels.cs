@@ -58,7 +58,9 @@ internal sealed record AssemblyNavigationSummary(
     int DiagnosticShownCount = 0,
     bool DiagnosticsTruncated = false,
     IReadOnlyList<string>? DiagnosticsTruncatedBy = null,
-    bool ResultsTruncated = false);
+    bool ResultsTruncated = false,
+    bool RequestedIncludeReferences = false,
+    string EffectiveSearchMode = "root_only");
 
 internal sealed record AssemblyCallTreeResult(
     MetricsTreeNode Root,

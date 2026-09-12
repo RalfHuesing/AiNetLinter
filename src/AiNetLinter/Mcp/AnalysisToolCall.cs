@@ -5,6 +5,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Registration;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -243,9 +244,21 @@ internal static class AssemblyAnalysisDispatcher
                     options.DetailLevel,
                     options.Cursor,
                     options.ApplyAssemblyWireBudget));
-            return options.PostNavigationResponseBudget is null || options.MaxResponseBytes <= 0
-                ? enriched
-                : options.PostNavigationResponseBudget(enriched, options.MaxResponseBytes);
+            var postNavigationResponseBudget = options.PostNavigationResponseBudget;
+            if (postNavigationResponseBudget is null
+                || ShouldSkipPostNavigationBudget(enriched, options))
+            {
+                return enriched;
+            }
+
+            var finalBudget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
+                options.MaxResponseBytes,
+                options.DetailLevel,
+                lease.Context.ResponseBudgetBytes);
+            var budgeted = postNavigationResponseBudget(enriched, finalBudget);
+            return budgeted.IsError == true
+                ? McpToolResults.WithNavigation(budgeted, snapshotTarget)
+                : budgeted;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -264,6 +277,12 @@ internal static class AssemblyAnalysisDispatcher
             }
         }
     }
+
+    private static bool ShouldSkipPostNavigationBudget(
+        CallToolResult enriched,
+        AssemblyAnalysisExecutionOptions options) =>
+        enriched.IsError == true
+        || (!options.ApplyAssemblyWireBudget && options.MaxResponseBytes <= 0);
 
     internal static CallToolResult UnsupportedAssemblyTarget(string? canonicalPath = null) =>
         canonicalPath is null

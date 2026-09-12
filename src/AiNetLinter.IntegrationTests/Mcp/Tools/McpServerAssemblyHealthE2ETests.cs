@@ -9,6 +9,7 @@ using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Validation;
+using AiNetLinter.Mcp.Wire;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -82,7 +83,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
                 ["format"] = "json",
             });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.format", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }
@@ -122,8 +123,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
         Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
         Assert.True(payload.TryGetProperty("analysis", out var analysis), payload.GetRawText());
         Assert.False(string.IsNullOrWhiteSpace(analysis.GetProperty("assemblyHash").GetString()));
-        Assert.True(payload.TryGetProperty("wireBudget", out var wireBudget), payload.GetRawText());
-        Assert.True(wireBudget.GetProperty("limitBytes").GetInt32() > 0);
+        Assert.True(McpResponseSize.From(result).TotalBytes <= 4096, payload.GetRawText());
         Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
@@ -144,7 +144,6 @@ public sealed partial class McpServerAssemblyHealthE2ETests
         var payload = result.StructuredContent!.Value;
         Assert.Equal("assembly", payload.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
         Assert.False(string.IsNullOrWhiteSpace(payload.GetProperty("analysis").GetProperty("assemblyHash").GetString()));
-        Assert.True(payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32() > 0);
         Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
@@ -463,13 +462,5 @@ public sealed partial class McpServerAssemblyHealthE2ETests
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
         Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
         Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
-        Assert.Contains(
-            $"status: operation=`{navigation.GetProperty("status").GetProperty("operation").GetString()}`",
-            text,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            $"completeness: `{navigation.GetProperty("status").GetProperty("completeness").GetString()}`",
-            text,
-            StringComparison.Ordinal);
     }
 }

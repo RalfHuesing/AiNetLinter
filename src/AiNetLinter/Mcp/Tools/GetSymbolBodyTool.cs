@@ -27,7 +27,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// (Methode, Konstruktor, Property, Indexer, Event). Erwartet ausschliesslich das
 /// <c>symbolIdentifiers</c>-Array.
 /// </summary>
-internal static class GetSymbolBodyTool
+internal static partial class GetSymbolBodyTool
 {
     internal const int DefaultMaxBodyLines = 80;
     internal const int DefaultMaxResponseBytes = 32 * 1024;
@@ -81,6 +81,66 @@ internal static class GetSymbolBodyTool
         ExecuteAsync(state, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        GetSymbolBodyRequest request,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
+        if (!identifiers.Any(identifier =>
+                AssemblySearchPlan.Create(identifier, includeReferences: false).Mode == AssemblySearchMode.SymbolOwnerOnly))
+        {
+            return await ExecuteAsync((IAssemblyBodyContext)lease, request, ct).ConfigureAwait(false);
+        }
+
+        if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes)) return InvalidResponseBudget();
+        if (identifiers.Count == 0)
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifiersBatchHint);
+        }
+
+        var requests = new List<RenderSingleSymbolRequest>(identifiers.Count);
+        var navigations = new List<AssemblyNavigationSummary>();
+        foreach (var identifier in identifiers)
+        {
+            var plan = AssemblySearchPlan.Create(identifier, includeReferences: false);
+            var targetLease = lease;
+            if (plan.Mode == AssemblySearchMode.SymbolOwnerOnly)
+            {
+                var resolved = await AssemblySymbolResolver.ResolveAsync(lease, identifier, plan, ct).ConfigureAwait(false);
+                if (resolved.Error is not null) return resolved.Error;
+                targetLease = resolved.Target!.Lease;
+                navigations.Add(resolved.Navigation);
+            }
+
+            var solution = targetLease.Server.GetCurrentSolution();
+            if (solution is null) return McpToolResults.SolutionNotLoaded();
+            requests.Add(new(
+                solution,
+                identifier,
+                identifiers.Count,
+                request.EffectiveMaxBodyLines,
+                request.StartLine,
+                Path.GetDirectoryName(solution.FilePath) ?? string.Empty,
+                targetLease.Server.AssemblySymbolIdentity,
+                targetLease.Context.Origin));
+        }
+
+        var result = await RenderSymbolBodiesAsync(requests, request.MaxResponseBytes, ct).ConfigureAwait(false);
+        if (navigations.Count > 0)
+        {
+            result = AddAssemblyNavigation(
+                result,
+                navigations.Aggregate(AssemblyNavigationSupport.MergeSummaries));
+        }
+
+        return AssemblyPublicContract.Project(result);
+    }
+
+    internal static async Task<CallToolResult> ExecuteAsync(
         IAssemblyBodyContext lease,
         GetSymbolBodyRequest request,
         CancellationToken ct)
@@ -115,27 +175,58 @@ internal static class GetSymbolBodyTool
         CancellationToken ct) =>
         ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
 
+    private static CallToolResult AddAssemblyNavigation(
+        CallToolResult result,
+        AssemblyNavigationSummary navigation)
+    {
+        if (result.StructuredContent is not { } structured
+            || JsonNode.Parse(structured.GetRawText()) is not JsonObject payload)
+        {
+            return result;
+        }
+
+        payload["navigation"] = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default);
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = result.Content,
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
+    }
+
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
         RenderSymbolBodiesRequest request,
         CancellationToken ct)
     {
-        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
-        var units = new List<SymbolBodyRenderUnit>();
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
+        var requests = request.Identifiers.Select(identifier => new RenderSingleSymbolRequest(
+            request.Solution,
+            identifier,
+            request.Identifiers.Count,
+            request.MaxBodyLines,
+            request.StartLine,
+            outputRoot,
+            request.AssemblyIdentity,
+            request.AssemblyOrigin));
+        return await RenderSymbolBodiesAsync(requests, request.MaxResponseBytes, ct).ConfigureAwait(false);
+    }
 
-        for (var i = 0; i < request.Identifiers.Count; i++)
+    private static async Task<CallToolResult> RenderSymbolBodiesAsync(
+        IEnumerable<RenderSingleSymbolRequest> requests,
+        int maxResponseBytes,
+        CancellationToken ct)
+    {
+        var requestList = requests.ToList();
+        var units = new List<SymbolBodyRenderUnit>(requestList.Count);
+        foreach (var request in requestList)
         {
-            var rendered = await RenderSingleSymbolAsync(
-                new RenderSingleSymbolRequest(
-                    request.Solution, request.Identifiers[i], request.Identifiers.Count, request.MaxBodyLines,
-                    request.StartLine, outputRoot, request.AssemblyIdentity, request.AssemblyOrigin),
-                ct);
-
+            var rendered = await RenderSingleSymbolAsync(request, ct).ConfigureAwait(false);
             if (rendered.EarlyError is not null) return rendered.EarlyError;
             units.Add(rendered.Unit!);
         }
 
-        return CreateBudgetedResult(units, request.Identifiers.Count, request.MaxResponseBytes);
+        return CreateBudgetedResult(units, requestList.Count, maxResponseBytes);
     }
 
     private static async Task<RenderSingleSymbolResult> RenderSingleSymbolAsync(
@@ -283,41 +374,6 @@ internal static class GetSymbolBodyTool
         return CreateResult(kept, requestedCount, truncated);
     }
 
-    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
-    {
-        if (maxResponseBytes <= 0 || Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes)
-        {
-            return result;
-        }
-
-        if (result.StructuredContent is not { } structured)
-        {
-            return BudgetTooSmall(maxResponseBytes);
-        }
-
-        var payload = JsonSerializer.Deserialize<SymbolBodyBatchDto>(structured.GetRawText(), McpJsonOptions.Default);
-        if (payload is null) return BudgetTooSmall(maxResponseBytes);
-
-        var units = payload.Results.Select(entry => new SymbolBodyRenderUnit(entry, RenderEntryMarkdown(entry))).ToList();
-        while (units.Count > 0)
-        {
-            var projected = CreateBudgetedResult(units, payload.RequestedCount, maxResponseBytes);
-            if (projected.IsError == true) break;
-            var root = JsonNode.Parse(projected.StructuredContent!.Value.GetRawText())!.AsObject();
-            var originalRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
-            if (originalRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
-            var final = new CallToolResult
-            {
-                Content = projected.Content,
-                StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
-            };
-            if (Mcp.Wire.McpResponseSize.From(final).TotalBytes <= maxResponseBytes) return final;
-            units.RemoveAt(units.Count - 1);
-        }
-
-        return BudgetTooSmall(maxResponseBytes);
-    }
-
     private static CallToolResult CreateResult(
         IReadOnlyList<SymbolBodyRenderUnit> units,
         int requestedCount,
@@ -344,21 +400,6 @@ internal static class GetSymbolBodyTool
         var text = result.Content.OfType<TextContentBlock>().Single().Text;
         return Encoding.UTF8.GetByteCount(text)
             + JsonSerializer.SerializeToUtf8Bytes(result.StructuredContent!.Value, McpJsonOptions.Default).Length;
-    }
-
-    private static string RenderEntryMarkdown(SymbolBodyEntry entry)
-    {
-        var markdown = new MarkdownBuilder();
-        markdown.Heading(3, $"Symbol-Body: `{entry.Id ?? entry.RequestedIdentifier}` — `{entry.FilePath}`");
-        markdown.BlankLine();
-        markdown.Line($"bodyAvailability: `{entry.BodyAvailability}`; contentMode: `{entry.ContentMode}`");
-        if (entry.TotalBodyLines > 0)
-        {
-            markdown.Line($"Zeilen: {entry.DisplayedStartLine}-{entry.DisplayedEndLine} von {entry.TotalBodyLines}");
-        }
-        markdown.BlankLine();
-        markdown.CodeBlock("csharp", entry.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
-        return markdown.Build().TrimEnd();
     }
 
     private static CallToolResult BudgetTooSmall(int budget) =>

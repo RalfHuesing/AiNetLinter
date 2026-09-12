@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -59,12 +60,10 @@ internal static class AssemblyAnalysisContextTool
             var sectionTexts = new Dictionary<string, string>(StringComparer.Ordinal);
             var root = CreateRoot(lease, arguments);
             await AddAssemblyAnalysisAsync(root, lease, arguments, budget).ConfigureAwait(false);
-            await AddSymbolSectionsAsync(root, lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
+            var symbolError = await AddSymbolSectionsAsync(root, lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
+            if (symbolError is not null) return symbolError;
             AddEnvelope(root);
-            return AssemblyAnalysisResponse.ApplyWireBudget(
-                McpToolResults.Text(RenderText(root, sectionTexts), root),
-                budget,
-                AssemblyPaging.ReadOffset(arguments.Cursor));
+            return McpToolResults.Text(RenderText(root, sectionTexts), root);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -78,7 +77,7 @@ internal static class AssemblyAnalysisContextTool
     {
         ["contextId"] = CreateContextId(lease),
         ["targetPath"] = lease.CanonicalPath,
-        ["scope"] = arguments.IncludeReferences || arguments.IncludeCallers || arguments.IncludeImpact ? "root+references" : "root",
+        ["scope"] = arguments.IncludeReferences ? "root+references" : "root",
         ["completeness"] = lease.Context.Status.ResolveEffectiveStatus(
             lease.Context.Diagnostics.Concat(lease.ReferenceExpansionDiagnostics).ToArray()).ToCompletenessLabel(),
         ["symbolIdentifier"] = arguments.SymbolIdentifier,
@@ -108,32 +107,38 @@ internal static class AssemblyAnalysisContextTool
         root["assemblyAnalysis"] = Serialize(inspection.StructuredContent);
     }
 
-    private static async Task AddSymbolSectionsAsync(
+    private static async Task<CallToolResult?> AddSymbolSectionsAsync(
         JsonObject root,
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
         Dictionary<string, string> sectionTexts,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(arguments.SymbolIdentifier)) return;
+        if (string.IsNullOrWhiteSpace(arguments.SymbolIdentifier)) return null;
+        var resolvedSectionLease = await ResolveSectionLeaseAsync(lease, arguments, cancellationToken).ConfigureAwait(false);
+        if (resolvedSectionLease.Error is not null) return resolvedSectionLease.Error;
+        var symbolLease = resolvedSectionLease.Lease;
         if (arguments.IncludeMetrics)
         {
             var result = await MetricsLookupTool.ExecuteAsync(
-                lease.Server, [arguments.SymbolIdentifier], cancellationToken).ConfigureAwait(false);
+                symbolLease.Server, [arguments.SymbolIdentifier], cancellationToken).ConfigureAwait(false);
             root["metrics"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "metrics", result);
         }
         if (arguments.IncludeBody)
         {
             var result = await GetSymbolBodyTool.ExecuteAsync(
-                lease, [arguments.SymbolIdentifier], Math.Clamp(arguments.MaxBodyLines, 1, MaxBodyLinesCap), cancellationToken).ConfigureAwait(false);
+                (IAssemblyBodyContext)symbolLease,
+                [arguments.SymbolIdentifier],
+                Math.Clamp(arguments.MaxBodyLines, 1, MaxBodyLinesCap),
+                cancellationToken).ConfigureAwait(false);
             root["body"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "body", result);
         }
         if (arguments.IncludeClassStructure)
         {
             var result = await GetClassStructureTool.ExecuteAsync(
-                lease.Server,
+                symbolLease.Server,
                 new GetClassStructureArgs(arguments.SymbolIdentifier, "lines", Math.Clamp(arguments.MaxResults, 1, GetClassStructureTool.MaxMembersCap)),
                 cancellationToken).ConfigureAwait(false);
             root["classStructure"] = Serialize(result.StructuredContent);
@@ -143,7 +148,7 @@ internal static class AssemblyAnalysisContextTool
         {
             var result = await AssemblyFindReferencesTool.ExecuteAsync(
                 lease,
-                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), true),
+                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), arguments.IncludeReferences),
                 cancellationToken).ConfigureAwait(false);
             root["callers"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "callers", result);
@@ -152,11 +157,34 @@ internal static class AssemblyAnalysisContextTool
         {
             var result = await GetImpactTool.ExecuteAsync(
                 lease,
-                new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap)),
+                new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), IncludeReferences: arguments.IncludeReferences),
                 cancellationToken).ConfigureAwait(false);
             root["impact"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "impact", result);
         }
+        return null;
+    }
+
+    private static async Task<(AssemblyAnalysisLease Lease, CallToolResult? Error)> ResolveSectionLeaseAsync(
+        AssemblyAnalysisLease lease,
+        AssemblyAnalysisContextArguments arguments,
+        CancellationToken cancellationToken)
+    {
+        if (!arguments.IncludeReferences && !SymbolHandoffIdentifier.HasWirePrefix(arguments.SymbolIdentifier!))
+        {
+            return (lease, null);
+        }
+
+        var plan = AssemblySearchPlan.Create(arguments.SymbolIdentifier, arguments.IncludeReferences);
+        var resolved = await AssemblySymbolResolver.ResolveAsync(
+            lease,
+            arguments.SymbolIdentifier!,
+            plan,
+            cancellationToken).ConfigureAwait(false);
+        if (resolved.Error is not null) return (lease, resolved.Error);
+        return resolved.Target is null
+            ? (lease, McpToolResults.SymbolNotFound(arguments.SymbolIdentifier!))
+            : (resolved.Target.Lease, null);
     }
 
     private static void RecordText(Dictionary<string, string> sectionTexts, string key, CallToolResult result)

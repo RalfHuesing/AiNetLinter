@@ -7,6 +7,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -29,34 +30,8 @@ internal static class AssemblyFindReferencesTool
         AssemblyFindReferencesRequest request,
         CancellationToken cancellationToken)
     {
-        var requiresReferenceExpansion = IsAssemblyHandoff(request.SymbolIdentifier);
-        if (request.IncludeReferences || requiresReferenceExpansion)
-        {
-            if (requiresReferenceExpansion && !request.IncludeReferences)
-            {
-                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            return await ExecuteWithReferencesAsync(lease, request, cancellationToken).ConfigureAwait(false);
-        }
-
-        return await FindReferencesTool.ExecuteAsync(
-            lease.Server,
-            new FindReferencesRequest(
-                request.SymbolIdentifier,
-                request.MaxResults,
-                request.Depth,
-                request.ScopeType,
-                request.IncludeGenerated,
-                request.ScopeClassifier,
-                request.MaxResponseBytes),
-            cancellationToken).ConfigureAwait(false);
+        return await ExecuteWithReferencesAsync(lease, request, cancellationToken).ConfigureAwait(false);
     }
-
-    private static bool IsAssemblyHandoff(string? symbolIdentifier) =>
-        symbolIdentifier is not null
-        && SymbolHandoffIdentifier.TryParse(symbolIdentifier, out var handoff)
-        && handoff.Origin == SymbolHandoffOrigin.Assembly;
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
         AssemblyAnalysisLease lease,
@@ -74,15 +49,17 @@ internal static class AssemblyFindReferencesTool
 
         try
         {
+            var plan = AssemblySearchPlan.Create(symbolIdentifier, request.IncludeReferences);
             var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
                 lease,
                 symbolIdentifier,
+                plan,
                 cancellationToken).ConfigureAwait(false);
             if (error is not null) return error;
 
             var traversal = await AssemblyReferenceNavigator.FindReferencesAsync(
                 new AssemblyReferenceTraversalRequest(
-                    AssemblyNavigationSourceFactory.CreateSources(lease, target!),
+                    AssemblyNavigationSourceFactory.CreateSources(lease, target!, plan),
                     request.MaxResults,
                     request.Depth,
                     navigation,
@@ -95,7 +72,7 @@ internal static class AssemblyFindReferencesTool
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0
-                    ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
+                    ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                     : null);
             return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
         }

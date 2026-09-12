@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Xunit;
 
@@ -101,5 +103,28 @@ public sealed class MetricsTreeRendererTests
         Assert.StartsWith("    ├── medium.cs", lines[3]);
         Assert.StartsWith("    └── ... und 1 weitere", lines[4]);
         Assert.DoesNotContain("small.cs", text);
+    }
+
+    [Fact]
+    public void Render_ExcludesCanonicalHandoffIdWhileStructuredNodeRetainsIt()
+    {
+        const string handoffId = "a:assembly:owner:snapshot:member:Probe.Target.Read";
+        var root = new MetricsTreeNode(
+            "root",
+            "",
+            1,
+            1,
+            "1 Datei",
+            Array.Empty<MetricsTreeNode>(),
+            Handoff: true,
+            Id: handoffId,
+            TargetPath: "C:/probe/owner.dll",
+            Snapshot: "snapshot");
+
+        var text = MetricsTreeRenderer.Render(root, topN: 10, sortDescending: true);
+        var structured = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default);
+
+        Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
+        Assert.Equal(handoffId, structured.GetProperty("id").GetString());
     }
 }

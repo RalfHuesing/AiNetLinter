@@ -25,7 +25,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             ResolvedPath: Path.Combine(temp.DirectoryPath, "UnrequestedExtensionDependency.dll"));
         await using var fixture = await SyntheticAssemblyFixture.CreateAsync(temp, [reference], FailingReferenceFactory);
 
-        var result = await fixture.ExecuteExtensionsAsync(includeReferences: false);
+        var result = await fixture.ExecuteExtensionsAsync(new ExtensionExecutionOptions(IncludeReferences: false));
 
         var payload = Structured(result);
         Assert.Equal(0, payload.GetProperty("referenceSessions").GetArrayLength());

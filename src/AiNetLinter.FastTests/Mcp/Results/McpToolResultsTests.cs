@@ -28,6 +28,18 @@ public sealed partial class McpToolResultsTests
     }
 
     [Fact]
+    public void TargetMismatch_DoesNotEchoLongHandoffIdentifier()
+    {
+        var identifier = "handoff:" + new string('s', 512);
+
+        var result = McpToolResults.TargetMismatch(identifier);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.DoesNotContain(identifier, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(identifier, result.StructuredContent!.Value.GetRawText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WithNavigation_ConfigurationErrorsUseCatalogErrorStatus()
     {
         using var tempDir = TestTempDirectory.Create("mcp-navigation-config-error-");

@@ -122,6 +122,24 @@ internal static class AssemblyHealthProjection
             assembly.ErrorCause,
             assembly.NextAction);
 
+    internal static TargetAssemblyHealthEntry ToTargetEntry(AssemblyHealthEntry assembly) =>
+        new(
+            assembly.TargetPath,
+            assembly.LoadState,
+            assembly.OriginKind,
+            assembly.ContentHash,
+            assembly.Confidence,
+            assembly.DiagnosticsSummary,
+            assembly.Completeness,
+            assembly.Diagnostics,
+            assembly.LockStatus,
+            assembly.LeaseStatus,
+            assembly.CleanupStatus,
+            assembly.ErrorCode,
+            assembly.ErrorPhase,
+            assembly.ErrorCause,
+            assembly.NextAction);
+
     private static string ResolveEffectiveStatus(
         string statusValue,
         IReadOnlyCollection<string> diagnostics)

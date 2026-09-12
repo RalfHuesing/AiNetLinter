@@ -54,9 +54,40 @@ internal static class GetServerHealthFormatter
         builder.AppendLine();
     }
 
+    internal static void AppendTargetProjectSection(StringBuilder builder, ProjectSnapshot snapshot)
+    {
+        var server = snapshot.Server;
+        builder.AppendLine($"### {snapshot.Definition.SolutionPath}");
+        builder.AppendLine($"- LoadState: {server.LoadState}");
+        builder.AppendLine($"- Solution: {(server.LoadState == ServerLoadState.Loading ? "wird noch geladen" : server.GetCurrentSolution()?.FilePath ?? "unbekannt")}");
+        var (_, resolvedConfigPath) = server.GetConfigSnapshot();
+        builder.AppendLine($"- targetPath: {snapshot.Definition.SolutionPath}");
+        builder.AppendLine($"- Config: {resolvedConfigPath ?? "not_configured"}");
+        builder.AppendLine($"- Zuletzt genutzt (UTC): {FormatTimestamp(snapshot.LastUsedUtc)}");
+        builder.AppendLine($"- Solution-Refreshes: {server.RefreshCount}");
+        AppendStalenessSection(builder, server.LastStalenessStats, "für dieses Target");
+        if (server.LastGoodStateUtc is { } lastGoodState)
+        {
+            builder.AppendLine($"- Letzter guter Zustand (UTC): {FormatTimestamp(lastGoodState)}");
+        }
+        if (server.LastLoadError is { } lastLoadError)
+        {
+            builder.AppendLine($"- Letzter Ladefehler: {lastLoadError}");
+        }
+        builder.AppendLine();
+    }
+
     internal static void AppendAssemblySection(StringBuilder builder, AssemblyHealthEntry assembly)
     {
         AppendAssemblyHeader(builder, assembly);
+        AppendAssemblySourceDetails(builder, assembly);
+        AppendAssemblyDiagnostics(builder, assembly);
+        builder.AppendLine();
+    }
+
+    internal static void AppendTargetAssemblySection(StringBuilder builder, AssemblyHealthEntry assembly)
+    {
+        AppendAssemblyHeader(builder, assembly, includeDaemonProfile: false);
         AppendAssemblySourceDetails(builder, assembly);
         AppendAssemblyDiagnostics(builder, assembly);
         builder.AppendLine();
@@ -74,7 +105,10 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"- Diagnosen gesamt: {diagnosticCount}");
     }
 
-    private static void AppendAssemblyHeader(StringBuilder builder, AssemblyHealthEntry assembly)
+    private static void AppendAssemblyHeader(
+        StringBuilder builder,
+        AssemblyHealthEntry assembly,
+        bool includeDaemonProfile = true)
     {
         builder.AppendLine($"### {assembly.TargetPath}");
         builder.AppendLine($"- LoadState: {assembly.LoadState}");
@@ -83,7 +117,7 @@ internal static class GetServerHealthFormatter
             builder.AppendLine($"- Vollständigkeit: {assembly.Completeness}");
         }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
-        AppendOptionalAssemblyValue(builder, "Daemon-Profil", assembly.DaemonProfile);
+        if (includeDaemonProfile) AppendOptionalAssemblyValue(builder, "Daemon-Profil", assembly.DaemonProfile);
         AppendOptionalAssemblyValue(builder, "Lock-Status", assembly.LockStatus);
         AppendOptionalAssemblyValue(builder, "Lease-Status", assembly.LeaseStatus);
         AppendOptionalAssemblyValue(builder, "Cleanup-Status", assembly.CleanupStatus);
@@ -138,9 +172,12 @@ internal static class GetServerHealthFormatter
         }
     }
 
-    private static void AppendStalenessSection(StringBuilder builder, ServerStalenessStats staleness)
+    private static void AppendStalenessSection(
+        StringBuilder builder,
+        ServerStalenessStats staleness,
+        string scope = "seit Start")
     {
-        builder.AppendLine($"- Staleness-Checks seit Start: {staleness.CheckCount} (kumuliert {staleness.TotalMilliseconds:F0} ms)");
+        builder.AppendLine($"- Staleness-Checks {scope}: {staleness.CheckCount} (kumuliert {staleness.TotalMilliseconds:F0} ms)");
         if (staleness.LastWarning is { } warning)
         {
             builder.AppendLine($"- Staleness-Warnungen (letzter Lauf): {staleness.WarningCount}, zuletzt: {warning}");

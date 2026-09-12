@@ -9,6 +9,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
+using AiNetLinter.Mcp.Wire;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
@@ -31,8 +32,6 @@ public sealed partial class AssemblyAnalysisRouteTests
         Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.False(navigation.GetProperty("assembliesTruncated").GetBoolean());
         Assert.True(navigation.GetProperty("resultsTruncated").GetBoolean());
-        Assert.False(payload.GetProperty("wireTruncated").GetBoolean());
-        Assert.False(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean());
         Assert.Equal(["maxResults"], payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
         Assert.True(navigation.GetProperty("diagnostics").EnumerateArray().Select(item => item.GetString()!).Any(diagnostic => diagnostic.Contains("Treffer", StringComparison.Ordinal)), navigation.GetRawText());
     }
@@ -47,14 +46,14 @@ public sealed partial class AssemblyAnalysisRouteTests
         var result = await AnalysisToolCall.ExecuteRouted(AssemblyAnalysisDispatcher.CreateRoute(registry), new AnalysisToolCallRequest(
             new AnalysisTargetRequest(assemblyPath), new AnalysisToolDispatch(
                 AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(lease, new AssemblyFindSymbolRequest(["Type"], null, 500, false), CancellationToken.None),
-                MaxResponseBytes: 4096), CancellationToken.None));
+                MaxResponseBytes: 4096,
+                PostNavigationResponseBudget: FindSymbolTool.ApplyFinalResponseBudget,
+                ApplyAssemblyWireBudget: false), CancellationToken.None));
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value;
-        var wireBudget = payload.GetProperty("wireBudget");
-        Assert.True(wireBudget.GetProperty("truncated").GetBoolean(), payload.GetRawText());
-        Assert.True(payload.GetProperty("wireTruncated").GetBoolean(), payload.GetRawText());
+        Assert.True(payload.GetProperty("isTruncated").GetBoolean(), payload.GetRawText());
         Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Contains("responseBudget", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.True(wireBudget.GetProperty("totalBytes").GetInt32() <= wireBudget.GetProperty("limitBytes").GetInt32(), payload.GetRawText());
+        Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.True(McpResponseSize.From(result).TotalBytes <= 4096, payload.GetRawText());
     }
 }

@@ -17,6 +17,6 @@ internal static class ServerInstructions
     internal const string Text =
         "Zielgebundene Aufrufe brauchen targetPath: absoluter .sln/.slnx-Pfad fuer Source oder .dll/.exe fuer Assembly; die Endung bestimmt die Route. get_server_health darf ohne Ziel laufen, report_observability_feedback nie mit Ziel.\n\n" +
         "C#-Symbole, Referenzen und Graphen mit den semantischen Tools abfragen; fuer Text und Nicht-C# search_pattern verwenden. Schemas, Defaults und Toolgrenzen stehen in tools/list.\n\n" +
-        "structuredContent.navigation beschreibt Status, Scope, Completeness und naechsten Schritt; bei partial oder truncated Scope bzw. Limit gezielt verfeinern.\n\n" +
+        "Contract v2: structuredContent.navigation.status trennt operation und Completeness; IDs nur aus structuredContent.id uebernehmen. Bei Budgetfehler minimumResponseBytes mit gleichem Snapshot wiederholen; includeReferences erweitert Assembly-Suche nur explizit.\n\n" +
         "Den Integrationsleitfaden nur bei ausdruecklichem Auftrag unter ainetlinter://agent-guide lesen; die Agent-API-Resource ergaenzt Discovery-Details.";
 }

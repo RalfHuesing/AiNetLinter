@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
@@ -27,6 +28,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
     private readonly AssemblyReferenceLeaseFactory? referenceLeaseFactory;
     private readonly object referenceGate = new();
     private readonly List<AssemblyAnalysisLease> referenceLeases = [];
+    private readonly Dictionary<string, Task<AssemblyAnalysisLeaseResult>> navigationReferenceLeaseTasks = new(StringComparer.Ordinal);
     private readonly Action<AssemblyAnalysisEntry>? onReferenceLeaseReleased;
     private Task<AssemblyReferenceExpansion>? referenceExpansionTask;
     private AssemblyReferenceExpansion? referenceExpansion;
@@ -94,6 +96,52 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         if (!CanLeaseReference(reference)) return Task.FromResult(ReferenceLeaseRejected(reference));
         return referenceLeaseFactory(reference, cancellationToken);
     }
+
+    /// <summary>
+    /// Öffnet ausschließlich die direkte Referenz, deren kanonischer Handoff-Target-Token passt.
+    /// Die Suchmodus-Komponente des Keys verhindert, dass eine Owner-only-Öffnung eine spätere
+    /// Closure als bereits aufgebaut erscheinen lässt.
+    /// </summary>
+    internal Task<AssemblyAnalysisLeaseResult?> LeaseNavigationOwnerAsync(
+        SymbolHandoffIdentifier handoff,
+        string searchMode,
+        CancellationToken cancellationToken)
+    {
+        var reference = Context.References.FirstOrDefault(candidate => MatchesHandoffTarget(candidate, handoff));
+        if (reference is null) return Task.FromResult<AssemblyAnalysisLeaseResult?>(null);
+
+        var cacheKey = $"{handoff.TargetToken}|{searchMode}";
+        Task<AssemblyAnalysisLeaseResult> task;
+        lock (referenceGate)
+        {
+            if (!navigationReferenceLeaseTasks.TryGetValue(cacheKey, out task!))
+            {
+                task = OpenNavigationOwnerAsync(reference);
+                navigationReferenceLeaseTasks.Add(cacheKey, task);
+            }
+        }
+
+        return AwaitNavigationOwnerAsync(task, cancellationToken);
+    }
+
+    private async Task<AssemblyAnalysisLeaseResult> OpenNavigationOwnerAsync(AssemblyReferenceDto reference)
+    {
+        var result = await LeaseReferenceAsync(reference, CancellationToken.None).ConfigureAwait(false);
+        if (result.Lease is not null) RegisterReferenceLease(result.Lease);
+        return result;
+    }
+
+    private static async Task<AssemblyAnalysisLeaseResult?> AwaitNavigationOwnerAsync(
+        Task<AssemblyAnalysisLeaseResult> task,
+        CancellationToken cancellationToken) =>
+        await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+    private static bool MatchesHandoffTarget(AssemblyReferenceDto reference, SymbolHandoffIdentifier handoff) =>
+        handoff.Origin == SymbolHandoffOrigin.Assembly
+        && SymbolHandoffToken.TryCreateTarget(
+            reference.ResolvedPath ?? reference.SourceProjectPath ?? string.Empty,
+            out var targetToken)
+        && string.Equals(targetToken, handoff.TargetToken, StringComparison.Ordinal);
 
     private bool CanLeaseReference(AssemblyReferenceDto reference) =>
         reference.Resolved
@@ -178,6 +226,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         {
             leases = [.. referenceLeases];
             referenceLeases.Clear();
+            navigationReferenceLeaseTasks.Clear();
         }
 
         for (var index = leases.Length - 1; index >= 0; index--)

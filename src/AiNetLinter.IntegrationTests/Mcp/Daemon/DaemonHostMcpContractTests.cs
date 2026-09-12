@@ -94,7 +94,7 @@ public sealed class DaemonHostMcpContractTests
             registry,
             composition);
 
-        Assert.False(result.IsError);
+        Assert.True(result.IsError);
         var payload = StructuredOf(result);
         Assert.Equal(LinterErrorCodes.InvalidAssembly, payload.GetProperty("code").GetString());
         Assert.Equal(nativeAssemblyPath, payload.GetProperty("context").GetString());
@@ -102,7 +102,14 @@ public sealed class DaemonHostMcpContractTests
         Assert.Equal(
             McpToolResults.InvalidAssemblyHint,
             payload.GetProperty("hint").GetString());
-        Assert.True(payload.GetProperty("recoverable").GetBoolean());
+        Assert.False(payload.GetProperty("recoverable").GetBoolean());
+        var navigation = payload.GetProperty("navigation");
+        Assert.Equal(2, navigation.GetProperty("contractVersion").GetInt32());
+        Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(LinterErrorCodes.InvalidAssembly, navigation.GetProperty("status").GetProperty("code").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("analysis").GetProperty("quality").GetString());
     }
 
     private static async Task<(CallToolResult Inspect, CallToolResult Extensions)> RunAssemblySessionAsync(

@@ -86,7 +86,7 @@ public sealed class ThinClientMcpProcessContractTests
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var solutionPath = fixture.SolutionPath;
         using var isolatedState = TestTempDirectory.Create("thin-client-project-health-");
-        string[] warmupFrames =
+        string[] frames =
         [
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"ThinClientProjectHealthContract\",\"version\":\"1\"}}}",
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
@@ -101,16 +101,10 @@ public sealed class ThinClientMcpProcessContractTests
                     arguments = new { filePaths = new[] { "src/SymbolGraphMini/Greeter.cs" } },
                 },
             }),
-        ];
-
-        string[] healthFrames =
-        [
-            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"ThinClientProjectHealthContract\",\"version\":\"1\"}}}",
-            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
             JsonSerializer.Serialize(new
             {
                 jsonrpc = "2.0",
-                id = 2,
+                id = 3,
                 method = "tools/call",
                 @params = new
                 {
@@ -130,53 +124,56 @@ public sealed class ThinClientMcpProcessContractTests
             LocalAppDataOverride = isolatedState.DirectoryPath,
             DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
         };
+        var daemonSpec = new DaemonProcessSpec(
+            fixture.SolutionPath,
+            isolatedState.DirectoryPath,
+            IdleExitMinutes: 5);
         var daemonPid = 0;
         try
         {
-            var warmup = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
-                fixture.SolutionPath,
-                warmupFrames,
-                runOptions);
-
-            Assert.Equal(0, warmup.ExitCode);
-            var warmupResult = McpRawWireTestHarness.FindResponse(warmup.StdoutLines, 2).GetProperty("result");
-            Assert.False(
-                warmupResult.TryGetProperty("isError", out var warmupIsError) && warmupIsError.GetBoolean(),
-                warmupResult.ToString());
-            if (warmupResult.TryGetProperty("structuredContent", out var warmupStructured)
-                && warmupStructured.TryGetProperty("daemon", out var warmupDaemon))
-            {
-                daemonPid = warmupDaemon.GetProperty("processId").GetInt32();
-            }
-
             var result = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
                 fixture.SolutionPath,
-                healthFrames,
+                frames,
                 runOptions);
 
             Assert.Equal(0, result.ExitCode);
-            var response = McpRawWireTestHarness.FindResponse(result.StdoutLines, 2);
+            var warmupResult = McpRawWireTestHarness.FindResponse(result.StdoutLines, 2).GetProperty("result");
+            Assert.False(
+                warmupResult.TryGetProperty("isError", out var warmupIsError) && warmupIsError.GetBoolean(),
+                warmupResult.ToString());
+            daemonPid = await DaemonProcessContractHarness
+                .GetDaemonProcessIdAsync(daemonSpec, cancellation.Token)
+                .ConfigureAwait(false);
+
+            var response = McpRawWireTestHarness.FindResponse(result.StdoutLines, 3);
             var responseResult = response.GetProperty("result");
             Assert.False(
                 responseResult.TryGetProperty("isError", out var isError) && isError.GetBoolean(),
                 response.ToString());
 
             var structured = responseResult.GetProperty("structuredContent");
-            var daemon = structured.GetProperty("daemon");
-            daemonPid = daemon.GetProperty("processId").GetInt32();
-            Assert.Equal("daemon", daemon.GetProperty("mode").GetString());
-            Assert.Contains(
-                daemon.GetProperty("keys").EnumerateArray(),
-                key => string.Equals(key.GetString(), solutionPath, StringComparison.OrdinalIgnoreCase));
-
-            var project = Assert.Single(structured.GetProperty("projects").EnumerateArray());
+            Assert.False(structured.TryGetProperty("daemon", out _));
+            var project = structured.GetProperty("project");
             Assert.Equal(solutionPath, project.GetProperty("targetPath").GetString(), ignoreCase: true);
-            Assert.Contains(project.GetProperty("loadState").GetString(), new[] { "Loaded", "Loading" });
-            Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
+            var loadState = project.GetProperty("loadState").GetString();
+            Assert.Contains(loadState, new[] { "Loaded", "Loading" });
+            if (loadState == "Loaded")
+            {
+                Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
+            }
             var navigation = structured.GetProperty("navigation");
-            Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
-            Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
-            Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
+            var snapshot = navigation.GetProperty("snapshot");
+            if (loadState == "Loaded")
+            {
+                Assert.Equal("source", snapshot.GetProperty("kind").GetString());
+                Assert.True(snapshot.GetProperty("fresh").GetBoolean());
+                Assert.False(string.IsNullOrWhiteSpace(snapshot.GetProperty("fingerprint").GetString()));
+            }
+            else
+            {
+                Assert.Equal("unavailable", snapshot.GetProperty("kind").GetString());
+                Assert.False(snapshot.GetProperty("fresh").GetBoolean());
+            }
 
         }
         finally

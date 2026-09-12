@@ -41,7 +41,7 @@ internal sealed record SymbolDeclarationDto(
     string? ContainerType,
     string? ReturnType,
     IReadOnlyList<string> Parameters,
-    string? DocCommentId,
+    [property: JsonPropertyName("id")] string? DocCommentId,
     IReadOnlyList<string>? BaseTypes = null,
     IReadOnlyList<string>? Members = null,
     string ScopeType = "unknown",
@@ -59,7 +59,7 @@ internal sealed record CallersReportDto(
     IReadOnlyList<string>? TruncatedBy = null,
     string Semantics = FeatureContextSemantics.StaticCallSites,
     string Completeness = FeatureContextStatus.Complete,
-    string? NextStep = null,
+    [property: JsonIgnore] string? NextStep = null,
     McpScopeMetadata? Scope = null,
     int ExcludedCount = 0
 );
@@ -88,7 +88,7 @@ internal sealed record StaticTestContextReportDto(
     IReadOnlyList<string>? TruncatedBy = null,
     string Completeness = FeatureContextStatus.Complete,
     string EvidenceBoundary = FeatureContextSemantics.StaticTestCandidates,
-    string? NextStep = null,
+    [property: JsonIgnore] string? NextStep = null,
     McpScopeMetadata? Scope = null,
     int ExcludedCount = 0
 );
@@ -123,7 +123,7 @@ internal sealed record ViolationsReportDto(
     string Status = FeatureContextStatus.Complete,
     string? ReasonCode = null,
     IReadOnlyList<string>? TruncatedBy = null,
-    string? NextStep = null,
+    [property: JsonIgnore] string? NextStep = null,
     McpScopeMetadata? Scope = null
 );
 

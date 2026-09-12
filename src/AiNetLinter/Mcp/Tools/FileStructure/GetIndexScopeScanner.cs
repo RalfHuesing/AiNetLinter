@@ -30,7 +30,7 @@ internal static class GetIndexScopeScanner
     internal static async System.Threading.Tasks.Task<(string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries, IndexScopePopulation Population)> BuildBreakdownAsync(Solution solution, System.Threading.CancellationToken cancellationToken)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var csCount = CountCsFiles(solution, solutionDir);
+        var csCount = CountPhysicalCSharpFiles(solution, solutionDir);
         var nonCSharpCounts = CountNonCSharpFiles(solution);
         var entries = new List<FileTypeBreakdownEntry>();
         if (csCount > 0)
@@ -55,33 +55,36 @@ internal static class GetIndexScopeScanner
                 ScopeType: "all",
                 FileFilter: $"**/*{pair.Key}")));
 
-        var text = FormatBreakdown(entries);
         var documents = solution.Projects.SelectMany(project => project.Documents).ToList();
         var classifier = new McpScopeClassifier();
         var scopes = await System.Threading.Tasks.Task.WhenAll(documents.Select(document => classifier.ClassifyAsync(document, cancellationToken)));
         var generatedDocumentCount = scopes.Count(scope => scope.SourceKind == McpSourceKind.Generated);
         var testDocumentCount = scopes.Count(scope => scope.ProjectKind == McpProjectKind.Tests);
-        return (text, entries, new IndexScopePopulation(
+        var population = new IndexScopePopulation(
             csCount + nonCSharpCounts.Values.Sum(),
             documents.Count,
             generatedDocumentCount,
             testDocumentCount,
-            documents.Count - csCount,
-            entries.Sum(entry => entry.Count)));
+            entries.Sum(entry => entry.Count));
+        return (FormatBreakdown(entries, population), entries, population);
     }
 
-    private static int CountCsFiles(Solution solution, string solutionDir)
+    private static int CountPhysicalCSharpFiles(Solution solution, string solutionDir)
     {
-        var count = 0;
+        var physicalPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var project in solution.Projects)
         {
             foreach (var document in project.Documents)
             {
-                if (SourceFileCatalog.IsValidDocument(document, solutionDir)) count++;
+                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)
+                    || string.IsNullOrWhiteSpace(document.FilePath)
+                    || !File.Exists(document.FilePath)) continue;
+
+                physicalPaths.Add(Path.GetFullPath(document.FilePath));
             }
         }
 
-        return count;
+        return physicalPaths.Count;
     }
 
     private static IReadOnlyDictionary<string, int> CountNonCSharpFiles(Solution solution)
@@ -116,8 +119,14 @@ internal static class GetIndexScopeScanner
         counts[extension] = counts.TryGetValue(extension, out var count) ? count + 1 : 1;
     }
 
-    private static string FormatBreakdown(IReadOnlyList<FileTypeBreakdownEntry> entries) =>
-        string.Join("\n", entries.Select(FormatFileCountLine));
+    private static string FormatBreakdown(
+        IReadOnlyList<FileTypeBreakdownEntry> entries,
+        IndexScopePopulation population) =>
+        string.Join("\n", entries.Select(FormatFileCountLine)) +
+        $"\n\nPopulation: {population.PhysicalFileCount} physische Dateien in der Aufschluesselung; " +
+        $"{population.RoslynDocumentCount} Roslyn-Dokumente " +
+        $"({population.GeneratedDocumentCount} generiert, {population.TestDocumentCount} in Testprojekten); " +
+        $"{population.ShownPhysicalFileCount} physische Dateien nach Extension gezeigt.";
 
     private static string FormatFileCountLine(FileTypeBreakdownEntry entry)
     {
@@ -173,5 +182,4 @@ internal sealed record IndexScopePopulation(
     int RoslynDocumentCount,
     int GeneratedDocumentCount,
     int TestDocumentCount,
-    int ExcludedCount,
-    int ShownCount);
+    int ShownPhysicalFileCount);

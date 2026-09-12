@@ -13,7 +13,10 @@ namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 public sealed class ThinClientsSharedWarmthProcessContractTests
 {
     private const int FirstHealthId = 3;
-    private const int LastHealthId = 42;
+    // Der Wire-Vertrag braucht einen warmen zweiten Client, nicht vierzig identische
+    // Polls. Zwanzig Sekunden decken den realen Roslyn-Load ab und halten den
+    // unverzichtbaren Multiprozess-Test aus dem Runner-Hot-Path heraus.
+    private const int LastHealthId = 22;
     private const int SecondaryLastHealthId = 8;
     private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(1);
 
@@ -31,6 +34,10 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             var solutionPath = fixture.SolutionPath;
             using var isolatedState = TestTempDirectory.Create("thin-client-shared-state-");
             var clientFrames = CreateClientFrames(solutionPath);
+            var daemonSpec = new DaemonProcessSpec(
+                fixture.SolutionPath,
+                isolatedState.DirectoryPath,
+                IdleExitMinutes: 5);
 
             // Der lange Idle-Exit haelt den Daemon zwischen beiden Clients am Leben;
             // das Teardown killt ihn anhand der Welcome-PID, bevor das Fixture freigegeben wird.
@@ -47,6 +54,12 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
                     LocalAppDataOverride = isolatedState.DirectoryPath,
                     DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
                 }).ConfigureAwait(false);
+            // Die Welcome-PID gehoert zur Pipe, nicht zum oeffentlichen Health-Vertrag.
+            // Sie muss vor den nachfolgenden Assertions feststehen, damit ein fehlschlagender
+            // Wire-Contract den langlebigen Testdaemon niemals verwaist zuruecklaesst.
+            sharedPid = await DaemonProcessContractHarness
+                .GetDaemonProcessIdAsync(daemonSpec, CancellationToken.None)
+                .ConfigureAwait(false);
             var second = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
                 fixture.SolutionPath,
                 CreateClientFrames(solutionPath, primary: false),
@@ -62,40 +75,27 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             Assert.Equal(0, first.ExitCode);
             Assert.Equal(0, second.ExitCode);
 
-            var healthFirst = LatestLoadedHealthOrThrow(first.StdoutLines);
-            var healthSecond = LatestLoadedHealthOrThrow(second.StdoutLines);
-            var daemonFirst = healthFirst.GetProperty("daemon");
-            var daemonSecond = healthSecond.GetProperty("daemon");
-            Assert.Equal("daemon", daemonFirst.GetProperty("mode").GetString());
-            Assert.Equal("daemon", daemonSecond.GetProperty("mode").GetString());
+            var secondDaemonPid = await DaemonProcessContractHarness
+                .GetDaemonProcessIdAsync(daemonSpec, CancellationToken.None)
+                .ConfigureAwait(false);
+            var healthFirst = LatestLoadedTargetHealthOrThrow(first.StdoutLines, LastHealthId);
+            var healthSecond = LatestLoadedTargetHealthOrThrow(second.StdoutLines, SecondaryLastHealthId);
 
-            sharedPid = daemonFirst.GetProperty("processId").GetInt32();
             Assert.True(sharedPid > 0);
-            Assert.Equal(sharedPid, daemonSecond.GetProperty("processId").GetInt32());
+            Assert.Equal(sharedPid, secondDaemonPid);
 
-            var projectsFirst = healthFirst.GetProperty("projects");
-            var projectsSecond = healthSecond.GetProperty("projects");
-            // Bewusst Root-Match statt Single(): Der geteilte Daemon darf auch
-            // fremde Keys resident halten, solange der Fixture-Key geteilt wird.
-            var entryFirst = SelectFixtureEntry(projectsFirst, solutionPath);
-            var entrySecond = SelectFixtureEntry(projectsSecond, solutionPath);
+            var entryFirst = healthFirst.GetProperty("project");
+            var entrySecond = healthSecond.GetProperty("project");
+            Assert.Equal(solutionPath, entryFirst.GetProperty("targetPath").GetString(), ignoreCase: true);
+            Assert.Equal(solutionPath, entrySecond.GetProperty("targetPath").GetString(), ignoreCase: true);
 
             // Shared-Warmth (B.6): beide Clients treffen dieselbe residente Projekt-Instanz —
             // kein zweiter vollstaendiger Load und kein Refresh dazwischen (identischer
-            // Refresh-Zaehler), waehrend die Instanz-Uptime strikt weitergelaufen ist.
+            // Refresh-Zaehler). Die target-gebundene Projektion exponiert absichtlich
+            // keine daemonweite Uptime; die identische Pipe-Welcome-PID beweist die Instanz.
             var refreshFirst = entryFirst.GetProperty("refreshCount").GetInt32();
             var refreshSecond = entrySecond.GetProperty("refreshCount").GetInt32();
             Assert.Equal(refreshFirst, refreshSecond);
-            var uptimeFirst = entryFirst.GetProperty("uptimeSeconds").GetDouble();
-            var uptimeSecond = entrySecond.GetProperty("uptimeSeconds").GetDouble();
-            Assert.True(
-                uptimeSecond > uptimeFirst,
-                $"Instanz-Uptime nicht gewachsen: erster Client {uptimeFirst}s, zweiter Client {uptimeSecond}s.");
-
-            var keys = daemonSecond.GetProperty("keys");
-            Assert.Contains(
-                keys.EnumerateArray(),
-                key => string.Equals(key.GetString(), solutionPath, StringComparison.OrdinalIgnoreCase));
 
         }
         finally
@@ -118,6 +118,8 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         };
         for (var id = FirstHealthId; id <= lastHealthId; id++)
         {
+            // Der zielgebundene Poll treibt das Laden genau dieses Projekts voran und
+            // liefert dessen reduzierte, aber fuer Shared-Warmth ausreichende Projektion.
             var arguments = JsonSerializer.Serialize(new { targetPath });
             frames.Add(
                 "{\"jsonrpc\":\"2.0\",\"id\":" + id.ToString(System.Globalization.CultureInfo.InvariantCulture) +
@@ -127,35 +129,19 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         return [.. frames];
     }
 
-    private static JsonElement LatestLoadedHealthOrThrow(IReadOnlyList<string> lines)
+    private static JsonElement LatestLoadedTargetHealthOrThrow(IReadOnlyList<string> lines, int lastHealthId)
     {
-        // Fehlende Ids (kuerzere Secondary-Sequenz) werden einfach uebersprungen.
-        for (var id = LastHealthId; id >= FirstHealthId; id--)
+        for (var id = lastHealthId; id >= FirstHealthId; id--)
         {
-            try
+            var structured = StructuredContentOf(lines, id);
+            var project = structured.GetProperty("project");
+            if (string.Equals(project.GetProperty("loadState").GetString(), "Loaded", StringComparison.Ordinal))
             {
-                var structured = StructuredContentOf(lines, id);
-                var projects = structured.GetProperty("projects");
-                if (projects.GetArrayLength() > 0 &&
-                    string.Equals(
-                        projects[0].GetProperty("loadState").GetString(),
-                        "Loaded",
-                        StringComparison.Ordinal))
-                {
-                    return structured;
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // Antwort zu dieser Id fehlt oder war unvollständig — aeltere pruefen.
-            }
-            catch (KeyNotFoundException)
-            {
-                // dito.
+                return structured;
             }
         }
 
-        throw new InvalidOperationException("Keine get_server_health-Antwort mit LoadState 'Loaded' gefunden.");
+        throw new InvalidOperationException("Keine zielgebundene get_server_health-Antwort mit LoadState 'Loaded' gefunden.");
     }
 
     private static JsonElement StructuredContentOf(IReadOnlyList<string> lines, int id)
@@ -166,22 +152,6 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             result.TryGetProperty("isError", out var isError) && isError.GetBoolean(),
             $"Tool-Aufruf id={id} lieferte einen Fehler: {response.ToString()}");
         return result.GetProperty("structuredContent");
-    }
-
-    private static JsonElement SelectFixtureEntry(JsonElement projects, string fixtureRoot)
-    {
-        foreach (var entry in projects.EnumerateArray())
-        {
-            if (string.Equals(
-                    entry.GetProperty("targetPath").GetString(),
-                    fixtureRoot,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return entry;
-            }
-        }
-
-        throw new InvalidOperationException($"Kein Projekt-Eintrag fuer '{fixtureRoot}' in der Health-Antwort.");
     }
 
     private static void TryKill(int processId)

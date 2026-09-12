@@ -17,8 +17,9 @@ internal static class GetFileTreeRenderer
         var builder = new StringBuilder();
         builder.AppendLine($"get_file_tree: root={payload.Root} view={payload.View}");
         builder.AppendLine(
-            $"{summary.ScannedFileCount} Dateien gescannt, {summary.MatchedFileCount} Treffer, " +
+            $"{summary.ScannedFileCount} physische Dateien gescannt, {summary.MatchedFileCount} physische Dateitreffer, " +
             $"{FormatBytes(summary.MatchedBytes)} gematcht");
+        AppendExclusions(builder, payload.Exclusions);
         AppendExtensions(builder, summary.ByExtension);
 
         if (payload.View.Equals("tree", StringComparison.OrdinalIgnoreCase))
@@ -46,6 +47,12 @@ internal static class GetFileTreeRenderer
         var values = extensions.Select(extension =>
             $"{extension.Extension ?? "[ohne Extension]"} {extension.Count}");
         builder.AppendLine($"Extensions: {string.Join(", ", values)}");
+    }
+
+    private static void AppendExclusions(StringBuilder builder, FileTreeExclusions exclusions)
+    {
+        if (exclusions.ExcludedPhysicalFileCount == 0) return;
+        builder.AppendLine($"{exclusions.ExcludedPhysicalFileCount} physische Dateien durch angeforderte Ausschlussmuster ausgeschlossen");
     }
 
     private static void AppendTree(StringBuilder builder, FileTreePayload payload, int treeDepth)
@@ -107,30 +114,47 @@ internal static class GetFileTreeRenderer
         {
             var isSummary = payload.View.Equals("summary", StringComparison.OrdinalIgnoreCase);
             var isDepthOnly = completeness.TruncatedBy.Count == 1 && completeness.TruncatedBy[0] == "maxDepth";
-            if (isDepthOnly)
-            {
-                builder.AppendLine($"[WARN]: Scantiefe begrenzt ({string.Join(", ", completeness.TruncatedBy)}), tiefere Ebenen nicht gescannt.");
-                builder.Append("[HINWEIS]: maxDepth bzw. treeDepth anpassen fuer tiefere Ebenen.");
-                return;
-            }
-
-            var warning = isSummary
-                ? $"[WARN]: {payload.Summary.MatchedFileCount} Dateien aggregiert, Verzeichnisliste begrenzt ({string.Join(", ", completeness.TruncatedBy)})."
-                : $"[WARN]: {payload.Summary.MatchedFileCount} Dateien gematcht, {completeness.ShownFileCount} gezeigt ({string.Join(", ", completeness.TruncatedBy)}).";
+            var warning = isDepthOnly
+                ? $"[WARN]: Scantiefe begrenzt ({string.Join(", ", completeness.TruncatedBy)}), tiefere Ebenen nicht gescannt."
+                : isSummary
+                    ? $"[WARN]: {payload.Summary.MatchedFileCount} physische Dateien aggregiert, Verzeichnisliste begrenzt ({string.Join(", ", completeness.TruncatedBy)})."
+                    : $"[WARN]: {payload.Summary.MatchedFileCount} physische Dateien gematcht, {completeness.ShownPhysicalFileCount} gezeigt ({string.Join(", ", completeness.TruncatedBy)}).";
             builder.AppendLine(warning);
-            builder.Append(isSummary
-                ? "[HINWEIS]: Verzeichnisliste auf Top-Level-Aggregate begrenzt; maxResults oder treeDepth anpassen."
-                : "[HINWEIS]: root/fileFilter verfeinern oder maxResults anpassen.");
+            AppendSkippedDirectoryDetails(builder, completeness);
+            builder.Append(isDepthOnly
+                ? "[HINWEIS]: maxDepth bzw. treeDepth anpassen fuer tiefere Ebenen."
+                : isSummary
+                    ? "[HINWEIS]: Verzeichnisliste auf Top-Level-Aggregate begrenzt; maxResults oder treeDepth anpassen."
+                    : "[HINWEIS]: root/fileFilter verfeinern oder maxResults anpassen.");
             return;
         }
 
         var status = payload.View.Equals("summary", StringComparison.OrdinalIgnoreCase)
-            ? $"{payload.Summary.MatchedFileCount} Dateien aggregiert"
-            : $"{completeness.ShownFileCount} Dateien gezeigt";
+            ? $"{payload.Summary.MatchedFileCount} physische Dateien aggregiert"
+            : $"{completeness.ShownPhysicalFileCount} physische Dateien gezeigt";
         builder.Append($"[{(completeness.ScanCompleted ? "vollstaendig" : "partiell")}: {status}]");
+        AppendSkippedDirectoryDetails(builder, completeness);
         if (completeness.Warnings.Count > 0)
         {
             builder.Append($" {completeness.Warnings.Count} Warnung(en)");
+        }
+    }
+
+    private static void AppendSkippedDirectoryDetails(StringBuilder builder, FileTreeCompleteness completeness)
+    {
+        if (completeness.SkippedExcludedDirectoryCount > 0)
+        {
+            builder.Append($" {completeness.SkippedExcludedDirectoryCount} Standard-Ausschlussverzeichnisse uebersprungen.");
+        }
+
+        if (completeness.SkippedReparsePointDirectoryCount > 0)
+        {
+            builder.Append($" {completeness.SkippedReparsePointDirectoryCount} Reparse-Point-Verzeichnisse uebersprungen.");
+        }
+
+        if (completeness.InaccessibleDirectoryCount > 0)
+        {
+            builder.Append($" {completeness.InaccessibleDirectoryCount} unzugaengliche Verzeichnisse nicht gelesen.");
         }
     }
 

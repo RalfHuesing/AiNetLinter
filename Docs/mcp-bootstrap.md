@@ -6,7 +6,8 @@ und keine Suche im Arbeitsverzeichnis.
 
 ## Ablauf
 
-1. Wähle aus der für den Host sichtbaren Dateiliste den konkreten absoluten
+1. Der Agent MUSS zuerst das passende Target aus der für den Host sichtbaren
+   Dateiliste wählen: den konkreten absoluten
    Pfad zu einer vorhandenen `.sln`- oder `.slnx`-Datei für Source-Analyse
    beziehungsweise zu einer vorhandenen `.dll`- oder `.exe`-Datei für
    Decompiled-Analyse. Bei mehreren möglichen Solutions nicht raten, sondern
@@ -88,6 +89,33 @@ ainetlinter://rules{?targetPath}
 keinen Target- oder Projektkontextparameter. Unbekannte Properties werden nicht
 still ignoriert, sondern gegen das aktuelle `tools/list`-Schema geprüft und als
 `invalid_argument` mit Feldnamen abgelehnt.
+
+## Antwort- und Folgeaufrufvertrag
+
+Zielgebundene Antworten verwenden Contract v2. `navigation.status.operation`
+beschreibt die Ausführung, `navigation.status.completeness` die Vollständigkeit
+der Antwort; fachliche Analysequalität (etwa partielle Assembly-Diagnostics)
+bleibt davon getrennt. Bei `RESPONSE_BUDGET_TOO_SMALL` enthält der Fehler
+`fieldPath=$.maxResponseBytes`, `requestedBytes` und `minimumResponseBytes`.
+Mit demselben Request und Snapshot ist dieser Mindestwert unmittelbar als
+`maxResponseBytes` wiederholbar; Text, Structured Content und Navigation werden
+gemeinsam in UTF-8 gemessen.
+
+Stabile Handoff-IDs werden nur aus dem dafür vorgesehenen
+`structuredContent`-Feld `id` übernommen, nie aus Markdown,
+`docCommentId` oder einem Anzeigenamen. Bei Assembly-Tools trennt
+`includeReferences` die Suchbreite: `false` bleibt für eine Root-ID root-only
+und öffnet für eine verifizierte Referenz-ID ausschließlich deren Owner;
+`true` erlaubt die begrenzte Referenz-Closure. Die Antwort weist angeforderten
+und effektiven Suchmodus aus. Ein zielgebundener Health-Call zeigt nur das
+adressierte Target; Daemon- und Prozessaggregate stehen ausschließlich im
+globalen Health-Call.
+
+`get_file_tree` zählt physische Dateien, während `get_index_scope` die
+Roslyn-Dokumentpopulation beschreibt. Ausschlüsse bleiben nach Ursache und
+Einheit getrennt (`excludedPhysicalFileCount`, übersprungene Ausschluss-,
+Reparse-Point- und unlesbare Verzeichnisse); diese Counts nicht gegenseitig
+umdeuten.
 
 ---
 

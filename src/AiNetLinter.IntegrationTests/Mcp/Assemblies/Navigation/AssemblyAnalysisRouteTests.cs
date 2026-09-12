@@ -2,12 +2,14 @@
 
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -25,161 +27,6 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 // @covers AssemblyFindReferencesTool
 public sealed partial class AssemblyAnalysisRouteTests
 {
-    [Fact]
-    public async Task AssemblyRoute_ResolvesRootReferenceAndAllowsLazyTransitiveTarget()
-    {
-        using var temp = TestTempDirectory.Create("assembly-route-reference-target-");
-        var dependencyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedReferenceTarget",
-            "namespace Probe; public sealed class DependencyType { public int Value => 1; }");
-        var rootPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedReferenceRoot",
-            "namespace Probe; public sealed class Root { public DependencyType Value { get; } = new(); }",
-            dependencyPath);
-        await using var registry = new AssemblyAnalysisRegistry();
-
-        var rootResult = await AnalysisToolCall.ExecuteRouted(
-            AssemblyAnalysisDispatcher.CreateRoute(registry),
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest(rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
-                        lease,
-                        new InspectAssemblyArguments(lease.CanonicalPath, null, null, null, true, 100)),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-        Assert.NotNull(rootResult.StructuredContent);
-        var reference = Assert.Single(
-            rootResult.StructuredContent!.Value.GetProperty("references").EnumerateArray(),
-            item => item.GetProperty("name").GetString() == "RoutedReferenceTarget");
-        var resolvedPath = reference.GetProperty("resolvedPath").GetString();
-        Assert.Equal(Path.GetFullPath(dependencyPath), resolvedPath, StringComparer.OrdinalIgnoreCase);
-
-        var dependencySession = Assert.Single(
-            rootResult.StructuredContent.Value.GetProperty("referenceSessions").EnumerateArray(),
-            item => item.GetProperty("reference").GetProperty("name").GetString() == "RoutedReferenceTarget");
-        Assert.Equal("RoutedReferenceTarget", dependencySession.GetProperty("identity").GetProperty("name").GetString());
-        Assert.Equal("complete", dependencySession.GetProperty("sessionStatus").GetString());
-        Assert.Contains("RoutedReferenceTarget", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(rootResult.Content)).Text, StringComparison.Ordinal);
-        Assert.Equal(1, registry.ResidentCount);
-    }
-
-    [Fact]
-    public async Task AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()
-    {
-        using var temp = TestTempDirectory.Create("assembly-route-symbol-graph-");
-        var dependencyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedSymbolDependency",
-            "namespace Probe; public sealed class DependencyType { public int Value => 1; public int Read() => Value; }");
-        var secondDependencyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedSymbolSecondDependency",
-            "namespace Probe; public sealed class ExclusiveDependencyType { public int Value => 2; }");
-        var rootPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedSymbolRoot",
-            "namespace Probe; public sealed class Root { public int Read() => new DependencyType().Read(); public int ReadOther() => new ExclusiveDependencyType().Value; }",
-            dependencyPath,
-            secondDependencyPath);
-        await using var registry = new AssemblyAnalysisRegistry();
-        var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
-
-        var symbolResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest(rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
-                        lease,
-                        new AssemblyFindSymbolRequest(["ExclusiveDependencyType"], null, 50, true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, symbolResult.IsError);
-        var symbolPayload = symbolResult.StructuredContent!.Value;
-        var symbolMatch = Assert.Single(
-            symbolPayload.GetProperty("results")[0].GetProperty("matches").EnumerateArray());
-        Assert.Equal("Probe.ExclusiveDependencyType", symbolMatch.GetProperty("name").GetString());
-        Assert.Equal("decompiled", symbolMatch.GetProperty("origin").GetProperty("originKind").GetString());
-        Assert.True(symbolPayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
-        Assert.True(symbolPayload.GetProperty("navigation").GetProperty("totalAssemblyCount").GetInt32() >= 3);
-        Assert.Equal("partial", symbolPayload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
-        Assert.NotEmpty(symbolPayload.GetProperty("navigation").GetProperty("diagnostics").EnumerateArray());
-
-        var impactResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest(rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
-                        lease,
-                        new GetImpactInput(null, "Probe.Root.Read", 50, 1),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, impactResult.IsError);
-        var impactPayload = impactResult.StructuredContent!.Value;
-        Assert.Equal("decompiled", impactPayload.GetProperty("analysis").GetProperty("origin").GetString());
-        Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", Text(impactResult), StringComparison.Ordinal);
-
-        var referenceResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest(rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
-                        lease,
-                        new AssemblyFindReferencesRequest("Probe.DependencyType.Read", 50, 1, true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.True(
-            referenceResult.IsError != true,
-            string.Join("\n", referenceResult.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
-        var referencePayload = referenceResult.StructuredContent!.Value;
-        Assert.True(referencePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
-        Assert.Equal("partial", referencePayload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
-        Assert.True(referencePayload.TryGetProperty("callSites", out _));
-        var referenceText = Text(referenceResult);
-        Assert.DoesNotContain("handoff=", referenceText, StringComparison.Ordinal);
-        Assert.DoesNotContain("id: `a:", referenceText, StringComparison.Ordinal);
-        var referenceCallSite = referencePayload.GetProperty("callSites")[0];
-        Assert.StartsWith("a:", referenceCallSite.GetProperty("id").GetString(), StringComparison.Ordinal);
-        Assert.Equal("member", referenceCallSite.GetProperty("handoffKind").GetString());
-        Assert.False(referenceCallSite.TryGetProperty("targetPath", out _));
-        Assert.False(referenceCallSite.TryGetProperty("snapshot", out _));
-        Assert.False(referenceCallSite.TryGetProperty("allowedFollowUpTools", out _));
-        Assert.False(referenceCallSite.TryGetProperty("origin", out _));
-
-        var treeResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest(rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
-                        lease,
-                        new AssemblyGetCallTreeRequest(
-                            new GetCallTreeInput("Probe.DependencyType.Read", 2, null, 10, null),
-                            true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, treeResult.IsError);
-        Assert.Contains("assembly=", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(treeResult.Content)).Text, StringComparison.Ordinal);
-        var treePayload = treeResult.StructuredContent!.Value;
-        Assert.True(treePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
-        var graph = treePayload.GetProperty("graph");
-        Assert.NotEmpty(graph.GetProperty("nodes").EnumerateArray());
-        Assert.NotEmpty(graph.GetProperty("edges").EnumerateArray());
-    }
-
     [Fact]
     public async Task AssemblyRoute_CallTreeSkipsGeneralWireTrimAndRefreshesFinalBudget()
     {
@@ -234,7 +81,7 @@ public sealed partial class AssemblyAnalysisRouteTests
         Assert.Equal(textBytes, wireBudget.GetProperty("textBytes").GetInt32());
         Assert.Equal(structuredBytes, wireBudget.GetProperty("structuredBytes").GetInt32());
         Assert.Equal(textBytes + structuredBytes, wireBudget.GetProperty("totalBytes").GetInt32());
-        Assert.True(wireBudget.GetProperty("truncated").GetBoolean(), payload.GetRawText());
+        Assert.False(wireBudget.GetProperty("truncated").GetBoolean(), payload.GetRawText());
         Assert.True(wireBudget.GetProperty("totalBytes").GetInt32() <= 8_192, payload.GetRawText());
     }
 
@@ -364,6 +211,185 @@ public sealed partial class AssemblyAnalysisRouteTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_ReferenceHandoffWithoutExpansionSearchesOnlyItsOwner()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-owner-only-");
+        var alphaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerOnlyAlpha",
+            "namespace Probe; public sealed class SharedTarget { public int Read() => 1; } public sealed class AlphaCaller { public int Invoke() => new SharedTarget().Read(); }");
+        var betaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerOnlyBeta",
+            "namespace Probe; public sealed class SharedTarget { public int Read() => 2; } public sealed class BetaCaller { public int Invoke() => new SharedTarget().Read(); }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerOnlyRoot",
+            "namespace Probe; public sealed class Root { public object Value => new AlphaCaller(); }",
+            alphaPath,
+            betaPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
+
+        var symbols = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindSymbolRequest(["SharedTarget"], null, 50, true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+        var alphaId = Assert.Single(symbols.StructuredContent!.Value.GetProperty("results")[0]
+            .GetProperty("matches").EnumerateArray(), match => string.Equals(
+                match.GetProperty("origin").GetProperty("canonicalPath").GetString(),
+                Path.GetFullPath(alphaPath),
+                StringComparison.OrdinalIgnoreCase)).GetProperty("id").GetString();
+
+        var result = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindReferencesRequest(alphaId, 50, 1, false),
+                        CancellationToken.None)),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value;
+        var navigation = payload.GetProperty("navigation");
+        Assert.False(navigation.GetProperty("requestedIncludeReferences").GetBoolean());
+        Assert.Equal("symbol_owner_only", navigation.GetProperty("effectiveSearchMode").GetString());
+        Assert.Equal(1, navigation.GetProperty("searchedAssemblyCount").GetInt32());
+        Assert.NotEmpty(payload.GetProperty("callSites").EnumerateArray());
+        Assert.All(payload.GetProperty("callSites").EnumerateArray(), callSite =>
+            Assert.EndsWith("AlphaCaller.cs", callSite.GetProperty("filePath").GetString(), StringComparison.OrdinalIgnoreCase));
+
+        var rootOnly = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindReferencesRequest("Probe.Root.Value", 50, 1, false),
+                        CancellationToken.None)),
+                CancellationToken.None));
+        var rootNavigation = rootOnly.StructuredContent!.Value.GetProperty("navigation");
+        Assert.False(rootNavigation.GetProperty("requestedIncludeReferences").GetBoolean());
+        Assert.Equal("root_only", rootNavigation.GetProperty("effectiveSearchMode").GetString());
+        Assert.Equal(1, rootNavigation.GetProperty("searchedAssemblyCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_ReferenceHandoffOpensOnlyItsOwnerForOwnerOnlyAndClosureScopes()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-owner-session-scope-");
+        var alphaChildPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerSessionAlphaChild",
+            "namespace Probe; public sealed class AlphaChild { public int Value => 1; }");
+        var alphaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerSessionAlpha",
+            "namespace Probe; public sealed class SharedTarget { public int Read() => new AlphaChild().Value; }",
+            alphaChildPath);
+        var betaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerSessionBeta",
+            "namespace Probe; public sealed class BetaOnly { public int Read() => 2; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OwnerSessionRoot",
+            "namespace Probe; public sealed class Root { public object Value => new SharedTarget(); public object Other => new BetaOnly(); }",
+            alphaPath,
+            betaPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var alphaLeaseResult = await registry.LeaseAsync(alphaPath);
+        Assert.Null(alphaLeaseResult.Error);
+        string alphaId;
+        using (var alphaLease = alphaLeaseResult.Lease!)
+        {
+            var alphaSymbol = alphaLease.Context.Compilation
+                .GetTypeByMetadataName("Probe.SharedTarget")!
+                .GetMembers("Read")
+                .Single();
+            alphaId = AnalysisSymbolIdentity.ForAssembly(
+                    alphaLease.CanonicalPath,
+                    alphaLease.Context.Origin.ContentHash,
+                    alphaLease.Context.Generation)
+                .FormatHandoff(alphaSymbol)!;
+        }
+
+        var rootLeaseResult = await registry.LeaseAsync(rootPath);
+        Assert.Null(rootLeaseResult.Error);
+        using var rootLease = rootLeaseResult.Lease!;
+
+        var ownerOnly = await AssemblyFindReferencesTool.ExecuteAsync(
+            rootLease,
+            new AssemblyFindReferencesRequest(alphaId, 50, 1, false),
+            CancellationToken.None);
+
+        Assert.False(ownerOnly.IsError == true, Text(ownerOnly));
+        Assert.All(rootLease.ReferenceLeasesSnapshot(), opened =>
+            Assert.Equal(Path.GetFullPath(alphaPath), opened.CanonicalPath, ignoreCase: true));
+
+        var closure = await AssemblyFindReferencesTool.ExecuteAsync(
+            rootLease,
+            new AssemblyFindReferencesRequest(alphaId, 50, 1, true),
+            CancellationToken.None);
+
+        Assert.False(closure.IsError == true, Text(closure));
+        Assert.All(rootLease.ReferenceLeasesSnapshot(), opened =>
+            Assert.Equal(Path.GetFullPath(alphaPath), opened.CanonicalPath, ignoreCase: true));
+        Assert.Contains(rootLease.ReferenceLeasesSnapshot(), ownerLease =>
+            ownerLease.ReferenceLeasesSnapshot().Any(opened =>
+                string.Equals(opened.CanonicalPath, Path.GetFullPath(alphaChildPath), StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_GetSymbolBodyResolvesBatchHandoffsFromTheirVerifiedOwners()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-body-batch-owners-");
+        var alphaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BodyBatchAlpha",
+            "namespace Probe; public sealed class Alpha { public int Read() => 1; }");
+        var betaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BodyBatchBeta",
+            "namespace Probe; public sealed class Beta { public int Read() => 2; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BodyBatchRoot",
+            "namespace Probe; public sealed class Root { public int Alpha() => new Alpha().Read(); public int Beta() => new Beta().Read(); }",
+            alphaPath,
+            betaPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var alphaId = await CreateMemberHandoffAsync(registry, alphaPath, "Probe.Alpha", "Read");
+        var betaId = await CreateMemberHandoffAsync(registry, betaPath, "Probe.Beta", "Read");
+        var rootLeaseResult = await registry.LeaseAsync(rootPath);
+        Assert.Null(rootLeaseResult.Error);
+        using var rootLease = rootLeaseResult.Lease!;
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            rootLease,
+            new GetSymbolBodyRequest([alphaId, betaId]),
+            CancellationToken.None);
+
+        Assert.False(result.IsError == true, Text(result));
+        var entries = result.StructuredContent!.Value.GetProperty("results").EnumerateArray().ToArray();
+        Assert.Equal(2, entries.Length);
+        Assert.All(entries, entry => Assert.StartsWith("a:", entry.GetProperty("id").GetString(), StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AssemblyRoute_GetImpactWithoutSymbolReturnsRecoverableInvalidArgument()
     {
         using var temp = TestTempDirectory.Create("assembly-route-impact-invalid-");
@@ -384,7 +410,7 @@ public sealed partial class AssemblyAnalysisRouteTests
                         CancellationToken.None)),
                 CancellationToken.None));
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError == true);
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Contains("symbolIdentifier", Text(result), StringComparison.Ordinal);
         Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", Text(result), StringComparison.Ordinal);
@@ -445,4 +471,28 @@ public sealed partial class AssemblyAnalysisRouteTests
 
     private static string Text(ModelContextProtocol.Protocol.CallToolResult result) =>
         Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+
+    private static void AssertCompositeSectionErrors(JsonElement payload)
+    {
+        Assert.Equal("NOT_CONFIGURED", payload.GetProperty("metrics").GetProperty("code").GetString());
+        Assert.Equal("SYMBOL_NOT_FOUND", payload.GetProperty("body").GetProperty("code").GetString());
+        Assert.Equal("SYMBOL_NOT_FOUND", payload.GetProperty("classStructure").GetProperty("code").GetString());
+    }
+
+    private static async Task<string> CreateMemberHandoffAsync(
+        AssemblyAnalysisRegistry registry,
+        string assemblyPath,
+        string typeName,
+        string memberName)
+    {
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var member = lease.Context.Compilation.GetTypeByMetadataName(typeName)!.GetMembers(memberName).Single();
+        return AnalysisSymbolIdentity.ForAssembly(
+                lease.CanonicalPath,
+                lease.Context.Origin.ContentHash,
+                lease.Context.Generation)
+            .FormatHandoff(member)!;
+    }
 }

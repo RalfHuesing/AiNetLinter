@@ -48,6 +48,8 @@ public sealed class GetIndexScopeToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains(BuildBreakdownLine(".cs", 5, "(voll vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Population:", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Roslyn-Dokumente", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -84,7 +86,9 @@ public sealed class GetIndexScopeToolTests
         Assert.True(population.GetProperty("roslynDocumentCount").GetInt32() >= 5);
         Assert.True(population.GetProperty("testDocumentCount").GetInt32() >= 0);
         Assert.True(population.GetProperty("generatedDocumentCount").GetInt32() >= 0);
-        Assert.Equal(entries.Sum(entry => entry.Count), population.GetProperty("shownCount").GetInt32());
+        Assert.Equal(entries.Sum(entry => entry.Count), population.GetProperty("shownPhysicalFileCount").GetInt32());
+        Assert.False(population.TryGetProperty("shownCount", out _));
+        Assert.False(population.TryGetProperty("excludedCount", out _));
     }
 
     [Fact]

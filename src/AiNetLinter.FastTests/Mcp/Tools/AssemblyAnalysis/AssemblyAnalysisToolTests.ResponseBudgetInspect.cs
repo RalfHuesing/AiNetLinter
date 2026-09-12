@@ -134,7 +134,45 @@ public sealed partial class AssemblyAnalysisToolTests
                 Assert.NotNull(extension.GenericParameters);
                 Assert.NotNull(extension.Constraints);
                 Assert.Contains(extension.Signature, text, StringComparison.Ordinal);
-            });
+        });
+    }
+
+    [Fact]
+    public async Task FindAssemblyExtensions_LeavesHandoffIdOutOfTextButKeepsItsSingleStructuredIdentity()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-extension-handoff-id-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ExtensionHandoffIdProbe",
+            "namespace Probe; public static class Extensions { public static string Extend(this object value) => value.ToString(); }");
+
+        var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(
+            null,
+            new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 10),
+            CancellationToken.None);
+
+        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
+        var extension = Assert.Single(payload.Extensions);
+        var handoffId = Assert.IsType<string>(extension.Id);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+
+        Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
+        Assert.Equal(handoffId, result.StructuredContent!.Value
+            .GetProperty("extensions")[0].GetProperty("id").GetString());
+        Assert.Equal(1, CountOccurrences(result.StructuredContent!.Value.GetRawText(), handoffId));
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        var offset = 0;
+        while ((offset = text.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += value.Length;
+        }
+
+        return count;
     }
 
     [Fact]

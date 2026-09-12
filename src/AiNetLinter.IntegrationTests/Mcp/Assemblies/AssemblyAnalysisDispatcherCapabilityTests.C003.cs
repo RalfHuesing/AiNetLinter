@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -58,6 +59,6 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Probe.NeedleDependency", text, StringComparison.Ordinal);
-        Assert.False(payload.GetProperty("wireTruncated").GetBoolean());
+        AssertFinalCombinedBudget(result, AssemblyAnalysisResponseLimits.DefaultResponseBytes);
     }
 }

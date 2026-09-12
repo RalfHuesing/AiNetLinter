@@ -209,7 +209,8 @@ internal sealed record GetImpactInput(
     int Depth,
     string? DetailLevel = null,
     int MaxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
-    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol)
+    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
+    bool IncludeReferences = false)
 {
     public string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;

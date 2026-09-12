@@ -89,4 +89,23 @@ public sealed class CallTreeMermaidRendererTests
         Assert.Contains("n4[\"... und 1 weitere\"]", text, StringComparison.Ordinal);
         Assert.Contains("n1 --> n4", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Render_ExcludesCanonicalHandoffIdFromMermaidLabel()
+    {
+        const string handoffId = "a:assembly:owner:snapshot:member:Probe.Target.Read";
+        var root = new MetricsTreeNode(
+            "Target.Read",
+            "",
+            0,
+            0,
+            "Target.cs:1",
+            Array.Empty<MetricsTreeNode>(),
+            Handoff: true,
+            Id: handoffId);
+
+        var text = CallTreeMermaidRenderer.Render(root, topN: 10);
+
+        Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
+    }
 }

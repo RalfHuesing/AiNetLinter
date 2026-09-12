@@ -30,6 +30,11 @@ internal sealed record McpRawWireRunOptions
 
 internal static class McpRawWireTestHarness
 {
+    private static readonly TimeSpan DefaultResponseTimeout = TimeSpan.FromSeconds(30);
+    // Nach allen erwarteten Frames ist der Wire-Vertrag erfüllt. Ein noch offener
+    // Server darf den Testhost nicht minutenlang festhalten oder Build-Artefakte sperren.
+    private static readonly TimeSpan ProcessExitTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan StderrDrainTimeout = TimeSpan.FromSeconds(2);
     private const string InitializeProtocolVersion = "2024-11-05";
     private const string ModernProtocolVersion = "2026-07-28";
     private const string ClientName = "FramingTestClient";
@@ -157,29 +162,38 @@ internal static class McpRawWireTestHarness
         var writerTask = WriteFramesAsync(writer, frames, targetPath, options.InterFrameDelay);
 
         var observed = new List<string>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-        try
+        var responseTimeout = GetResponseTimeout(frames.Length, options.InterFrameDelay);
+        using var responseCancellation = new CancellationTokenSource();
+        var readResponses = ReadStdoutFramesAsync(
+            process.StandardOutput,
+            observed,
+            expectedResponses,
+            responseCancellation.Token);
+        var receivedExpectedResponses = await Task.WhenAny(
+            readResponses,
+            Task.Delay(responseTimeout)).ConfigureAwait(false) == readResponses;
+        if (receivedExpectedResponses)
         {
-            await ReadStdoutFramesAsync(process.StandardOutput, observed, expectedResponses, cts.Token);
+            try { await readResponses.ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
         }
-        catch (OperationCanceledException)
+        else
         {
-            // Server-Timeout: bereits gelesene Frames werden fuer die Assertions erhalten.
+            // Named-pipe stdout kann einen CancellationToken erst nach einem weiteren
+            // Prozessereignis beobachten. Der externe Timeout bleibt daher der
+            // verbindliche Hang-Schutz; der nachfolgende Prozess-Kill loest den Read.
+            responseCancellation.Cancel();
         }
 
         try { await writerTask; } catch { /* Pipe-Close-Fehler ist hier unkritisch. */ }
         try { writer.Close(); } catch { /* Pipe evtl. schon geschlossen. */ }
 
-        try
+        var (exitCode, stderrText) = await EnsureProcessTerminatedAsync(process, stderrTask).ConfigureAwait(false);
+        if (!receivedExpectedResponses)
         {
-            await DrainRemainingStdoutAsync(process.StandardOutput, observed, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // Timeout beim Drain: der Prozess wird im Anschluss sicher beendet.
+            await Task.WhenAny(readResponses, Task.Delay(ProcessExitTimeout)).ConfigureAwait(false);
         }
 
-        var (exitCode, stderrText) = await EnsureProcessTerminatedAsync(process, stderrTask).ConfigureAwait(false);
         return new McpRawWireRunResult(observed, stderrText, exitCode);
     }
 
@@ -244,6 +258,19 @@ internal static class McpRawWireTestHarness
     private static int CountExpectedResponses(IEnumerable<string> frames) =>
         frames.Count(frame => frame.Contains("\"id\":", StringComparison.Ordinal));
 
+    private static TimeSpan GetResponseTimeout(int frameCount, TimeSpan? interFrameDelay)
+    {
+        if (interFrameDelay is not { } delay || delay <= TimeSpan.Zero)
+        {
+            return DefaultResponseTimeout;
+        }
+
+        var scheduledWriteDuration = TimeSpan.FromTicks(delay.Ticks * frameCount);
+        return scheduledWriteDuration > DefaultResponseTimeout
+            ? scheduledWriteDuration + DefaultResponseTimeout
+            : DefaultResponseTimeout;
+    }
+
     private static string AddTargetToToolCall(string frame, string targetPath)
     {
         try
@@ -288,28 +315,17 @@ internal static class McpRawWireTestHarness
         }
     }
 
-    private static async Task DrainRemainingStdoutAsync(
-        StreamReader stdout, List<string> observed, CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            var line = await stdout.ReadLineAsync(ct);
-            if (line is null) break;
-            observed.Add(line);
-        }
-    }
-
     private static async Task<(int ExitCode, string StderrText)> EnsureProcessTerminatedAsync(
         Process process,
         Task<string> stderrTask)
     {
         if (!process.HasExited)
         {
-            TryWaitOrKill(process);
+            await WaitOrKillAsync(process).ConfigureAwait(false);
         }
 
         var stderrText = string.Empty;
-        var completed = await Task.WhenAny(stderrTask, Task.Delay(TimeSpan.FromSeconds(10))).ConfigureAwait(false);
+        var completed = await Task.WhenAny(stderrTask, Task.Delay(StderrDrainTimeout)).ConfigureAwait(false);
         if (completed == stderrTask)
         {
             stderrText = await stderrTask.ConfigureAwait(false);
@@ -325,13 +341,15 @@ internal static class McpRawWireTestHarness
         }
     }
 
-    private static void TryWaitOrKill(Process process)
+    private static async Task WaitOrKillAsync(Process process)
     {
         try
         {
-            if (!process.WaitForExit(TimeSpan.FromSeconds(10)) && !process.HasExited)
+            var exit = process.WaitForExitAsync();
+            if (await Task.WhenAny(exit, Task.Delay(ProcessExitTimeout)).ConfigureAwait(false) != exit && !process.HasExited)
             {
                 process.Kill(entireProcessTree: true);
+                await Task.WhenAny(exit, Task.Delay(ProcessExitTimeout)).ConfigureAwait(false);
             }
         }
         catch

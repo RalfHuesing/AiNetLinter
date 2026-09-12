@@ -238,19 +238,22 @@ public sealed class McpServerCommandContractTests
         await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "BaseGreeting" }, "IGreeting");
 
     [Theory]
-    [InlineData("find_symbol", "namePatterns")]
-    [InlineData("get_file_skeleton", "filePaths")]
-    [InlineData("get_symbol_body", "symbolIdentifiers")]
-    [InlineData("metrics_lookup", "symbolIdentifiers")]
-    public async Task RunAsync_ValidFixture_MissingArrayParameter_ReturnsRecoverableInvalidArgument(string toolName, string parameterName)
+    [InlineData("find_symbol", "namePatterns", false)]
+    [InlineData("get_file_skeleton", "filePaths", true)]
+    [InlineData("get_symbol_body", "symbolIdentifiers", true)]
+    [InlineData("metrics_lookup", "symbolIdentifiers", true)]
+    public async Task RunAsync_ValidFixture_MissingArrayParameter_ReturnsRecoverableInvalidArgument(
+        string toolName,
+        string parameterName,
+        bool isError)
     {
         var host = await fixture.GetHostAsync();
         var result = await host.CallToolAsync(toolName, new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.Equal(isError, result.IsError == true);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
-        Assert.Contains($"Pflichtparameter '{parameterName}' fehlt oder ist leer.", text, StringComparison.Ordinal);
+        Assert.Contains(parameterName, text, StringComparison.Ordinal);
     }
 
     [Fact]

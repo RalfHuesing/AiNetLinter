@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text;
 using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Registration;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -124,7 +125,10 @@ internal static partial class McpToolResults
         McpErrorParameters parameters,
         bool isError)
     {
-        var text = LinterErrorFormatter.Format(code, message, parameters.Context, parameters.Hint);
+        var safeMessage = LimitErrorValue(message) ?? string.Empty;
+        var safeContext = LimitErrorValue(parameters.Context);
+        var safeHint = LimitErrorValue(parameters.Hint);
+        var text = LinterErrorFormatter.Format(code, safeMessage, safeContext, safeHint);
         if (!string.IsNullOrWhiteSpace(parameters.FieldPath))
         {
             text += $"\n  fieldPath: {parameters.FieldPath}";
@@ -136,9 +140,9 @@ internal static partial class McpToolResults
             StructuredContent = JsonSerializer.SerializeToElement(
                 new McpErrorPayload(
                     code,
-                    message,
-                    parameters.Context,
-                    parameters.Hint,
+                    safeMessage,
+                    safeContext,
+                    safeHint,
                 Recoverable: !isError,
                 parameters.TargetPath,
                 parameters.FieldPath,
@@ -169,6 +173,14 @@ internal static partial class McpToolResults
     /// </summary>
     internal static CallToolResult SymbolNotFound(string identifier)
     {
+        if (SymbolHandoffIdentifier.HasWirePrefix(identifier))
+        {
+            return Recoverable(
+                LinterErrorCodes.SymbolNotFound,
+                "Die angegebene Handoff-ID konnte im aktuellen Analyse-Snapshot nicht aufgelöst werden.",
+                hint: "Das Symbol im aktuellen Snapshot erneut mit 'find_symbol' suchen.");
+        }
+
         return Recoverable(
             LinterErrorCodes.SymbolNotFound,
             $"Kein Symbol gefunden fuer Identifikator '{identifier}'.",
@@ -201,16 +213,22 @@ internal static partial class McpToolResults
     internal static CallToolResult TargetMismatch(string identifier) =>
         Recoverable(
             McpHandoffErrorCodes.TargetMismatch,
-            $"Die Handoff-ID '{identifier}' gehört zu einem anderen Target.",
-            context: identifier,
+            "Die angegebene Handoff-ID gehört zu einem anderen Target.",
             hint: "Eine Handoff-ID aus demselben targetPath verwenden.");
 
     internal static CallToolResult StaleSnapshot(string identifier) =>
         Recoverable(
             McpHandoffErrorCodes.StaleSnapshot,
-            $"Die Handoff-ID '{identifier}' gehört zu einem veralteten Analyse-Snapshot.",
-            context: identifier,
+            "Die angegebene Handoff-ID gehört zu einem veralteten Analyse-Snapshot.",
             hint: "Das Symbol im aktuellen Snapshot erneut mit 'find_symbol' suchen.");
+
+    private static string? LimitErrorValue(string? value)
+    {
+        const int maxLength = 256;
+        return value is null || value.Length <= maxLength
+            ? value
+            : value[..maxLength] + "…";
+    }
 
     /// <summary>
     /// Kurzform fuer den Fall, dass ein Tool-Aufruf ungueltige oder unvollstaendige Argumente enthaelt.
@@ -360,23 +378,25 @@ internal static partial class McpToolResults
 
     private static void MergeNavigation(JsonObject payload, JsonObject navigationNode)
     {
+        if (payload["navigation"] is JsonObject toolNavigation)
+        {
+            foreach (var property in toolNavigation)
+            {
+                if (!navigationNode.ContainsKey(property.Key))
+                {
+                    navigationNode[property.Key] = property.Value?.DeepClone();
+                }
+            }
+
+            if (toolNavigation["completeness"] is JsonValue completeness
+                && navigationNode["status"] is JsonObject status
+                && !string.Equals(status["completeness"]?.GetValue<string>(), "truncated", StringComparison.Ordinal))
+            {
+                status["completeness"] = completeness.DeepClone();
+            }
+        }
         payload["navigation"] = navigationNode;
     }
-
-    private static List<ContentBlock> AppendNavigationText(
-        IEnumerable<ContentBlock> content,
-        string navigationText) => content
-            .Select(block => block is TextContentBlock textBlock
-                ? new TextContentBlock
-                {
-                    Text = string.IsNullOrEmpty(navigationText)
-                        ? textBlock.Text.TrimEnd()
-                        : string.IsNullOrWhiteSpace(textBlock.Text)
-                            ? navigationText
-                            : textBlock.Text.TrimEnd() + "\n" + navigationText,
-                }
-                : block)
-            .ToList();
 
     /// <summary>
     /// Kurzform fuer eine echte Malfunction: ein unerwarteter Roslyn-/Laufzeit-Fehler wurde in

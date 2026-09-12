@@ -53,7 +53,14 @@ internal static class GetTestContextTool
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
             var scoped = await FilterTestFilesAsync(testResults.TestFiles, solution, options.Scope, ct);
-            var payload = BuildPayload(symbol, solution, scoped.Visible, scoped.Scopes, options, scoped.ExcludedCount);
+            var payload = BuildPayload(new TestContextPayloadRequest(
+                symbol,
+                solution,
+                scoped.Visible,
+                scoped.Scopes,
+                options,
+                scoped.ExcludedCount,
+                state.HandoffSymbolIdentity));
             return TestContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -64,37 +71,31 @@ internal static class GetTestContextTool
         }
     }
 
-    private static TestContextPayload BuildPayload(
-        ISymbol symbol,
-        Solution solution,
-        IReadOnlyList<TestFileCoverageResult> scopedTestFiles,
-        IReadOnlyDictionary<string, McpDocumentScope> testFileScopes,
-        TestContextOptions options,
-        int excludedTestFileCount)
+    private static TestContextPayload BuildPayload(TestContextPayloadRequest request)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var targetFilePath = ExtractFilePath(symbol, solutionDir);
-        var maxResults = Math.Clamp(options.MaxResults, 1, MaxResultsCap);
-        var isTruncated = scopedTestFiles.Count > maxResults;
-        var testFiles = isTruncated ? scopedTestFiles.Take(maxResults).ToList() : scopedTestFiles;
-        var totalMatchingTests = scopedTestFiles.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
-        var isUntested = totalMatchingTests == 0 || scopedTestFiles.Count == 0;
+        var solutionDir = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
+        var targetFilePath = ExtractFilePath(request.Symbol, solutionDir);
+        var maxResults = Math.Clamp(request.Options.MaxResults, 1, MaxResultsCap);
+        var isTruncated = request.ScopedTestFiles.Count > maxResults;
+        var testFiles = isTruncated ? request.ScopedTestFiles.Take(maxResults).ToList() : request.ScopedTestFiles;
+        var totalMatchingTests = request.ScopedTestFiles.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
+        var isUntested = totalMatchingTests == 0 || request.ScopedTestFiles.Count == 0;
         var completeness = isUntested ? "empty" : isTruncated ? "truncated" : "complete";
         var nextStep = isTruncated
             ? "Abschnitt testContext: maxResults erhöhen und die statischen Testkandidaten erneut abfragen."
             : null;
         var suggestedTestPath = isUntested
-            ? SuggestTestFilePath(symbol, targetFilePath, solution, solutionDir)
+            ? SuggestTestFilePath(request.Symbol, targetFilePath, request.Solution, solutionDir)
             : null;
 
         return new TestContextPayload(
-            symbol.ToDisplayString(),
-            symbol.Kind.ToString(),
+            request.Symbol.ToDisplayString(),
+            request.Symbol.Kind.ToString(),
             targetFilePath,
             totalMatchingTests,
-            scopedTestFiles.Count,
-            testFiles.Select(file => ToStaticCandidate(file, testFileScopes[file.FilePath])).ToList(),
-            BuildRecommendedCommands(scopedTestFiles),
+            request.ScopedTestFiles.Count,
+            testFiles.Select(file => ToStaticCandidate(file, request.TestFileScopes[file.FilePath])).ToList(),
+            BuildRecommendedCommands(request.ScopedTestFiles),
             isUntested,
             isTruncated,
             suggestedTestPath,
@@ -104,9 +105,20 @@ internal static class GetTestContextTool
             isTruncated ? ["maxResults"] : [],
             "static-test-candidates-only",
             nextStep,
-            options.Scope.ToMetadata(),
-            excludedTestFileCount);
+            request.Options.Scope.ToMetadata(),
+            request.ExcludedTestFileCount,
+            request.HandoffIdentity?.Format(request.Symbol.TryGetDocCommentId() ?? request.Symbol.ToDisplayString())
+                ?? request.Symbol.TryGetDocCommentId());
     }
+
+    private sealed record TestContextPayloadRequest(
+        ISymbol Symbol,
+        Solution Solution,
+        IReadOnlyList<TestFileCoverageResult> ScopedTestFiles,
+        IReadOnlyDictionary<string, McpDocumentScope> TestFileScopes,
+        TestContextOptions Options,
+        int ExcludedTestFileCount,
+        AnalysisSymbolIdentity? HandoffIdentity);
 
     private static async Task<(List<TestFileCoverageResult> Visible, IReadOnlyDictionary<string, McpDocumentScope> Scopes, int ExcludedCount)> FilterTestFilesAsync(
         IReadOnlyList<TestFileCoverageResult> testFiles,

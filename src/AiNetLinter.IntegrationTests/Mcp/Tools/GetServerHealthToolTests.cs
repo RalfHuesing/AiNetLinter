@@ -47,7 +47,7 @@ public sealed class GetServerHealthToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("## Projekte (1)", text, StringComparison.Ordinal);
+        Assert.Contains("## Projekt", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -62,13 +62,14 @@ public sealed class GetServerHealthToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Version:", text);
-        Assert.Contains("Repository: https://github.com/RalfHuesing/AiNetLinter", text);
+        Assert.DoesNotContain("Version:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Repository:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Daemon", text, StringComparison.Ordinal);
         Assert.Contains("Loaded", text);
         Assert.Contains(solutionPath, text, System.StringComparison.OrdinalIgnoreCase);
         Assert.Contains(rulesPath, text, System.StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Uptime", text);
-        Assert.Contains("Solution-Refreshes seit Start: 0", text);
+        Assert.DoesNotContain("Uptime", text, StringComparison.Ordinal);
+        Assert.Contains("Solution-Refreshes: 0", text);
     }
 
     [Fact]
@@ -83,16 +84,15 @@ public sealed class GetServerHealthToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.False(string.IsNullOrWhiteSpace(payload!.Version));
-        Assert.Equal("https://github.com/RalfHuesing/AiNetLinter", payload.Repository);
-        var project = Assert.Single(payload.Projects);
-        Assert.Equal(solutionPath, project.TargetPath);
-        Assert.Equal("Loaded", project.LoadState);
-        Assert.Equal(rulesPath, project.ConfigPath);
-        Assert.Equal(0, project.RefreshCount);
+        var payload = result.StructuredContent!.Value;
+        Assert.False(payload.TryGetProperty("version", out _));
+        Assert.False(payload.TryGetProperty("repository", out _));
+        Assert.False(payload.TryGetProperty("daemon", out _));
+        var project = payload.GetProperty("project");
+        Assert.Equal(solutionPath, project.GetProperty("targetPath").GetString());
+        Assert.Equal("Loaded", project.GetProperty("loadState").GetString());
+        Assert.Equal(rulesPath, project.GetProperty("configPath").GetString());
+        Assert.Equal(0, project.GetProperty("refreshCount").GetInt32());
     }
 
     [Fact]
@@ -171,6 +171,29 @@ public sealed class GetServerHealthToolTests
         Assert.Contains("health-transitive-0", sessionDetailsText, StringComparison.Ordinal);
         Assert.DoesNotContain("health-root-1", sessionDetailsText, StringComparison.Ordinal);
         Assert.DoesNotContain("health-transitive-1", sessionDetailsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_TargetAssemblyHealthContainsOnlyTheRequestedTarget()
+    {
+        var entry = CreateAssemblyEntry("C:\\fixtures\\target-only.dll");
+
+        var result = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(AssemblyPath: entry.TargetPath, IncludeDiagnostics: true));
+
+        var payload = result.StructuredContent!.Value;
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.True(payload.TryGetProperty("assembly", out var assembly));
+        Assert.Equal(entry.TargetPath, assembly.GetProperty("targetPath").GetString());
+        Assert.False(payload.TryGetProperty("version", out _));
+        Assert.False(payload.TryGetProperty("repository", out _));
+        Assert.False(payload.TryGetProperty("daemon", out _));
+        Assert.False(payload.TryGetProperty("totalAssemblySessions", out _));
+        Assert.DoesNotContain("Version:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Daemon", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assembly-Sessions", text, StringComparison.Ordinal);
     }
 
     [Fact]

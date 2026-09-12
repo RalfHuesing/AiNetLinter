@@ -17,6 +17,20 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {
+    private sealed record InspectionExecutionOptions(
+        int MaxResponseBytes = 0,
+        string? DetailLevel = null,
+        string? Cursor = null,
+        string? TypeName = null,
+        bool PublicOnly = true,
+        bool ApplyPostNavigationResponseBudget = false);
+
+    private sealed record ExtensionExecutionOptions(
+        bool IncludeReferences = true,
+        int MaxResponseBytes = 0,
+        string? ExtensionName = null,
+        bool ApplyPostNavigationResponseBudget = false);
+
     private sealed class SyntheticAssemblyFixture : IAsyncDisposable
     {
         private readonly AssemblyAnalysisRegistry backingRegistry;
@@ -70,12 +84,9 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             return new SyntheticAssemblyFixture(backingRegistry, backingLease, entry, lease!, assemblyPath);
         }
 
-        internal async Task<CallToolResult> ExecuteInspectAsync(
-            int maxResponseBytes = 0,
-            string? detailLevel = null,
-            string? cursor = null,
-            string? typeName = null)
+        internal async Task<CallToolResult> ExecuteInspectAsync(InspectionExecutionOptions? options = null)
         {
+            options ??= new();
             var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
             return await AnalysisToolCall.ExecuteRouted(
                 route,
@@ -87,25 +98,26 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                             new InspectAssemblyArguments(
                                 lease.CanonicalPath,
                                 null,
-                                typeName,
+                                options.TypeName,
                                 null,
-                                PublicOnly: true,
+                                PublicOnly: options.PublicOnly,
                                 MaxResults: 100,
-                                MaxResponseBytes: maxResponseBytes,
-                                DetailLevel: detailLevel,
-                                Cursor: cursor)),
+                                MaxResponseBytes: options.MaxResponseBytes,
+                                DetailLevel: options.DetailLevel,
+                                Cursor: options.Cursor)),
                         ExpandAssemblyReferences: true,
-                        MaxResponseBytes: maxResponseBytes,
-                        DetailLevel: detailLevel,
-                        Cursor: cursor),
+                        MaxResponseBytes: options.MaxResponseBytes,
+                        DetailLevel: options.DetailLevel,
+                        Cursor: options.Cursor,
+                        PostNavigationResponseBudget: options.ApplyPostNavigationResponseBudget
+                            ? (result, budget) => AssemblyAnalysisPostNavigationResponseBudget.ApplyInspect(result, budget, options.PublicOnly)
+                            : null),
                     CancellationToken.None));
         }
 
-        internal async Task<CallToolResult> ExecuteExtensionsAsync(
-            bool includeReferences = true,
-            int maxResponseBytes = 0,
-            string? extensionName = null)
+        internal async Task<CallToolResult> ExecuteExtensionsAsync(ExtensionExecutionOptions? options = null)
         {
+            options ??= new();
             var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
             return await AnalysisToolCall.ExecuteRouted(
                 route,
@@ -117,13 +129,16 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                             new FindAssemblyExtensionsArguments(
                                 lease.CanonicalPath,
                                 null,
-                                extensionName,
+                                options.ExtensionName,
                                 null,
                                 100,
-                                includeReferences,
-                                MaxResponseBytes: maxResponseBytes)),
-                        ExpandAssemblyReferences: includeReferences,
-                        MaxResponseBytes: maxResponseBytes),
+                                options.IncludeReferences,
+                                MaxResponseBytes: options.MaxResponseBytes)),
+                        ExpandAssemblyReferences: options.IncludeReferences,
+                        MaxResponseBytes: options.MaxResponseBytes,
+                        PostNavigationResponseBudget: options.ApplyPostNavigationResponseBudget
+                            ? AssemblyAnalysisPostNavigationResponseBudget.ApplyExtensions
+                            : null),
                     CancellationToken.None));
         }
 
@@ -142,7 +157,8 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                         AssemblySessionCall: call,
                         MaxResponseBytes: maxResponseBytes,
                         DetailLevel: detailLevel,
-                        Cursor: cursor),
+                        Cursor: cursor,
+                        PostNavigationResponseBudget: AssemblyAnalysisPostNavigationResponseBudget.ApplyContext),
                     CancellationToken.None));
         }
 

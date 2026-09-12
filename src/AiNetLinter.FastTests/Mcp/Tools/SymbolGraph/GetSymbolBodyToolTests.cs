@@ -419,5 +419,36 @@ public sealed class GetSymbolBodyToolTests
         Assert.True(Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text)
             + Encoding.UTF8.GetByteCount(projected.StructuredContent!.Value.GetRawText()) <= 1_024);
     }
+
+    [Fact]
+    public void ApplyFinalResponseBudget_OmitsAssemblyHandoffIdFromProjectedHeadingButKeepsStructuredId()
+    {
+        var entries = new[]
+        {
+            new SymbolBodyEntry(
+                "s:assembly-handoff-opaque-1", "s:assembly-handoff-opaque-1", "member", "Demo.cs", 1,
+                "public void WorkOne() { }", "available", "decompiled", false),
+            new SymbolBodyEntry(
+                "s:assembly-handoff-opaque-2", "s:assembly-handoff-opaque-2", "member", "Demo.cs", 2,
+                "public void WorkTwo() { }", "available", "decompiled", false),
+        };
+        var root = JsonSerializer.SerializeToNode(new SymbolBodyBatchDto(entries, entries.Length), McpJsonOptions.Default)!.AsObject();
+        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 180) } };
+        var original = McpToolResults.Text(
+            string.Join("\n\n---\n\n", entries.Select(entry =>
+                $"### Symbol-Body: `{entry.Id}` — `{entry.FilePath}`\n\nbodyAvailability: `{entry.BodyAvailability}`; contentMode: `{entry.ContentMode}`\n\n```csharp\n{entry.Body}\n```")),
+            root);
+
+        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(
+            original,
+            AiNetLinter.Mcp.Wire.McpResponseSize.From(original).TotalBytes - 1);
+
+        Assert.NotEqual(true, projected.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
+        Assert.All(entries, entry => Assert.DoesNotContain(entry.Id!, text, StringComparison.Ordinal));
+        var projectedId = projected.StructuredContent!.Value
+            .GetProperty("results")[0].GetProperty("id").GetString();
+        Assert.Contains(entries, entry => string.Equals(entry.Id, projectedId, StringComparison.Ordinal));
+    }
 }
 

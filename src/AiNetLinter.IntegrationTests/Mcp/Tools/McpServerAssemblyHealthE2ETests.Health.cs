@@ -58,14 +58,16 @@ public sealed partial class McpServerAssemblyHealthE2ETests
             assembly.IsError == true,
             string.Join("\n", assembly.Content.OfType<TextContentBlock>().Select(block => block.Text)));
         var assemblyText = Assert.IsType<TextContentBlock>(Assert.Single(assembly.Content)).Text;
-        Assert.Contains("Assembly-Sessions (1)", assemblyText, StringComparison.Ordinal);
+        Assert.Contains("## Assembly", assemblyText, StringComparison.Ordinal);
         Assert.Contains("Origin:", assemblyText, StringComparison.Ordinal);
         Assert.DoesNotContain("Generation", assemblyText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("GeneratedPath", assemblyText, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(assembly.StructuredContent);
-        Assert.True(assembly.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
-        Assert.Equal(1, assembly.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
-        Assert.Single(assembly.StructuredContent!.Value.GetProperty("assemblies").EnumerateArray());
+        Assert.True(assembly.StructuredContent!.Value.TryGetProperty("assembly", out var assemblyPayload));
+        Assert.Equal(typeof(McpCodeGraphServer).Assembly.Location, assemblyPayload.GetProperty("targetPath").GetString());
+        Assert.False(assembly.StructuredContent.Value.TryGetProperty("version", out _));
+        Assert.False(assembly.StructuredContent.Value.TryGetProperty("daemon", out _));
+        Assert.False(assembly.StructuredContent.Value.TryGetProperty("totalAssemblySessions", out _));
         var assemblyNavigation = assembly.StructuredContent.Value.GetProperty("navigation");
         Assert.Equal("assembly", assemblyNavigation.GetProperty("snapshot").GetProperty("kind").GetString());
         Assert.True(assemblyNavigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());

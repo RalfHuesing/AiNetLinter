@@ -237,6 +237,7 @@ internal static class SymbolGraphToolRegistrations
                 string? detailLevel = null,
                 int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
+                bool includeReferences = false,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
@@ -247,13 +248,13 @@ internal static class SymbolGraphToolRegistrations
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(ProjectCall: lease => GetImpactTool.ExecuteAsync(
                             lease.Server,
-                            new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                            new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol, includeReferences),
                             ct),
                             AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
                                 lease,
-                                new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                                new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol, includeReferences),
                                 ct),
-                            ExpandAssemblyReferences: true),
+                            ExpandAssemblyReferences: includeReferences),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_impact", GetImpactDescription)));
@@ -268,6 +269,8 @@ internal static class SymbolGraphToolRegistrations
         "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
         "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
         "maxResults: mindestens 1, Limit der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "includeReferences (Default false) erweitert Assembly-Suchen nur auf ausdrücklichen Wunsch zur bounded Closure; " +
+        "eine Assembly-Handoff-ID bleibt bei false auf ihren verifizierten Owner begrenzt. " +
         "depth: im Symbol-Branch mindestens 1 (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten); " +
         "0 oder negative Werte liefern dort INVALID_ARGUMENT. Im gesamten Git-Diff-Branch (callers und " +
         "change-context) ist depth wirkungslos und wird auch bei 0 nicht abgelehnt. " +

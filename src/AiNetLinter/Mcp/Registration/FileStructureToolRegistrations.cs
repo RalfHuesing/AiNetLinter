@@ -108,7 +108,9 @@ internal static class FileStructureToolRegistrations
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Die Assembly-Navigation bleibt an Target und Snapshot gebunden. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
-        "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree.";
+        "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree; " +
+        "summary, exclusions und completeness unterscheiden physische Dateien, angefordert ausgeschlossene " +
+        "Dateien sowie uebersprungene Standard- und Reparse-Point-Verzeichnisse.";
 
     private static void AddGetNamespaceTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -258,7 +260,8 @@ internal static class FileStructureToolRegistrations
     private const string GetIndexScopeDescription =
         "Wann nutzen: als ersten Discovery-Call vor find_symbol/search_pattern — Dateityp-" +
         "Aufschluesselung der Solution (.cs vom Symbolgraph abgedeckt, .css/.html/.js/.razor/" +
-        ".xaml nicht abgedeckt, jeweils mit Dateianzahl).";
+        ".xaml nicht abgedeckt, jeweils mit Dateianzahl). population trennt physische Dateien " +
+        "von Roslyn-Dokumenten sowie generierten und Test-Dokumenten.";
 
     private static void AddGetHotspots(
         McpServerPrimitiveCollection<McpServerTool> tools,

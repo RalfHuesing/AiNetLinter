@@ -132,47 +132,4 @@ public sealed partial class GetClassStructureToolTests
         Assert.Equal(4, payload.ShownMemberCount);
     }
 
-    [Fact]
-    public void FinalWireTrim_ReconcilesClassStructureCountsInTextAndStructuredContent()
-    {
-        var members = Enumerable.Range(1, 20)
-            .Select(i => new
-            {
-                kind = "Method",
-                name = $"Method{i}",
-                visibility = "public",
-                startLine = i,
-                endLine = i,
-                lineCount = 1,
-                signature = new string('x', 400),
-                filePath = "CandidateClass.cs",
-            })
-            .ToArray();
-        var result = McpToolResults.Text(
-            "# Typ: BudgetNs.CandidateClass\n- Member Count: 20 von 20",
-            new
-            {
-                classStructure = new
-                {
-                    typeName = "BudgetNs.CandidateClass",
-                    kind = "class",
-                    files = new[] { "CandidateClass.cs" },
-                    totalLines = 22,
-                    totalMemberCount = 20,
-                    shownMemberCount = 20,
-                    truncated = false,
-                    members,
-                    truncatedBy = Array.Empty<string>(),
-                },
-            });
-
-        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
-        var classStructure = projected.StructuredContent!.Value.GetProperty("classStructure");
-        var returned = classStructure.GetProperty("members").GetArrayLength();
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
-
-        Assert.True(returned < members.Length);
-        Assert.Equal(returned, classStructure.GetProperty("shownMemberCount").GetInt32());
-        Assert.Contains($"- Member Count: {returned} von 20", text, StringComparison.Ordinal);
-    }
 }

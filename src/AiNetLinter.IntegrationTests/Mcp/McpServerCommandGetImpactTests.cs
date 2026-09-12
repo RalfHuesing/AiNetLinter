@@ -57,7 +57,7 @@ public sealed class McpServerCommandGetImpactTests
     }
 
     [Fact]
-    public async Task RunAsync_AssemblyTarget_GetImpactWithoutSymbolReturnsRecoverableInvalidArgument()
+    public async Task RunAsync_AssemblyTarget_GetImpactWithoutSymbolReturnsErrorInvalidArgument()
     {
         var result = await fixture.Client.CallToolAsync(
             "get_impact",
@@ -66,7 +66,7 @@ public sealed class McpServerCommandGetImpactTests
                 ["targetPath"] = typeof(AiNetLinter.Mcp.Server.McpCodeGraphServer).Assembly.Location,
             });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Contains(
             "symbolIdentifier",

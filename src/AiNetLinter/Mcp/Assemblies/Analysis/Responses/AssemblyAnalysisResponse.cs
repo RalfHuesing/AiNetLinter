@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Wire;
@@ -54,12 +53,11 @@ internal static partial class AssemblyAnalysisResponse
             return AssemblyPublicContract.Project(enriched);
         }
 
-        return AssemblyPublicContract.Project(
-            ApplyWireBudget(enriched, budget, AssemblyPaging.ReadOffset(request.Cursor)));
+        // Tool-nahe projectors run after this common navigation/enrichment step.
+        // Keeping this envelope intact prevents a generic JSON mutation from
+        // removing a partial domain unit before its owner can select it.
+        return AssemblyPublicContract.Project(enriched);
     }
-
-    internal static CallToolResult ApplyWireBudget(CallToolResult result, int budget, int cursorOffset) =>
-        AssemblyAnalysisWireBudgetProjection.Apply(result, budget, cursorOffset);
 
     private static CallToolResult CreateEnriched(CallToolResult result, AssemblyAnalysisLease lease)
     {

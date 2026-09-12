@@ -92,7 +92,7 @@ internal static partial class FindReferencesTool
         if (error is not null) return error;
         var traversal = await CallGraphTraversal.ExpandAsync(new ReferenceTraversalRequest(solution, symbol!, request.Depth, Math.Max(1, request.MaxResults), ct, AssemblySymbolIdentity: state.HandoffSymbolIdentity, ScopeFilter: scopeFilter));
         traversal = traversal with { Scope = new FindSymbolScopeDto(McpScopeValues.ToWireValue(request.ScopeType), request.IncludeGenerated) };
-        var formatted = ProjectResponseBudget(traversal, request.MaxResponseBytes, symbolIdentifier);
+        var formatted = ProjectResponseBudget(traversal, request.MaxResponseBytes, symbol!.ToDisplayString());
         return CombinedBytes(formatted) > request.MaxResponseBytes
             ? BudgetTooSmall(request.MaxResponseBytes)
             : McpToolResults.Text(formatted.Text, formatted.StructuredPayload);

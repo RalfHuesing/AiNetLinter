@@ -42,7 +42,8 @@ public sealed record TestContextPayload(
     string EvidenceBoundary = "static-test-candidates-only",
     string? NextStep = null,
     McpScopeMetadata? Scope = null,
-    int ExcludedTestFileCount = 0
+    int ExcludedTestFileCount = 0,
+    string? Id = null
 );
 
 /// <summary>

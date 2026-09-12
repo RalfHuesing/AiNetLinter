@@ -35,25 +35,20 @@ public sealed record FileTreeSummary(
     long MatchedBytes,
     IReadOnlyList<FileTreeExtensionEntry> ByExtension);
 
-public sealed record FileTreePopulation(
-    int PhysicalFileCount,
-    int ExcludedCount,
-    int ShownCount);
-
 public sealed record FileTreeExclusions(
     IReadOnlyList<string> RequestedPatterns,
     IReadOnlyList<string> AppliedPatterns,
-    int ExcludedCount);
+    int ExcludedPhysicalFileCount);
 
 /// <summary>Vollstaendigkeits- und Trunkierungsinformationen des Scans.</summary>
 public sealed record FileTreeCompleteness(
     bool ScanCompleted,
     bool Truncated,
     IReadOnlyList<string> TruncatedBy,
-    int ShownFileCount,
-    int InaccessibleSubtreeCount,
+    int ShownPhysicalFileCount,
+    int InaccessibleDirectoryCount,
     int SkippedExcludedDirectoryCount,
-    int SkippedReparsePointCount,
+    int SkippedReparsePointDirectoryCount,
     IReadOnlyList<string> Warnings,
     int ReturnedDirectoryCount = 0);
 
@@ -66,7 +61,6 @@ public sealed record FileTreePayload(
     string EffectiveRoot,
     string View,
     FileTreeSummary Summary,
-    FileTreePopulation Population,
     FileTreeExclusions Exclusions,
     IReadOnlyList<FileTreeDirectoryEntry> Directories,
     IReadOnlyList<FileTreeFileEntry> Files,

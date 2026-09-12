@@ -3,7 +3,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -28,7 +30,7 @@ public sealed class GetFileTreeScannerTests
         Assert.DoesNotContain(result.Files, file => file.Path.Contains("obj", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.Directories, directory => directory.Path == ".");
         Assert.Contains(result.Directories, directory => directory.Path == "Docs");
-        Assert.Equal(4, result.Completeness.ShownFileCount);
+        Assert.Equal(4, result.Completeness.ShownPhysicalFileCount);
         Assert.True(result.Completeness.ScanCompleted);
         Assert.True(result.Completeness.SkippedExcludedDirectoryCount >= 1);
     }
@@ -63,9 +65,47 @@ public sealed class GetFileTreeScannerTests
 
         Assert.Equal(["*.md"], result.Exclusions.RequestedPatterns);
         Assert.Equal(["*.md"], result.Exclusions.AppliedPatterns);
-        Assert.Equal(2, result.Exclusions.ExcludedCount);
-        Assert.Equal(2, result.Population.ExcludedCount);
-        Assert.Equal(result.Files.Count, result.Population.ShownCount);
+        var payload = JsonSerializer.SerializeToElement(result, McpJsonOptions.Default);
+        var exclusions = payload.GetProperty("exclusions");
+        Assert.Equal(2, exclusions.GetProperty("excludedPhysicalFileCount").GetInt32());
+        Assert.False(exclusions.TryGetProperty("excludedCount", out _));
+        Assert.False(payload.TryGetProperty("population", out _));
+        Assert.Equal(result.Files.Count, result.Completeness.ShownPhysicalFileCount);
+    }
+
+    [Fact]
+    public void Render_TruncatedResponseExplainsStructuredSkippedDirectoryPopulations()
+    {
+        var payload = new FileTreePayload(
+            Root: ".",
+            EffectiveRoot: "C:/synthetic",
+            View: "files",
+            Summary: new FileTreeSummary(10, 8, 6, 4, 1024, []),
+            Exclusions: new FileTreeExclusions([], [], 0),
+            Directories: [],
+            Files: [],
+            Completeness: new FileTreeCompleteness(
+                ScanCompleted: false,
+                Truncated: true,
+                TruncatedBy: ["maxResults", "maxDepth", "inaccessibleSubtree"],
+                ShownPhysicalFileCount: 2,
+                InaccessibleDirectoryCount: 3,
+                SkippedExcludedDirectoryCount: 4,
+                SkippedReparsePointDirectoryCount: 5,
+                Warnings: [],
+                ReturnedDirectoryCount: 1),
+            Next: new FileTreeNext("refine_scope", "Scope verfeinern."));
+
+        var structured = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default);
+        var completeness = structured.GetProperty("completeness");
+        var text = GetFileTreeRenderer.Render(new FileTreeScanResult(payload, 2));
+
+        Assert.Equal(4, completeness.GetProperty("skippedExcludedDirectoryCount").GetInt32());
+        Assert.Equal(5, completeness.GetProperty("skippedReparsePointDirectoryCount").GetInt32());
+        Assert.Equal(3, completeness.GetProperty("inaccessibleDirectoryCount").GetInt32());
+        Assert.Contains("4 Standard-Ausschlussverzeichnisse uebersprungen.", text, StringComparison.Ordinal);
+        Assert.Contains("5 Reparse-Point-Verzeichnisse uebersprungen.", text, StringComparison.Ordinal);
+        Assert.Contains("3 unzugaengliche Verzeichnisse nicht gelesen.", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -196,7 +236,7 @@ public sealed class GetFileTreeScannerTests
         var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
 
         Assert.Equal(4, result.Summary.MatchedFileCount);
-        Assert.Equal(2, result.Completeness.ShownFileCount);
+        Assert.Equal(2, result.Completeness.ShownPhysicalFileCount);
         Assert.True(result.Completeness.Truncated);
         Assert.Contains("maxResults", result.Completeness.TruncatedBy);
         Assert.True(result.Completeness.ScanCompleted);
@@ -215,7 +255,7 @@ public sealed class GetFileTreeScannerTests
         Assert.Equal(4, result.Summary.MatchedFileCount);
         Assert.True(result.Completeness.Truncated);
         Assert.Contains("maxResults", result.Completeness.TruncatedBy);
-        Assert.Equal(0, result.Completeness.ShownFileCount);
+        Assert.Equal(0, result.Completeness.ShownPhysicalFileCount);
         Assert.Equal(".", Assert.Single(result.Directories).Path);
     }
 

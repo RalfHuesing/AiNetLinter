@@ -9,6 +9,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -24,16 +25,12 @@ internal static class AssemblyGetCallTreeTool
         AssemblyAnalysisLease lease,
         AssemblyGetCallTreeRequest request,
         CancellationToken cancellationToken) =>
-        request.IncludeReferences
-            ? ExecuteWithReferencesAsync(lease, request.Input, cancellationToken)
-            : GetCallTreeTool.ExecuteAsync(
-                lease.Server,
-                request.Input,
-                cancellationToken);
+        ExecuteWithReferencesAsync(lease, request.Input, request.IncludeReferences, cancellationToken);
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
         AssemblyAnalysisLease lease,
         GetCallTreeInput input,
+        bool includeReferences,
         CancellationToken cancellationToken)
     {
         var validationError = ValidateInput(input);
@@ -41,7 +38,7 @@ internal static class AssemblyGetCallTreeTool
 
         try
         {
-            return await BuildResponseAsync(lease, input, cancellationToken).ConfigureAwait(false);
+            return await BuildResponseAsync(lease, input, includeReferences, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -98,16 +95,19 @@ internal static class AssemblyGetCallTreeTool
     private static async Task<CallToolResult> BuildResponseAsync(
         AssemblyAnalysisLease lease,
         GetCallTreeInput input,
+        bool includeReferences,
         CancellationToken cancellationToken)
     {
+        var plan = AssemblySearchPlan.Create(input.SymbolIdentifier, includeReferences);
         var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
             lease,
             input.SymbolIdentifier!,
+            plan,
             cancellationToken).ConfigureAwait(false);
         if (error is not null) return error;
 
         var graphResult = await AssemblyReferenceNavigator.BuildCallGraphAsync(
-            AssemblyNavigationSourceFactory.CreateSources(lease, target!),
+            AssemblyNavigationSourceFactory.CreateSources(lease, target!, plan),
             target!.Symbol,
             input,
             cancellationToken).ConfigureAwait(false);

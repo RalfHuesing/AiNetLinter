@@ -299,7 +299,7 @@ public sealed class WiringProjectContractTests
         Assert.NotEqual(true, freshlyLoaded.IsError);
         var freshlyLoadedText = TextOf(freshlyLoaded);
         Assert.Contains(unknown, freshlyLoadedText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("## Projekte (1)", freshlyLoadedText, StringComparison.Ordinal);
+        Assert.Contains("## Projekt", freshlyLoadedText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public sealed class WiringProjectContractTests
 
         Assert.NotEqual(true, result.IsError);
         var text = TextOf(result);
-        Assert.Contains("## Projekte (1)", text, StringComparison.Ordinal);
+        Assert.Contains("## Projekt", text, StringComparison.Ordinal);
         Assert.Contains(solutionPath, text, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -345,7 +345,7 @@ public sealed class WiringProjectContractTests
 
         Assert.NotEqual(true, result.IsError);
         var text = TextOf(result);
-        Assert.Contains("## Projekte (1)", text, StringComparison.Ordinal);
+        Assert.Contains("## Projekt", text, StringComparison.Ordinal);
         Assert.Contains(solutionPath, text, StringComparison.OrdinalIgnoreCase);
     }
 

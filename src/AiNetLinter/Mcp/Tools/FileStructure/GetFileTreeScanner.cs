@@ -218,10 +218,6 @@ internal sealed class FileTreeAccumulator
                 _directories.Values.Count(directory => directory.MatchedFileCount > 0),
                 sortedMatches.Sum(match => match.SizeBytes),
                 BuildExtensionSummary(sortedMatches)),
-            Population: new FileTreePopulation(
-                _scannedFileCount,
-                _excludedByRequestCount,
-                shownMatches.Count),
             Exclusions: new FileTreeExclusions(
                 _input.ExcludePatterns ?? [],
                 _input.ExcludePatterns ?? [],
@@ -232,10 +228,10 @@ internal sealed class FileTreeAccumulator
                 ScanCompleted: !walkStats.CancellationRequested && walkStats.InaccessibleSubtreeCount == 0 && warnings.Count == 0,
                 Truncated: truncationReasons.Count > 0,
                 TruncatedBy: truncationReasons,
-                ShownFileCount: shownMatches.Count,
-                InaccessibleSubtreeCount: walkStats.InaccessibleSubtreeCount,
+                ShownPhysicalFileCount: shownMatches.Count,
+                InaccessibleDirectoryCount: walkStats.InaccessibleSubtreeCount,
                 SkippedExcludedDirectoryCount: walkStats.SkippedExcludedDirectoryCount,
-                SkippedReparsePointCount: walkStats.SkippedReparsePointCount,
+                SkippedReparsePointDirectoryCount: walkStats.SkippedReparsePointCount,
                 Warnings: warnings,
                 ReturnedDirectoryCount: directories.Count),
             Next: next);

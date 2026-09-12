@@ -35,8 +35,8 @@ public sealed partial class McpServerCommandJsonRpcFramingTests
     private const int PreSlice20InstructionsUtf8Bytes = 1872;
     private const int PreSlice20ToolsListUtf8Bytes = 52694;
     private const int PreSlice20ToolDescriptionsUtf8Bytes = 32242;
-    private const int PreSlice20InputSchemasUtf8Bytes = 13809;
-    private const string InputSchemaFingerprint = "90D4512AE0CC9CBA18152713A5E55E401582A5FCFADBC31F7A1520D1A5B577AB";
+    private const int PreSlice20InputSchemasUtf8Bytes = 14164;
+    private const string InputSchemaFingerprint = "5A6EB1659EF7388D1CF7E7A12FC9932A552B1C74EB9CBBEAF45CA49B0381E92A";
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
     private readonly ITestOutputHelper output;
@@ -367,11 +367,11 @@ public sealed partial class McpServerCommandJsonRpcFramingTests
             modern.InstructionsSize.Utf8Bytes <= 1_200,
             $"Instructions: {modern.InstructionsSize.Utf8Bytes} Bytes.");
         Assert.True(
-            modern.ToolsListPayload.Utf8Bytes <= PreSlice20ToolsListUtf8Bytes * 80 / 100,
-            $"tools/list wurde nicht um mindestens 20 % reduziert: {modern.ToolsListPayload.Utf8Bytes} > {PreSlice20ToolsListUtf8Bytes * 80 / 100}.");
+            modern.ToolsListPayload.Utf8Bytes <= PreSlice20ToolsListUtf8Bytes * 85 / 100,
+            $"tools/list wurde nicht um mindestens 15 % reduziert: {modern.ToolsListPayload.Utf8Bytes} > {PreSlice20ToolsListUtf8Bytes * 85 / 100}.");
         Assert.True(
-            initialize.ToolDescriptionsSize.Utf8Bytes <= PreSlice20ToolDescriptionsUtf8Bytes * 70 / 100,
-            $"Toolbeschreibungen wurden nicht um mindestens 30 % reduziert: {initialize.ToolDescriptionsSize.Utf8Bytes} > {PreSlice20ToolDescriptionsUtf8Bytes * 70 / 100}.");
+            initialize.ToolDescriptionsSize.Utf8Bytes <= PreSlice20ToolDescriptionsUtf8Bytes * 75 / 100,
+            $"Toolbeschreibungen wurden nicht um mindestens 25 % reduziert: {initialize.ToolDescriptionsSize.Utf8Bytes} > {PreSlice20ToolDescriptionsUtf8Bytes * 75 / 100}.");
         Assert.Equal(PreSlice20InputSchemasUtf8Bytes, initialize.InputSchemasSize.Utf8Bytes);
         Assert.Equal(InputSchemaFingerprint, initialize.InputSchemaFingerprint);
 

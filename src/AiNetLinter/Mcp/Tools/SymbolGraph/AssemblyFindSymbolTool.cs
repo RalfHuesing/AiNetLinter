@@ -79,6 +79,7 @@ internal static class AssemblyFindSymbolTool
     {
         var results = new List<FindSymbolPatternResultDto>(patterns.Count);
         var markdown = new MarkdownBuilder();
+        var plan = AssemblySearchPlan.Create(null, includeReferences: true);
         AssemblyNavigationSummary? navigation = null;
         foreach (var pattern in patterns)
         {
@@ -92,6 +93,15 @@ internal static class AssemblyFindSymbolTool
                 requestScopeType: scopeType,
                 includeGenerated: includeGenerated,
                 cancellationToken).ConfigureAwait(false);
+            search = search with
+            {
+                Navigation = search.Navigation with
+                {
+                    IncludeReferences = plan.RequestedIncludeReferences,
+                    RequestedIncludeReferences = plan.RequestedIncludeReferences,
+                    EffectiveSearchMode = plan.ToWireValue(),
+                },
+            };
             navigation = navigation is null
                 ? search.Navigation
                 : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);

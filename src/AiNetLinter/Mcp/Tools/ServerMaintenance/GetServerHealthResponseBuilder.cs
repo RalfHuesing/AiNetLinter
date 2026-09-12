@@ -51,10 +51,45 @@ internal static class GetServerHealthResponseBuilder
             sessionsTruncatedBy,
             statusCounts,
             diagnosticCount);
+        if (targeted) return BuildTargetResponse(response);
+
         var builder = BuildText(response);
         return McpToolResults.Text(
             builder,
             CreatePayload(response));
+    }
+
+    private static CallToolResult BuildTargetResponse(HealthResponseData response)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("# AiNetLinter MCP-Server — Target Health");
+        builder.AppendLine();
+        if (response.Snapshots.Count == 1)
+        {
+            builder.AppendLine("## Projekt");
+            builder.AppendLine();
+            GetServerHealthFormatter.AppendTargetProjectSection(builder, response.Snapshots[0]);
+        }
+        else if (response.ShownAssemblies is { Count: 1 })
+        {
+            builder.AppendLine("## Assembly");
+            builder.AppendLine();
+            GetServerHealthFormatter.AppendTargetAssemblySection(builder, response.ShownAssemblies[0]);
+        }
+
+        var project = response.Snapshots.Count == 1
+            ? ProjectHealthProjection.ToTargetEntry(response.Snapshots[0])
+            : null;
+        var assembly = response.ShownAssemblies is { Count: 1 }
+            ? AssemblyHealthProjection.ToTargetEntry(response.ShownAssemblies[0])
+            : null;
+        return McpToolResults.Text(
+            builder.ToString().TrimEnd(),
+            new TargetHealthPayload(
+                project,
+                assembly,
+                response.Options.IncludeDiagnostics,
+                AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(response.Options.MaxDiagnostics)));
     }
 
     private static IReadOnlyList<AssemblyHealthEntry>? SelectShownAssemblies(

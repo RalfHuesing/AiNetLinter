@@ -71,7 +71,8 @@ internal static class AssemblyAnalysisToolRegistrations
                                     kind),
                                 ct),
                             MaxResponseBytes: maxResponseBytes,
-                            Cursor: effectiveCursor),
+                            Cursor: effectiveCursor,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
@@ -99,7 +100,7 @@ internal static class AssemblyAnalysisToolRegistrations
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (
+            (
                 RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? @namespace = null,
@@ -115,45 +116,87 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? detailLevel = null,
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
-            {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
-                if (AssemblyAnalysisResponseLimits.ValidateDetailLevel(detailLevel) is { } detailLevelError) return detailLevelError;
-                var effectiveCursor = continuationToken;
-                var effectiveIncludeReferences = includeReferences ?? (
-                    string.IsNullOrWhiteSpace(@namespace)
-                    && string.IsNullOrWhiteSpace(typeName)
-                    && string.IsNullOrWhiteSpace(memberName)
-                    && (memberNames is null || memberNames.All(string.IsNullOrWhiteSpace)));
-                return await AnalysisToolCall.ExecuteRouted(
+                ExecuteInspectAssemblyAsync(
+                    context,
                     assemblyRoute,
-                    new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetPath),
-                        new AnalysisToolDispatch(
-                            AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
-                                lease,
-                                new InspectAssemblyArguments(
-                                    lease.CanonicalPath,
-                                    @namespace,
-                                    typeName,
-                                    memberName,
-                                    publicOnly,
-                                    maxResults,
-                                    exactTypeName,
-                                    memberNames,
-                                    maxMembers,
-                                    effectiveIncludeReferences,
-                                    maxResponseBytes,
-                                    detailLevel,
-                                    effectiveCursor)),
-                            ExpandAssemblyReferences: effectiveIncludeReferences,
-                            MaxResponseBytes: maxResponseBytes,
-                            DetailLevel: detailLevel,
-                            Cursor: effectiveCursor),
-                        ct));
-            },
+                    new InspectAssemblyExecutionParameters(
+                        targetPath,
+                        @namespace,
+                        typeName,
+                        memberName,
+                        publicOnly,
+                        maxResults,
+                        exactTypeName,
+                        memberNames,
+                        maxMembers,
+                        includeReferences,
+                        maxResponseBytes,
+                        detailLevel,
+                        continuationToken,
+                        ct)),
             TargetPathToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
+
+    private static async Task<CallToolResult> ExecuteInspectAssemblyAsync(
+        RequestContext<CallToolRequestParams> context,
+        AnalysisToolRoute assemblyRoute,
+        InspectAssemblyExecutionParameters parameters)
+    {
+        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+        if (unknownError is not null) return unknownError;
+        if (AssemblyAnalysisResponseLimits.ValidateDetailLevel(parameters.DetailLevel) is { } detailLevelError) return detailLevelError;
+        var includeReferences = parameters.IncludeReferences ?? ShouldIncludeReferences(parameters);
+        return await AnalysisToolCall.ExecuteRouted(
+            assemblyRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(parameters.TargetPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
+                        lease,
+                        new InspectAssemblyArguments(
+                            lease.CanonicalPath,
+                            parameters.Namespace,
+                            parameters.TypeName,
+                            parameters.MemberName,
+                            parameters.PublicOnly,
+                            parameters.MaxResults,
+                            parameters.ExactTypeName,
+                            parameters.MemberNames,
+                            parameters.MaxMembers,
+                            includeReferences,
+                            parameters.MaxResponseBytes,
+                            parameters.DetailLevel,
+                            parameters.ContinuationToken)),
+                    ExpandAssemblyReferences: includeReferences,
+                    MaxResponseBytes: parameters.MaxResponseBytes,
+                    DetailLevel: parameters.DetailLevel,
+                    Cursor: parameters.ContinuationToken,
+                    PostNavigationResponseBudget: (result, budget) =>
+                        AssemblyAnalysisPostNavigationResponseBudget.ApplyInspect(result, budget, parameters.PublicOnly)),
+                parameters.CancellationToken));
+    }
+
+    private static bool ShouldIncludeReferences(InspectAssemblyExecutionParameters parameters) =>
+        string.IsNullOrWhiteSpace(parameters.Namespace)
+        && string.IsNullOrWhiteSpace(parameters.TypeName)
+        && string.IsNullOrWhiteSpace(parameters.MemberName)
+        && (parameters.MemberNames is null || parameters.MemberNames.All(string.IsNullOrWhiteSpace));
+
+    private sealed record InspectAssemblyExecutionParameters(
+        string TargetPath,
+        string? Namespace,
+        string? TypeName,
+        string? MemberName,
+        bool PublicOnly,
+        int MaxResults,
+        bool ExactTypeName,
+        string[]? MemberNames,
+        int MaxMembers,
+        bool? IncludeReferences,
+        int MaxResponseBytes,
+        string? DetailLevel,
+        string? ContinuationToken,
+        CancellationToken CancellationToken);
 
     private static readonly string InspectAssemblyDescription =
         "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
@@ -219,7 +262,8 @@ internal static class AssemblyAnalysisToolRegistrations
                             ExpandAssemblyReferences: includeReferences,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
-                            Cursor: effectiveCursor),
+                            Cursor: effectiveCursor,
+                            PostNavigationResponseBudget: AssemblyAnalysisPostNavigationResponseBudget.ApplyExtensions),
                         ct));
             },
             TargetPathToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
@@ -322,10 +366,11 @@ internal static class AssemblyAnalysisToolRegistrations
                             parameters.DetailLevel,
                             parameters.ContinuationToken),
                         parameters.CancellationToken),
-                    ExpandAssemblyReferences: parameters.IncludeReferences || parameters.IncludeCallers || parameters.IncludeImpact,
+                    ExpandAssemblyReferences: parameters.IncludeReferences,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
-                    Cursor: parameters.ContinuationToken),
+                    Cursor: parameters.ContinuationToken,
+                    PostNavigationResponseBudget: AssemblyAnalysisPostNavigationResponseBudget.ApplyContext),
                 parameters.CancellationToken));
     }
 
@@ -354,6 +399,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
         "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
         "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
+        "includeReferences (Default false) bestimmt die effektive Suchbreite aller Composite-Abschnitte: " +
+        "false bleibt root-only, true verwendet die bounded Referenz-Closure. " +
         "maxBodyLines, maxCallers, depth und topN sind Abschnitts-Limits und müssen jeweils mindestens 1 sein; " +
         "0 oder negative Werte liefern INVALID_ARGUMENT (Caps: 1000, 200, 3 bzw. 200). " +
         $"maxResponseBytes, detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) und continuationToken steuern Budget und Paging; " +

@@ -104,3 +104,41 @@ internal sealed record DaemonHealthPayload(
     IReadOnlyList<string> Keys,
     string DaemonVersion,
     string? DaemonProfile = null);
+
+/// <summary>Target-bound health projection without process-wide daemon or aggregate fields.</summary>
+internal sealed record TargetHealthPayload(
+    TargetProjectHealthEntry? Project,
+    TargetAssemblyHealthEntry? Assembly,
+    bool DiagnosticsIncluded,
+    int DiagnosticLimit);
+
+internal sealed record TargetProjectHealthEntry(
+    string TargetPath,
+    string LoadState,
+    string? SolutionPath,
+    string? ConfigPath,
+    DateTime? LastUsedUtc,
+    int RefreshCount,
+    long StalenessCheckCount,
+    double StalenessCheckDurationMs,
+    int StalenessWarningCount,
+    string? LastStalenessWarning,
+    DateTime? LastGoodStateUtc,
+    string? LastLoadError);
+
+internal sealed record TargetAssemblyHealthEntry(
+    string TargetPath,
+    string LoadState,
+    string? OriginKind,
+    string? ContentHash,
+    string? Confidence,
+    AssemblyDiagnosticsSummary? DiagnosticsSummary,
+    string? Completeness,
+    IReadOnlyList<string>? Diagnostics,
+    string? LockStatus,
+    string? LeaseStatus,
+    string? CleanupStatus,
+    string? ErrorCode,
+    string? ErrorPhase,
+    string? ErrorCause,
+    string? NextAction);

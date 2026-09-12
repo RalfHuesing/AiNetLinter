@@ -17,66 +17,49 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 internal static class AssemblySymbolResolver
 {
-    // ainetlinter-disable MaxMethodLineCount — die Resolver-Pipeline bildet Diagnose, Identity und Navigation in einem Ergebnis.
     internal static async Task<(AssemblySymbolTarget? Target, CallToolResult? Error, AssemblyNavigationSummary Navigation)> ResolveAsync(
         AssemblyAnalysisLease root,
         string identifier,
+        AssemblySearchPlan plan,
         CancellationToken cancellationToken)
     {
-        var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
+        var handoff = ParseHandoff(identifier);
+        if (handoff.Error is not null)
+        {
+            return (null, handoff.Error,
+                AssemblySearchRouting.CreateSummary(new([root], 1, false), plan, new(0, Array.Empty<string>())));
+        }
+
+        var scopeRoot = await AssemblySearchRouting.ResolveScopeRootAsync(root, plan, cancellationToken)
+            .ConfigureAwait(false);
+        var allLeases = scopeRoot is null
+            ? new AssemblyNavigationLeaseSet([root], 1, false)
+            : AssemblySearchRouting.GetScopeLeases(root, scopeRoot, plan);
+        if (GetHandoffScopeError(identifier, handoff, scopeRoot, allLeases, plan) is { } handoffError)
+        {
+            return (null, handoffError,
+                AssemblySearchRouting.CreateSummary(allLeases, plan, new(0, Array.Empty<string>())));
+        }
+
+        if (scopeRoot is null)
+        {
+            return (null, McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(identifier)),
+                AssemblySearchRouting.CreateSummary(allLeases, plan, new(0, Array.Empty<string>())));
+        }
+
+        var leaseSet = AssemblySearchRouting.GetScopeLeases(root, scopeRoot, plan);
         var leases = leaseSet.Leases;
-        var looksLikeHandoff = SymbolHandoffIdentifier.HasWirePrefix(identifier)
-            || SymbolHandoffIdentifier.HasUnsupportedPrefix(identifier);
-        var providedIdentifier = default(SymbolHandoffIdentifier);
-        if (looksLikeHandoff && !SymbolHandoffIdentifier.TryParse(identifier, out providedIdentifier))
-        {
-            return (null, McpToolResults.InvalidArgument(
-                "Die Handoff-ID ist nicht kanonisch.",
-                hint: "Eine ID aus dem StructuredContent des aktuellen Ergebnisses kopieren.",
-                fieldPath: "$.symbolIdentifier"),
-                AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
-                    leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
-        }
-
-        if (looksLikeHandoff)
-        {
-            var targetLease = leases.FirstOrDefault(lease =>
-                AssemblyNavigationSupport.MatchesLeaseTarget(
-                    providedIdentifier,
-                    AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
-            var exactSnapshot = targetLease is not null
-                && AssemblyNavigationSupport.MatchesLeaseIdentity(
-                    providedIdentifier,
-                    AssemblyNavigationLeaseAccess.CreateView(targetLease).Identity);
-            if (providedIdentifier.Origin != SymbolHandoffOrigin.Assembly || targetLease is null)
-            {
-                return (null, McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(identifier)),
-                    AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
-                        leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
-            }
-
-            if (!exactSnapshot)
-            {
-                return (null, McpToolResults.StaleSnapshot(SymbolHandoffIdentifier.ForError(identifier)),
-                    AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
-                        leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
-            }
-        }
-
         var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(
-            AssemblyNavigationLeaseAccess.CreateView(root));
+            AssemblyNavigationLeaseAccess.CreateView(
+                scopeRoot));
         var candidates = await ResolveCandidatesAsync(
             leases,
             identifier,
-            looksLikeHandoff ? providedIdentifier : null,
+            handoff.Value,
             diagnostics,
             cancellationToken).ConfigureAwait(false);
 
-        var navigation = AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
-            leaseSet.TotalAssemblyCount,
-            leases.Count,
-            leaseSet.AssembliesTruncated,
-            diagnostics));
+        var navigation = AssemblySearchRouting.CreateSummary(leaseSet, plan, new(leases.Count, diagnostics));
         if (candidates.Count == 0)
         {
             return (null, McpToolResults.SymbolNotFound(identifier), navigation);
@@ -99,6 +82,39 @@ internal static class AssemblySymbolResolver
         }
 
         return (distinct[0], null, navigation);
+    }
+
+    private static (SymbolHandoffIdentifier? Value, CallToolResult? Error) ParseHandoff(string identifier)
+    {
+        var looksLikeHandoff = SymbolHandoffIdentifier.HasWirePrefix(identifier)
+            || SymbolHandoffIdentifier.HasUnsupportedPrefix(identifier);
+        if (!looksLikeHandoff) return (null, null);
+        return SymbolHandoffIdentifier.TryParse(identifier, out var handoff)
+            ? (handoff, null)
+            : (null, McpToolResults.InvalidArgument(
+                "Die Handoff-ID ist nicht kanonisch.",
+                hint: "Eine ID aus dem StructuredContent des aktuellen Ergebnisses kopieren.",
+                fieldPath: "$.symbolIdentifier"));
+    }
+
+    private static CallToolResult? GetHandoffScopeError(
+        string identifier,
+        (SymbolHandoffIdentifier? Value, CallToolResult? Error) handoff,
+        AssemblyAnalysisLease? scopeRoot,
+        AssemblyNavigationLeaseSet allLeases,
+        AssemblySearchPlan plan)
+    {
+        if (handoff.Value is not { } value) return null;
+        if (value.Origin != SymbolHandoffOrigin.Assembly || scopeRoot is null)
+        {
+            return McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(identifier));
+        }
+
+        return AssemblyNavigationSupport.MatchesLeaseIdentity(
+            value,
+            AssemblyNavigationLeaseAccess.CreateView(scopeRoot).Identity)
+            ? null
+            : McpToolResults.StaleSnapshot(SymbolHandoffIdentifier.ForError(identifier));
     }
 
     private static async Task<List<AssemblySymbolTarget>> ResolveCandidatesAsync(

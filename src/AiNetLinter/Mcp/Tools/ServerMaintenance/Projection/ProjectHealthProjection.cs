@@ -6,6 +6,24 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 
 internal static class ProjectHealthProjection
 {
+    internal static TargetProjectHealthEntry ToTargetEntry(ProjectSnapshot snapshot)
+    {
+        var entry = FromSnapshot(snapshot);
+        return new TargetProjectHealthEntry(
+            entry.TargetPath,
+            entry.LoadState,
+            entry.SolutionPath,
+            entry.ConfigPath,
+            entry.LastUsedUtc,
+            entry.RefreshCount,
+            entry.StalenessCheckCount,
+            entry.StalenessCheckDurationMs,
+            entry.StalenessWarningCount,
+            entry.LastStalenessWarning,
+            entry.LastGoodStateUtc,
+            entry.LastLoadError);
+    }
+
     internal static ProjectHealthEntry FromSnapshot(ProjectSnapshot snapshot)
     {
         var server = snapshot.Server;

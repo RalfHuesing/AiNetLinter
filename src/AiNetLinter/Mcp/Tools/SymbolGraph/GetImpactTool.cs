@@ -12,6 +12,7 @@ using AiNetLinter.Core.Git;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -210,7 +211,7 @@ internal static partial class GetImpactTool
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
-                ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
+                ? $"Keine Aufrufstellen gefunden fuer '{symbol!.ToDisplayString()}'"
                 : null);
 
         var finalBody = TransitiveCallGraphFormatter.FormatSymbolImpactText(
@@ -234,15 +235,17 @@ internal static partial class GetImpactTool
         CancellationToken ct)
     {
         var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        var plan = AssemblySearchPlan.Create(symbolIdentifier, input.IncludeReferences);
         var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
             lease,
             symbolIdentifier,
+            plan,
             ct).ConfigureAwait(false);
         if (error is not null) return error;
 
         var traversal = await AssemblyReferenceNavigator.FindReferencesAsync(
             new AssemblyReferenceTraversalRequest(
-                AssemblyNavigationSourceFactory.CreateSources(lease, target!),
+                AssemblyNavigationSourceFactory.CreateSources(lease, target!, plan),
                 input.MaxResults,
                 input.Depth,
                 navigation,
@@ -252,7 +255,7 @@ internal static partial class GetImpactTool
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
-                ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
+                ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                 : null);
 
         return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);

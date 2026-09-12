@@ -2,19 +2,21 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 
 internal static class AssemblyNavigationSourceFactory
 {
     internal static IReadOnlyList<AssemblyNavigationSource> CreateSources(
         AssemblyAnalysisLease root,
-        AssemblySymbolTarget target)
+        AssemblySymbolTarget target,
+        AssemblySearchPlan plan)
     {
         var sources = new List<AssemblyNavigationSource>();
-        var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
+        var leaseSet = AssemblySearchRouting.GetScopeLeases(root, target.Lease, plan);
         foreach (var lease in leaseSet.Leases)
         {
             var symbol = ReferenceEquals(lease, target.Lease)

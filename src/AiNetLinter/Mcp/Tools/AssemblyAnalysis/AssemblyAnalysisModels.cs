@@ -4,9 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -178,7 +181,14 @@ internal sealed record InspectAssemblyPayload(
     int ReturnedCount = 0,
     bool IsTruncated = false,
     string? ContinuationToken = null,
-    string Scope = "root");
+    string Scope = "root")
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public McpNavigationPayload? Navigation { get; init; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
+}
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,
@@ -202,7 +212,14 @@ internal sealed record FindAssemblyExtensionsPayload(
     int ReturnedCount = 0,
     bool IsTruncated = false,
     string? ContinuationToken = null,
-    string Scope = "root");
+    string Scope = "root")
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public McpNavigationPayload? Navigation { get; init; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; init; }
+}
 
 internal static class AssemblyPaging
 {

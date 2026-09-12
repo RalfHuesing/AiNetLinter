@@ -136,7 +136,6 @@ internal static class FindAssemblyExtensionsResponseBuilder
                 ? extension.Name
                 : $"{extension.Namespace}.{extension.Name}";
             builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}");
-            if (extension.Id is not null) builder.AppendLine($"  ID: `{extension.Id}`");
             builder.AppendLine($"  Signatur: `{extension.Signature}`");
             if (extension.ApplicabilityReason is not null) builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");
         }
