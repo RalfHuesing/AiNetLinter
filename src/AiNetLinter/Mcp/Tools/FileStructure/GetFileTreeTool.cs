@@ -50,7 +50,7 @@ internal static class GetFileTreeTool
         {
             var scan = GetFileTreeScanner.Scan(analysisRoot, input, cancellationToken);
             var text = GetFileTreeRenderer.Render(scan);
-            return Task.FromResult(McpToolResults.Text(text, new { fileTree = scan.Payload }));
+            return Task.FromResult(McpToolResults.Text(text));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

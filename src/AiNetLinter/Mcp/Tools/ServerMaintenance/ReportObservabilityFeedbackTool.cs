@@ -69,7 +69,7 @@ internal static class ReportObservabilityFeedbackTool
             Severity: normalizedSeverity,
             TimestampUtc: DateTime.UtcNow);
 
-        return Task.FromResult(McpToolResults.Text(responseText, payload));
+        return Task.FromResult(McpToolResults.Text(responseText));
     }
 
     private static readonly HashSet<string> AllowedFeedbackTypes = new(StringComparer.OrdinalIgnoreCase)

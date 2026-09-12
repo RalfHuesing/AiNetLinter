@@ -68,7 +68,7 @@ internal static partial class AssemblySearchTool
                 () => BuildPayloadWithBinding(root, arguments, binding, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
             var text = RenderText(payload);
-            return McpToolResults.Text(text, new { assemblySearch = payload });
+            return McpToolResults.Text(text);
         }
         catch (ArgumentException exception)
         {

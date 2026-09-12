@@ -77,14 +77,14 @@ internal static class AssemblyFindSymbolTool
         bool includeGenerated,
         CancellationToken cancellationToken)
     {
-        var results = new List<FindSymbolPatternResultDto>(patterns.Count);
         var markdown = new MarkdownBuilder();
         var plan = AssemblySearchPlan.Create(null, includeReferences: true);
         AssemblyNavigationSummary? navigation = null;
-        foreach (var pattern in patterns)
+        for (var patternIndex = 0; patternIndex < patterns.Count; patternIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (results.Count > 0) markdown.Divider();
+            if (patternIndex > 0) markdown.Divider();
+            var pattern = patterns[patternIndex];
             var search = await SearchPatternAsync(
                 lease,
                 pattern,
@@ -105,14 +105,13 @@ internal static class AssemblyFindSymbolTool
             navigation = navigation is null
                 ? search.Navigation
                 : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);
-            results.Add(CreatePatternResult(pattern, search));
             AppendPatternMarkdown(markdown, pattern, search);
         }
 
         var summary = navigation ?? new AssemblyNavigationSummary(true, 1, 0, false, "partial", []);
         AppendSummary(markdown, summary);
         AppendDiagnostics(markdown, summary.Diagnostics);
-        return CreateResponse(markdown, results, summary, scopeType, includeGenerated);
+        return McpToolResults.Text(markdown.Build().TrimEnd());
     }
 
     private static Task<AssemblySymbolSearchResult> SearchPatternAsync(
@@ -131,17 +130,6 @@ internal static class AssemblyFindSymbolTool
             cancellationToken,
             requestScopeType,
             includeGenerated));
-
-    private static FindSymbolPatternResultDto CreatePatternResult(
-        string pattern,
-        AssemblySymbolSearchResult search) =>
-        new(
-            pattern,
-            search.Entries,
-            search.TotalCount,
-            search.ReturnedCount,
-            search.IsTruncated,
-            search.TruncatedBy);
 
     private static void AppendPatternMarkdown(
         MarkdownBuilder markdown,
@@ -176,26 +164,4 @@ internal static class AssemblyFindSymbolTool
         foreach (var diagnostic in shown) markdown.Line($"- {diagnostic}");
     }
 
-    private static CallToolResult CreateResponse(
-        MarkdownBuilder markdown,
-        IReadOnlyList<FindSymbolPatternResultDto> results,
-        AssemblyNavigationSummary summary,
-        McpScopeType scopeType,
-        bool includeGenerated)
-    {
-        var truncatedBy = results
-            .SelectMany(result => result.TruncatedBy ?? [])
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        return McpToolResults.Text(
-            markdown.Build().TrimEnd(),
-            new FindSymbolBatchDto(
-                results,
-                summary,
-                results.Sum(result => result.TotalCount),
-                results.Sum(result => result.ReturnedCount),
-                truncatedBy.Count > 0,
-                truncatedBy,
-                new FindSymbolScopeDto(FindSymbolTool.ToWireValue(scopeType), includeGenerated)));
-    }
 }

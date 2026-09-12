@@ -74,7 +74,7 @@ internal static class AssemblyFindReferencesTool
                 traversal.Completeness.TotalCallSiteCount == 0
                     ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                     : null);
-            return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
+            return McpToolResults.Text(formatted.Text);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

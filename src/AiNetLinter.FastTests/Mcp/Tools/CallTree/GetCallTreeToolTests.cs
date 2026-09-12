@@ -159,8 +159,7 @@ public sealed partial class GetCallTreeToolTests
             ],
             [new CallGraphEdge("n2", "n1", [new CallGraphCallSite("Caller.cs", 2, 1, "Assembly")])]);
         var result = McpToolResults.Text(
-            "[ASSEMBLY] targetPath=sample.dll; origin=decompiled\n\nflowchart TD\n    n2 --> n1\n" + new string('x', 3_000),
-            new CallTreePayload(graph, "incoming", 2, 2, false, 10, false, false));
+            "[ASSEMBLY] targetPath=sample.dll; origin=decompiled\n\nflowchart TD\n    n2 --> n1\n" + new string('x', 3_000));
 
         var limited = CallGraphResponseBudget.ApplyFinalResponseBudget(result, 4_096);
 
@@ -361,8 +360,7 @@ public sealed partial class GetCallTreeToolTests
                     Array.Empty<MetricsTreeNode>()))
                 .ToList());
         var result = McpToolResults.Text(
-            new string('x', 2_000),
-            new AssemblyCallTreeResult(root, navigation, false));
+            new string('x', 2_000));
 
         var limited = CallGraphResponseBudget.ApplyFinalResponseBudget(result, 1_024);
 

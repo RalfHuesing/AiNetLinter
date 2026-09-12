@@ -254,7 +254,7 @@ public sealed class WiringProjectContractTests
         var degraded = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest(solutionPath),
-            new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort", new { value = "payload" }))));
+            new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort"))));
         var degradedText = TextOf(degraded);
         Assert.StartsWith("[WARN]", degradedText, StringComparison.Ordinal);
         Assert.Contains("letzten guten Solution-Stand", degradedText, StringComparison.Ordinal);

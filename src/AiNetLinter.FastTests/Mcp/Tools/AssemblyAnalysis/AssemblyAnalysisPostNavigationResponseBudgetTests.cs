@@ -40,7 +40,7 @@ public sealed class AssemblyAnalysisPostNavigationResponseBudgetTests
             TruncatedBy: Array.Empty<string>(),
             TotalCount: types.Length,
             ReturnedCount: types.Length);
-        var original = McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, publicOnly: false), payload);
+        var original = McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, publicOnly: false));
 
         var projected = AssemblyAnalysisPostNavigationResponseBudget.ApplyInspect(original, 2_048, publicOnly: false);
 
@@ -54,31 +54,7 @@ public sealed class AssemblyAnalysisPostNavigationResponseBudgetTests
     [Fact]
     public void ApplyContext_UsesOnlyTheRenderedContentForItsBudget()
     {
-        var original = McpToolResults.Text("context", new
-        {
-            contextId = "asm:fixture",
-            targetPath = "C:/fixture.dll",
-            scope = "root",
-            completeness = "complete",
-            symbolIdentifier = "T:Fixture.Type",
-            identity = new { name = "Fixture" },
-            origin = new { canonicalPath = "C:/fixture.dll" },
-            assemblyAnalysis = new { totalCount = 1, returnedCount = 1 },
-            body = new { results = new[] { new { body = new string('x', 8_000) } } },
-            totalCount = 1,
-            returnedCount = 1,
-            isTruncated = false,
-            truncatedBy = Array.Empty<string>(),
-            navigation = new
-            {
-                contractVersion = 2,
-                target = new { targetPath = "C:/fixture.dll", analysisRoot = "C:/fixture.dll", origin = "assembly" },
-                snapshot = new { fingerprint = "fixture", kind = "assembly", fresh = true },
-                status = new { operation = "ok", completeness = "complete", code = (string?)null },
-                analysis = new { mode = "metadata", quality = "complete", limitationCodes = Array.Empty<string>() },
-                next = new { kind = "none", action = "none" },
-            },
-        });
+        var original = McpToolResults.Text("context");
 
         var projected = AssemblyAnalysisPostNavigationResponseBudget.ApplyContext(original, 2_048);
 

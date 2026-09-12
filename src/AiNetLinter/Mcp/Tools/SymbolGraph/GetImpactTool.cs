@@ -226,7 +226,7 @@ internal static partial class GetImpactTool
             traversal.Navigation,
             formatted.StructuredPayload.Handoff);
 
-        return McpToolResults.Text(finalBody, payload);
+        return McpToolResults.Text(finalBody);
     }
 
     private static async Task<CallToolResult> ExecuteAssemblySymbolBranchAsync(
@@ -258,7 +258,7 @@ internal static partial class GetImpactTool
                 ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                 : null);
 
-        return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
+        return McpToolResults.Text(formatted.Text);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
@@ -300,8 +300,7 @@ internal static partial class GetImpactTool
             ? callSiteEntries
             : callSiteEntries.Take(effectiveMax).ToList();
         return McpToolResults.Text(
-            $"Impact: statische Aufrufstellen gefunden.\n{finalText}",
-            new GitImpactPayload("impact_found", shownEntries, callSiteEntries.Count, shownEntries.Count));
+            $"Impact: statische Aufrufstellen gefunden.\n{finalText}");
     }
 
     private static string DetermineImpactStatus(int callSiteCount) =>
@@ -318,7 +317,7 @@ internal static partial class GetImpactTool
             _ => "Impact: statische Aufrufstellen gefunden.",
         };
         var payload = new GitImpactPayload(request.ImpactStatus, request.CallSites, request.TotalCount, request.ShownCount);
-        if (request.ImpactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
+        if (request.ImpactStatus != "invalid_ref") return McpToolResults.Text(text);
 
         var recoverable = McpToolResults.Recoverable(
             LinterErrorCodes.AnalysisFailed, text, context: request.Context, hint: request.Hint);

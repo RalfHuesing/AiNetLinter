@@ -2,6 +2,7 @@
 
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
@@ -13,6 +14,16 @@ namespace AiNetLinter.FastTests.Mcp.Results;
 [Trait("Category", "Unit")]
 public sealed class McpToolResultsContentTests
 {
+    [Fact]
+    public void Text_HasNoLegacyPayloadOverload()
+    {
+        var textOverloads = typeof(McpToolResults)
+            .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+            .Where(method => method.Name == nameof(McpToolResults.Text));
+
+        Assert.DoesNotContain(textOverloads, method => method.IsGenericMethodDefinition);
+    }
+
     [Fact]
     public void Error_RendersCodeMessageAndContextInOneTextBlock()
     {

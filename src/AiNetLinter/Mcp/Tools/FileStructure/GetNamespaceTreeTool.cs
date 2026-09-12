@@ -288,7 +288,7 @@ internal static class GetNamespaceTreeTool
         int maxResponseBytes,
         bool deferToNavigation) =>
         deferToNavigation
-            ? McpToolResults.Text(originalText, payload)
+            ? McpToolResults.Text(originalText)
             : GetNamespaceTreeResponseBudget.Apply(originalText, payload, maxResponseBytes);
 
     private static string AppendDepthEvidence(string text, int requestedDepth, int effectiveDepth)

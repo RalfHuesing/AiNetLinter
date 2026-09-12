@@ -19,38 +19,8 @@ internal static class RefactoringDriftResponseBuilder
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
         var body = RenderText(solutionDir, result);
-        var finalText = body;
-
-        var payload = new RefactoringDriftPayload(
-            Candidates: result.ShownCandidates.Select(c => ToEntry(solutionDir, c)).ToList(),
-            Summary: new RefactoringDriftSummary(
-                HelperSymbol: result.HelperSymbolDisplayName,
-                MethodsScanned: result.MethodsScanned,
-                TotalCandidates: result.TotalCandidates,
-                ShownCandidates: result.ShownCandidates.Count,
-                Truncated: result.Truncated,
-                Status: result.Truncated ? "truncated" : result.TotalCandidates == 0 ? "empty" : "checked",
-                TruncatedBy: result.Truncated ? result.TotalCandidates - result.ShownCandidates.Count : 0,
-                Next: result.Truncated
-                    ? "continue: maxResults erhoehen oder scopeDir eingrenzen."
-                    : "review_candidates: Kandidaten manuell pruefen."));
-
-        // In ein Objekt gewrappt statt eines nackten Arrays (siehe
-        // McpToolResults.Text<T>-Doc-Kommentar).
-        return McpToolResults.Text(finalText, payload);
+        return McpToolResults.Text(body);
     }
-
-    private static RefactoringDriftCandidateEntry ToEntry(string solutionDir, RefactoringDriftCandidate candidate) =>
-        new(
-            PathNormalizer.ToRelative(solutionDir, candidate.FilePath),
-            candidate.LineNumber,
-            candidate.SignatureName,
-            candidate.TokenCount,
-            candidate.Score,
-            ResultType: "candidate",
-            Confidence: candidate.Score >= 0.9 ? "high" : "medium",
-            EvidenceBoundary: "statische strukturelle Aehnlichkeit innerhalb des angeforderten Source-Scopes; kein Laufzeitbeweis",
-            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "manuelle Semantikpruefung"]);
 
     private static string RenderText(string solutionDir, RefactoringDriftScanResultForTool result)
     {

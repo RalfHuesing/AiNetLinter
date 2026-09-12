@@ -23,7 +23,7 @@ internal static class GetNamespaceTreeResponseBudget
         var candidate = PrepareCandidate(payload);
         if (maxResponseBytes <= 0)
         {
-            return McpToolResults.Text(RenderVisibleText(candidate, originalText), candidate);
+            return McpToolResults.Text(RenderVisibleText(candidate, originalText));
         }
 
         if (maxResponseBytes < McpResponseBudgetLimits.MinimumContentBytes)
@@ -110,7 +110,7 @@ internal static class GetNamespaceTreeResponseBudget
         var text = RenderVisibleText(candidate, originalText);
         return ContentBytes(text) > maxResponseBytes
             ? BudgetTooSmall(maxResponseBytes, candidate, originalText)
-            : McpToolResults.Text(text, candidate);
+            : McpToolResults.Text(text);
     }
 
     private static NamespaceTreePayload MarkTruncated(

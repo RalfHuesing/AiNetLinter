@@ -18,7 +18,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
     {
         var payload = CreatePayload(request);
         payload = ApplyResponseBudget(payload, request);
-        return McpToolResults.Text(FormatText(payload), payload);
+        return McpToolResults.Text(FormatText(payload));
     }
 
     private static FindAssemblyExtensionsPayload CreatePayload(FindAssemblyExtensionsBuildRequest request)
@@ -86,7 +86,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
             request.Lease is null
                 ? null
                 : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
-                    McpToolResults.Text(FormatText(candidate), candidate),
+                    McpToolResults.Text(FormatText(candidate)),
                     request.Lease,
                     budget),
             options: new(

@@ -58,7 +58,7 @@ internal static class ReloadConfigTool
         var payload = BuildPayload(state, rulesPath, newConfig);
         state.ReloadConfig(newConfig, resolvedConfigPath: rulesPath);
         await state.ReloadSolutionAsync(ct);
-        return McpToolResults.Text(BuildSummary(payload), payload);
+        return McpToolResults.Text(BuildSummary(payload));
     }
 
     private static ReloadConfigPayload BuildPayload(McpCodeGraphServer state, string newPath, Config newConfig)

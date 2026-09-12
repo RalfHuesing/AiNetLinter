@@ -95,7 +95,7 @@ internal static partial class FindReferencesTool
         var formatted = ProjectResponseBudget(traversal, request.MaxResponseBytes, symbol!.ToDisplayString());
         return CombinedBytes(formatted) > request.MaxResponseBytes
             ? BudgetTooSmall(request.MaxResponseBytes)
-            : McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
+            : McpToolResults.Text(formatted.Text);
     }
 
     private static TransitiveCallGraphFormatResult ProjectResponseBudget(

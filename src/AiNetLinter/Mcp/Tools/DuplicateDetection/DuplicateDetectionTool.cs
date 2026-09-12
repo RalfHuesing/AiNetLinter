@@ -136,44 +136,8 @@ internal static class DuplicateDetectionTool
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
         var body = RenderText(solutionDir, result, mode);
-        var finalText = body;
-
-        var payload = new DuplicateDetectionPayload(
-            Clusters: result.ShownClusters.Select(c => ToPayloadEntry(solutionDir, c)).ToList(),
-            Summary: new DuplicateDetectionSummary(
-                MethodsScanned: result.MethodsScanned,
-                TotalClusters: result.TotalClusters,
-                ShownClusters: result.ShownClusters.Count,
-                Truncated: result.Truncated,
-                Mode: mode,
-                Status: result.Truncated ? "truncated" : result.TotalClusters == 0 ? "empty" : "checked",
-                TruncatedBy: result.Truncated ? result.TotalClusters - result.ShownClusters.Count : 0,
-                Next: result.Truncated
-                    ? "continue: maxResults erhoehen oder scopeDir eingrenzen."
-                    : "review_candidates: Kandidaten manuell pruefen."));
-
-        // In ein Objekt gewrappt statt eines nackten Arrays (siehe
-        // McpToolResults.Text<T>-Doc-Kommentar).
-        return McpToolResults.Text(finalText, payload);
+        return McpToolResults.Text(body);
     }
-
-    private static DuplicateClusterPayloadEntry ToPayloadEntry(string solutionDir, DuplicateCluster cluster) =>
-        new(
-            Bucket: BucketLabel(cluster.Bucket),
-            Score: cluster.Score,
-            Members: cluster.Members.Select(m => ToEntry(solutionDir, m)).ToList());
-
-    private static DuplicateClusterEntry ToEntry(string solutionDir, DuplicateClusterMember member) =>
-        new(
-            PathNormalizer.ToRelative(solutionDir, member.FilePath),
-            member.LineNumber,
-            member.SignatureName,
-            member.TokenCount,
-            member.StructureProfile,
-            ResultType: "candidate",
-            Confidence: member.TokenCount >= 80 ? "high" : "medium",
-            EvidenceBoundary: "statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit",
-            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "manuelle Semantikpruefung"]);
 
     private static string BucketLabel(DuplicateSimilarityBucket bucket) => bucket switch
     {

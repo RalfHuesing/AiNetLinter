@@ -87,7 +87,7 @@ internal static partial class GetImpactTool
 
         var payload = ChangeContextResponseMapper.BuildPayload(new ChangeContextResponseInput(
             analysis, batch, violationsStage.Violations, maxTestsPerSymbol));
-        return McpToolResults.Text(BuildChangeContextText(payload, input.MaxResults), payload);
+        return McpToolResults.Text(BuildChangeContextText(payload, input.MaxResults));
     }
 
     internal static CallToolResult FormatChangeContextEmpty(string impactStatus, string? context = null, string? hint = null)
@@ -99,7 +99,7 @@ internal static partial class GetImpactTool
             "invalid_ref" => "Impact: gitRef konnte nicht aufgeloest werden.",
             _ => "Impact: keine ungecommitten Aenderungen.",
         };
-        if (impactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
+        if (impactStatus != "invalid_ref") return McpToolResults.Text(text);
         var recoverable = McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, text, context, hint);
         return new CallToolResult
         {

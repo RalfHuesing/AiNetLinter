@@ -57,23 +57,6 @@ internal sealed record CallTreeBuildRequest(
     bool IncludeGenerated = false,
     McpScopeClassifier? ScopeClassifier = null);
 
-internal sealed record CallTreePayload(
-    CallGraphPayload Graph,
-    string Direction,
-    int RequestedDepth,
-    int EffectiveDepth,
-    bool DepthWasClamped,
-    int TopN,
-    bool Truncated,
-    bool TopNTruncated,
-    int TotalNodeCount = 0,
-    int TotalEdgeCount = 0,
-    int ReturnedNodeCount = 0,
-    int ReturnedEdgeCount = 0,
-    IReadOnlyList<string>? TruncatedBy = null,
-    McpScopeMetadata? Scope = null,
-    AssemblyNavigationSummary? AssemblyNavigation = null);
-
 /// <summary>
 /// Kompakte, graphbasierte Darstellung des Aufrufgraphen. Die lokalen IDs sind nur fuer diese
 /// Nutzlast gueltig; stabile Symbolidentitaet bleibt separat auf dem Knoten erhalten.

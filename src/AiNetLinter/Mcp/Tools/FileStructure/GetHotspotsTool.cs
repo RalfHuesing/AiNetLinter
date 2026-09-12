@@ -78,14 +78,6 @@ internal static class GetHotspotsTool
                 normalizedScopeType));
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
         return Task.FromResult(McpToolResults.Text(
-            report.Text,
-            new HotspotsPayload(
-                report.Entries,
-                report.TotalHotspots,
-                report.ShownHotspots,
-                report.Truncated,
-                report.MaxResults,
-                report.MinLinePercentage,
-                report.ScopeType)));
+            report.Text));
     }
 }

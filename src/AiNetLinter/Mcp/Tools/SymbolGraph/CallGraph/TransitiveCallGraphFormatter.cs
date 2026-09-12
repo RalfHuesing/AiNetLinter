@@ -146,14 +146,7 @@ internal static class TransitiveCallGraphFormatter
             : request.Body;
 
         return McpToolResults.Text(
-            finalBody,
-            new AssemblyCallTreeResult(
-                request.Root,
-                effectiveNavigation,
-                treeTruncated,
-                request.RequestedDepth,
-                request.EffectiveDepth,
-                request.DepthWasClamped));
+            finalBody);
     }
 
     internal static CallToolResult FormatAssemblyCallGraphResponse(

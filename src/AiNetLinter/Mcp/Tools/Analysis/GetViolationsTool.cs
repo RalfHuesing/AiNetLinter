@@ -93,13 +93,7 @@ internal static class GetViolationsTool
         }
         var text = result.Text;
         var completeness = result.NoFilesMatched ? "empty" : (result.IsTruncated ? "truncated" : "complete");
-        return McpToolResults.Text(text, new
-        {
-            completeness,
-            totalViolations = result.TotalViolations,
-            isTruncated = result.IsTruncated,
-            Violations = result.Violations!
-        });
+        return McpToolResults.Text(text);
     }
 }
 

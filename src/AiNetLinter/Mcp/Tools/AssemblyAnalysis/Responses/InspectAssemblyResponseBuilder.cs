@@ -18,8 +18,7 @@ internal static class InspectAssemblyResponseBuilder
         var payload = BuildPayload(request);
         payload = ApplyResponseBudget(payload, request);
         return McpToolResults.Text(
-            InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly),
-            payload);
+            InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly));
     }
 
     /// <summary>
@@ -126,7 +125,7 @@ internal static class InspectAssemblyResponseBuilder
             request.Lease is null
                 ? null
                 : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
-                    McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
+                    McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly)),
                     request.Lease,
                     budget),
             options: new(

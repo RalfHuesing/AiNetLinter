@@ -74,13 +74,7 @@ internal static class FindDeadCodeTool
         var reportText = FormatTextReport(result, args);
         var finalText = reportText;
 
-        return McpToolResults.Text(finalText, new
-        {
-            Candidates = result.DeadSymbols,
-            Summary = result.Summary,
-            ResultType = result.ResultType,
-            DeletionClaim = result.DeletionClaim
-        });
+        return McpToolResults.Text(finalText);
     }
 
     private static string FormatTextReport(DeadCodeScanResult result, FindDeadCodeArgs args)

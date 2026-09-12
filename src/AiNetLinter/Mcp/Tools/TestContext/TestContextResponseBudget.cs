@@ -125,14 +125,6 @@ internal static class TestContextResponseBudget
 
     private static int NormalizeBudget(int requested) => requested <= 0 ? DefaultMaxResponseBytes : requested;
 
-    private static string? ExtractNavigationText(string text, TestContextPayload payload)
-    {
-        var report = TestContextFormatter.FormatReport(payload);
-        return text.StartsWith(report, StringComparison.Ordinal)
-            ? text[report.Length..].Trim()
-            : null;
-    }
-
     private static TestFileCoverageResult ToCoverageResult(StaticTestCandidateFile file) => new(
         file.FilePath,
         file.TestClassName,

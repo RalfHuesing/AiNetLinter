@@ -12,24 +12,6 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// <summary>Projects internal assembly-session data onto the stable agent contract.</summary>
 internal static partial class AssemblyPublicContract
 {
-    private static readonly HashSet<string> ForbiddenProperties = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "cursor", "isTruncated", "generation", "currentGeneration", "lastGoodGeneration",
-        "generatedPath", "generatedDocumentPath", "decompiledProjectDirectory",
-        "decompiledProjectPath", "decompiledSourceRoot", "sourceProjectPath",
-        "workspacePath", "workspaceDirectory", "cachePath", "cacheDirectory", "cacheRoot",
-        "materializedPath", "materializationPath", "materialisatPath",
-        "directoriesContinuationToken", "directoryContinuationToken",
-    };
-
-    private static readonly HashSet<string> DiagnosticProperties = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "diagnostic", "diagnostics", "diagnosticSamples", "samples", "errorCause", "lastLoadError",
-    };
-
-    [GeneratedRegex("(?i)(?:[A-Z]:[\\\\/]|\\\\\\\\|/)[^\\s,;\\)\\]}`]+")]
-    private static partial Regex AbsolutePathRegex();
-
     [GeneratedRegex("(?i)(?<=— `)(?:[A-Z]:[\\\\/]|\\\\\\\\|/)[^`]+(?=`)")]
     private static partial Regex BodyLocationPathRegex();
 

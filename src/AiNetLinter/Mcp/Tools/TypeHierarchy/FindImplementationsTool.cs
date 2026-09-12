@@ -346,7 +346,7 @@ internal static class FindImplementationsTool
         {
             return BudgetTooSmall(maxResponseBytes);
         }
-        return McpToolResults.Text(FormatResultText(current), current);
+        return McpToolResults.Text(FormatResultText(current));
     }
 
     private static CallToolResult InvalidResponseBudget() =>

@@ -376,8 +376,7 @@ internal static partial class GetSymbolBodyTool
         }
 
         return McpToolResults.Text(
-            markdown,
-            new SymbolBodyBatchDto(units.Where(unit => unit.Entry is not null).Select(unit => unit.Entry!).ToList(), requestedCount));
+            markdown);
     }
 
     private static int CombinedBytes(

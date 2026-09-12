@@ -68,17 +68,7 @@ internal static class MetricsTreeTool
         var text = MetricsTreeRenderer.Render(visibleTree, int.MaxValue, sortDescending);
         var withHint = McpDrillDownHints.Append(text, args.Depth);
         return McpToolResults.Text(
-            withHint,
-            new MetricsTreePayload(
-                MetricsTreeModeParser.ToWireValue(query.Mode),
-                query.Root,
-                query.Depth,
-                query.TopN,
-                visibleTree,
-                totalCount,
-                returnedCount,
-                completeness,
-                next));
+            withHint);
     }
 
     /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne

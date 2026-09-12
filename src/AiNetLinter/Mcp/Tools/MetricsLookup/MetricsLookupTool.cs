@@ -81,7 +81,7 @@ internal static class MetricsLookupTool
 
         var markdown = mb.Build().TrimEnd();
         var final = markdown;
-        return McpToolResults.Text(final, new MetricsLookupBatchDto(dtos, identifiers.Count));
+        return McpToolResults.Text(final);
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(

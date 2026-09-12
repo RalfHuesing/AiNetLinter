@@ -29,50 +29,6 @@ internal sealed record DuplicateDetectionInput(
     string? HelperSymbol = null,
     string? ScopeType = null);
 
-/// <summary>Ein Cluster-Mitglied fuer die <c>find_duplicates</c>-Ausgabe (Text und
-/// agentischen Content gemeinsam) — 1:1-Projektion von
-/// <see cref="Core.DuplicateDetection.DuplicateClusterMember"/> auf solution-relative Pfade.</summary>
-internal sealed record DuplicateClusterEntry(
-    string FilePath,
-    int Line,
-    string SignatureName,
-    int TokenCount,
-    string? StructureProfile = null,
-    string ResultType = "candidate",
-    string Confidence = "medium",
-    string EvidenceBoundary = "statische Aehnlichkeit innerhalb des angeforderten Source-Scopes",
-    IReadOnlyList<string>? Countercheck = null);
-
-/// <summary>Ein Klon-Cluster fuer die <c>find_duplicates</c>-Ausgabe. <see cref="Bucket"/> ist
-/// klein geschrieben (<c>exact</c>/<c>near</c>/<c>fuzzy</c>) fuer die JSON-Ausgabe.</summary>
-internal sealed record DuplicateClusterPayloadEntry(
-    string Bucket,
-    double Score,
-    IReadOnlyList<DuplicateClusterEntry> Members);
-
-/// <summary>Aggregat-Summary fuer <c>find_duplicates</c> — <see cref="TotalClusters"/> ist die
-/// volle (ungekappte) Trefferzahl nach Schwellwert-Filter, <see cref="ShownClusters"/> die nach
-/// <c>maxResults</c> gekappte Anzahl.</summary>
-internal sealed record DuplicateDetectionSummary(
-    int MethodsScanned,
-    int TotalClusters,
-    int ShownClusters,
-    bool Truncated,
-    string Mode,
-    string ResultType = "candidate",
-    bool DeletionClaim = false,
-    string Status = "checked",
-    int TruncatedBy = 0,
-    string Next = "Kandidaten manuell pruefen; keine automatische Loeschentscheidung ableiten.");
-
-/// <summary>Fachliche Wurzel für <c>find_duplicates</c>.
-/// </summary>
-internal sealed record DuplicateDetectionPayload(
-    IReadOnlyList<DuplicateClusterPayloadEntry> Clusters,
-    DuplicateDetectionSummary Summary,
-    string ResultType = "candidate",
-    bool DeletionClaim = false);
-
 /// <summary>Ergebnis von <see cref="DuplicateDetectionScanner.ScanAsync"/> — reine Daten, keine
 /// Text-/JSON-Formatierung (die macht <see cref="DuplicateDetectionTool"/>, analog
 /// <c>DependencyGraphScanner</c>/<c>DependencyGraphTool</c>). <see cref="Truncated"/> ist ein

@@ -126,7 +126,7 @@ internal static class GetTypeHierarchyTool
         {
             return BudgetTooSmall(maxResponseBytes);
         }
-        return McpToolResults.Text(text, current);
+        return McpToolResults.Text(text);
     }
 
     private static int CombinedBytes(TypeHierarchyPayload payload)

@@ -289,7 +289,6 @@ internal static class FindSymbolTool
         IReadOnlyList<string> patterns,
         int maxResults)
     {
-        var results = new List<FindSymbolPatternResultDto>(patterns.Count);
         var markdown = new MarkdownBuilder();
         var scopeClassifier = request.ScopeClassifier ?? new McpScopeClassifier();
         var scopedRequest = request with { ScopeClassifier = scopeClassifier };
@@ -300,11 +299,10 @@ internal static class FindSymbolTool
             if (i > 0) markdown.Divider();
             var pattern = patterns[i];
             var scan = await FindPatternAsync(scopedRequest, solution, pattern, maxResults);
-            results.Add(CreatePatternResult(pattern, scan));
             AppendPatternMarkdown(markdown, pattern, scan.Text);
         }
 
-        return CreateBatchResponse(markdown, results, request.ScopeType, request.IncludeGenerated);
+        return McpToolResults.Text(markdown.Build().TrimEnd());
     }
 
     private static Task<FindSymbolScanResult> FindPatternAsync(
@@ -324,43 +322,10 @@ internal static class FindSymbolTool
                 request.ScopeClassifier),
             request.CancellationToken);
 
-    private static FindSymbolPatternResultDto CreatePatternResult(
-        string pattern,
-        FindSymbolScanResult scan) =>
-        new(
-            pattern,
-            scan.Entries,
-            scan.TotalCount,
-            scan.ReturnedCount,
-            scan.IsTruncated,
-            scan.TruncatedBy,
-            scan.KindAlternatives);
-
     private static void AppendPatternMarkdown(MarkdownBuilder markdown, string pattern, string text)
     {
         markdown.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
         markdown.Line(text.TrimEnd());
-    }
-
-    private static CallToolResult CreateBatchResponse(
-        MarkdownBuilder markdown,
-        IReadOnlyList<FindSymbolPatternResultDto> results,
-        McpScopeType scopeType,
-        bool includeGenerated)
-    {
-        var truncatedBy = results
-            .SelectMany(result => result.TruncatedBy ?? [])
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        return McpToolResults.Text(
-            markdown.Build().TrimEnd(),
-            new FindSymbolBatchDto(
-                results,
-                TotalCount: results.Sum(result => result.TotalCount),
-                ReturnedCount: results.Sum(result => result.ReturnedCount),
-                IsTruncated: truncatedBy.Count > 0,
-                TruncatedBy: truncatedBy,
-                Scope: new FindSymbolScopeDto(ToWireValue(scopeType), includeGenerated)));
     }
 
     internal static string ToWireValue(McpScopeType scopeType) => scopeType switch
@@ -387,30 +352,6 @@ internal static class FindSymbolTool
     }
 
 }
-
-/// <summary>
-/// Interne Hülle für <c>find_symbol</c> — enthält die Ergebnisliste aller angefragten Namens-Muster.
-/// </summary>
-internal sealed record FindSymbolBatchDto(
-    IReadOnlyList<FindSymbolPatternResultDto> Results,
-    AssemblyNavigationSummary? Navigation = null,
-    int TotalCount = 0,
-    int ReturnedCount = 0,
-    bool IsTruncated = false,
-    IReadOnlyList<string>? TruncatedBy = null,
-    FindSymbolScopeDto? Scope = null);
-
-/// <summary>
-/// Ein Einzelergebnis für ein angefragtes Namens-Muster in <c>find_symbol</c>.
-/// </summary>
-internal sealed record FindSymbolPatternResultDto(
-    string NamePattern,
-    IReadOnlyList<SymbolLocationEntry> Matches,
-    int TotalCount = 0,
-    int ReturnedCount = 0,
-    bool IsTruncated = false,
-    IReadOnlyList<string>? TruncatedBy = null,
-    IReadOnlyList<string>? KindAlternatives = null);
 
 public sealed record FindSymbolScopeDto(string RequestedType, bool IncludeGenerated);
 

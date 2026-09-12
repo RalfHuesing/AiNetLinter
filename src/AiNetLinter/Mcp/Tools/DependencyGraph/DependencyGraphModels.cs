@@ -107,25 +107,6 @@ internal sealed record DependencyGraphResult(
     McpScopeMetadata? Scope = null,
     IReadOnlyList<string>? TruncatedBy = null);
 
-internal sealed record DependencyGraphWirePayload(
-    DependencyGraphTarget Target,
-    string Direction,
-    IReadOnlyList<DependencyGraphNode> Nodes,
-    IReadOnlyList<DependencyEdge> Edges,
-    IReadOnlyList<ProjectReferenceEntry> ProjectReferences,
-    int RequestedDepth,
-    int EffectiveDepth,
-    bool DepthWasClamped,
-    bool Truncated,
-    int TotalEdgeCount,
-    int ShownEdgeCount,
-    int TotalNodeCount,
-    int ShownNodeCount,
-    int ExcludedNodeCount,
-    int ExcludedEdgeCount,
-    McpScopeMetadata Scope,
-    IReadOnlyList<string> TruncatedBy);
-
 internal sealed record DependencyGraphScopeState(
     McpScopeClassifier Classifier,
     Dictionary<string, McpDocumentScope> NodeScopes,

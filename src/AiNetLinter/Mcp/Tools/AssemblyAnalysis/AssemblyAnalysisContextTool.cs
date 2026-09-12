@@ -63,7 +63,7 @@ internal static class AssemblyAnalysisContextTool
             var symbolError = await AddSymbolSectionsAsync(root, lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
             if (symbolError is not null) return symbolError;
             AddEnvelope(root);
-            return McpToolResults.Text(RenderText(root, sectionTexts), root);
+            return McpToolResults.Text(RenderText(root, sectionTexts));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -212,9 +212,6 @@ internal static class AssemblyAnalysisContextTool
         root["continuationToken"] = analysis?["continuationToken"]?.GetValue<string>();
         root["truncatedBy"] = analysis?["truncatedBy"]?.DeepClone() ?? new JsonArray();
     }
-
-    private static JsonNode? Serialize(JsonElement? element) =>
-        element is { } value ? JsonNode.Parse(value.GetRawText()) : null;
 
     private static JsonNode? Serialize<T>(T value) =>
         value is null ? null : JsonSerializer.SerializeToNode(value, McpJsonOptions.Default);

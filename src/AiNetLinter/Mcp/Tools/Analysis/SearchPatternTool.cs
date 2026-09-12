@@ -74,10 +74,10 @@ internal static class SearchPatternTool
         var text = SearchPatternTextFormatter.Format(scan);
         if (scan.Payload.Completeness.CancellationRequested)
         {
-            return McpToolResults.Text(text, scan.Payload);
+            return McpToolResults.Text(text);
         }
 
-        return McpToolResults.Text(text, scan.Payload);
+        return McpToolResults.Text(text);
     }
 
     private static CallToolResult? ValidateArguments(SearchPatternToolArguments arguments)

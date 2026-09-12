@@ -273,15 +273,6 @@ internal static partial class McpToolResults
         };
     }
 
-    /// <summary>Kompatibler Aufruf fuer bestehende typisierte Tool-Payloads; nur der Text ist öffentlich.</summary>
-    internal static CallToolResult Text<T>(string text, T payload)
-    {
-        return new CallToolResult
-        {
-            Content = CreateTextContent(text),
-        };
-    }
-
     internal static CallToolResult ReplaceText(CallToolResult result, string text) => new()
     {
         IsError = result.IsError,

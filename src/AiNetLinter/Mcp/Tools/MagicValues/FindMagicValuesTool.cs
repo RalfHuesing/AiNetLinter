@@ -108,14 +108,7 @@ internal static class FindMagicValuesTool
 
         // Der Renderer erhält die fachlich geordneten Ergebnisse direkt.
         return McpToolResults.Text(
-            result.Text,
-            new
-            {
-                MagicValues = result.Payload.MagicValues,
-                Categories = result.Payload.Categories,
-                Summary = result.Payload.Summary,
-                ResultType = result.Payload.ResultType,
-            });
+            result.Text);
     }
 
     private readonly struct ValueTypeResolution

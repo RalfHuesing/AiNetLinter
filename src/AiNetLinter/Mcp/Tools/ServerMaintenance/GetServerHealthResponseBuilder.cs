@@ -55,8 +55,7 @@ internal static class GetServerHealthResponseBuilder
 
         var builder = BuildText(response);
         return McpToolResults.Text(
-            builder,
-            CreatePayload(response));
+            builder);
     }
 
     private static CallToolResult BuildTargetResponse(HealthResponseData response)
@@ -84,12 +83,7 @@ internal static class GetServerHealthResponseBuilder
             ? AssemblyHealthProjection.ToTargetEntry(response.ShownAssemblies[0])
             : null;
         return McpToolResults.Text(
-            builder.ToString().TrimEnd(),
-            new TargetHealthPayload(
-                project,
-                assembly,
-                response.Options.IncludeDiagnostics,
-                AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(response.Options.MaxDiagnostics)));
+            builder.ToString().TrimEnd());
     }
 
     private static IReadOnlyList<AssemblyHealthEntry>? SelectShownAssemblies(
@@ -148,23 +142,6 @@ internal static class GetServerHealthResponseBuilder
 
         foreach (var assembly in shownAssemblies) GetServerHealthFormatter.AppendAssemblySection(builder, assembly);
     }
-
-    private static ServerHealthAggregatePayload CreatePayload(HealthResponseData response) =>
-        new(
-            Version: response.Version,
-            Projects: response.Snapshots.Select(ProjectHealthProjection.FromSnapshot).ToList(),
-            Repository: response.Targeted ? response.RepositoryUrl : null,
-            Daemon: response.Daemon,
-            Assemblies: response.ShownAssemblies?.Select(AssemblyHealthProjection.ToPublicEntry).ToList(),
-            DiagnosticsIncluded: response.Options.IncludeDiagnostics,
-            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(response.Options.MaxDiagnostics),
-            SessionsIncluded: response.ShownAssemblies is not null,
-            TotalAssemblySessions: response.TotalAssemblySessions,
-            ShownSessionCount: response.ShownAssemblies?.Count ?? 0,
-            SessionsTruncated: response.SessionsTruncated,
-            SessionsTruncatedBy: response.SessionsTruncatedBy,
-            AssemblyStatusCounts: response.StatusCounts,
-            AssemblyDiagnosticCount: response.DiagnosticCount);
 
     private sealed record HealthResponseData(
         string Version,

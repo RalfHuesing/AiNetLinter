@@ -316,7 +316,7 @@ internal static class ResolveTypeOriginTool
     private static CallToolResult SuccessResult(ResolveTypeOriginResultDto result, bool isAssemblyTarget)
     {
         var text = RenderMarkdown(result, isAssemblyTarget);
-        return McpToolResults.Text(text, new { resolveTypeOrigin = result });
+        return McpToolResults.Text(text);
     }
 
     private static CallToolResult NotFoundResult(string typeName, IReadOnlyList<string> searched)

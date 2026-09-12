@@ -13,7 +13,7 @@ frischer Subagent, anschließend Prüfung und Commit.
 - [X] Slice 04 – `structuredContent` restlos hart entfernen
 - [X] Slice 05 – Integrationstests und Dokumentation auf den Endzustand schneiden
 - [X] Slice 06 – Agentische Verifikation und Release-Gate
-- [ ] Abschlussaudit – Scope prüfen und alle Findings proaktiv beheben
+- [X] Abschlussaudit – Scope prüfen und alle Findings proaktiv beheben
 
 ## Durchführungsprotokoll
 
@@ -189,3 +189,30 @@ frischer Subagent, anschließend Prüfung und Commit.
   `McpNavigationProjection.Create` (sechs Parameter). Der README-Vertrag
   enthält noch `structuredContent` und bleibt gemäß ausdrücklicher
   README-Ausnahme unverändert.
+
+### Abschlussaudit – Scope prüfen und Findings proaktiv beheben (2026-09-12)
+
+- Unabhängiger MCP-first-Audit gegen Konzept, Wire-, Handoff-, Budget-,
+  Lifecycle-, Test- und Dokumentationsvertrag: Der globale Content-only-Guard
+  sowie die Raw-Wire- und Dogfood-Verträge bleiben grün. Die Negativsuche
+  findet außerhalb historischer Taskartefakte und des ausdrücklich unveränderten
+  README keine aktive `StructuredContent`-/`structuredContent`-Referenz.
+- Red-Test-First-Finding: `McpToolResults.Text<T>(text, payload)` war ein
+  verbliebener No-op-Kompatibilitätsadapter des entfernten Wirekanals. Der neue
+  FastTest `Text_HasNoLegacyPayloadOverload` war zunächst rot und ist nach dem
+  Entfernen des Adapters grün. Seine überzähligen Payloadübergaben und die
+  dadurch verwaisten Wire-DTOs, Projektoren und Budgetpfade wurden minimal
+  entfernt; die fachlichen typisierten Scanner- und Analysemodelle bleiben
+  erhalten.
+- MCP-Audit: `find_dead_code` für `src/AiNetLinter/Mcp` meldet 0 Kandidaten.
+  Der geänderte Magic-Values-Scan zeigt nur drei vorbestehende externe
+  Feldnamenliterale für `maxResponseBytes`; sie bleiben als Wirevertrag stabil.
+  `safeguard --minScore 10` und `get_violations` zeigen ausschließlich die
+  zwei dokumentierten, scopefremden Altbefunde `DecompiledProjectPaths` und
+  `McpNavigationProjection.Create`; sie wurden nicht durch diesen Task
+  verursacht und daher nicht verändert.
+- Abschlussgate: `dotnet build` ohne Warnungen/Fehler; FastTests ohne Stress
+  2.505 bestanden; Integrationstests ohne Stress beim Wiederholungslauf
+  216 bestanden. Der erste Integrationslauf hatte ausschließlich einen nicht
+  reproduzierbaren Daemon-Prozessfehler; TRX-Diagnose und isolierter
+  Wiederholungstest waren grün. `git diff --check` ist grün.

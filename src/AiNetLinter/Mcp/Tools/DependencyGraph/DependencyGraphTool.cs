@@ -208,26 +208,7 @@ internal static class DependencyGraphTool
         var body = RenderText(target, result);
         // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — trunkiert durch
         // maxResults ODER durch den Traversierungs-Hard-Cap (NodeCapReached), beides zaehlt.
-        var finalBody = body;
-        var payload = new DependencyGraphWirePayload(
-            target,
-            DirectionLabel(result),
-            result.Nodes ?? Array.Empty<DependencyGraphNode>(),
-            result.Edges,
-            result.ProjectReferences,
-            result.RequestedDepth,
-            result.ClampedDepth,
-            result.DepthWasClamped,
-            result.Truncated,
-            result.TotalEdgeCount,
-            result.Edges.Count,
-            result.TotalNodeCount,
-            result.ShownNodeCount,
-            result.ExcludedNodeCount,
-            result.ExcludedEdgeCount,
-            result.Scope ?? new McpScopeMetadata("all", false),
-            result.TruncatedBy ?? Array.Empty<string>());
-        return McpToolResults.Text(finalBody, payload);
+        return McpToolResults.Text(body);
     }
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
@@ -238,67 +219,6 @@ internal static class DependencyGraphTool
             "maxResponseBytes erhöhen oder filePath/symbolIdentifier verfeinern.",
             "$.maxResponseBytes");
     }
-
-    private static DependencyGraphResult ToResult(
-        DependencyGraphWirePayload payload,
-        IReadOnlyList<DependencyEdge> edges) =>
-        new(
-            edges,
-            payload.TotalEdgeCount,
-            payload.ProjectReferences,
-            payload.Direction is "outgoing" or "both",
-            payload.Direction is "incoming" or "both",
-            payload.RequestedDepth,
-            payload.EffectiveDepth,
-            payload.DepthWasClamped,
-            payload.TruncatedBy.Contains("nodeLimit", StringComparer.Ordinal),
-            payload.Truncated,
-            payload.Nodes,
-            payload.TotalNodeCount,
-            payload.ShownNodeCount,
-            payload.ExcludedNodeCount,
-            payload.ExcludedEdgeCount,
-            payload.Scope,
-            payload.TruncatedBy);
-
-    private static IReadOnlyList<DependencyGraphNode> NodesForEdges(
-        DependencyGraphWirePayload payload,
-        IReadOnlyList<DependencyEdge> edges)
-    {
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { payload.Target.Path };
-        foreach (var edge in edges)
-        {
-            paths.Add(edge.From);
-            paths.Add(edge.To);
-        }
-
-        return payload.Nodes.Where(node => paths.Contains(node.Path)).ToList();
-    }
-
-    private static IReadOnlyList<string> AddTruncationReason(
-        IReadOnlyList<string> existing,
-        bool budgetTruncated)
-    {
-        var reasons = existing.ToList();
-        if (budgetTruncated && !reasons.Contains("maxResponseBytes", StringComparer.Ordinal))
-        {
-            reasons.Add("maxResponseBytes");
-        }
-
-        return reasons;
-    }
-
-    private static int CombinedResponseBytes(string text, DependencyGraphWirePayload payload) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
-
-    private static string DirectionLabel(DependencyGraphResult result) =>
-        (result.IncludeOutgoing, result.IncludeIncoming) switch
-        {
-            (true, true) => "both",
-            (true, false) => "outgoing",
-            _ => "incoming",
-        };
 
     private static string RenderText(DependencyGraphTarget target, DependencyGraphResult result)
     {
