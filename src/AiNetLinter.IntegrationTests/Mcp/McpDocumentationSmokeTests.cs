@@ -97,8 +97,10 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("höchstens 1.200 UTF-8-Bytes", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("McpPayloadMeasurement", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("Tokenersparnis", docText, StringComparison.Ordinal);
-        Assert.Contains("`contractVersion`, `target`, `snapshot`, `status`,", docText, StringComparison.Ordinal);
-        Assert.Contains("`scope` und `next`", docText, StringComparison.Ordinal);
+        Assert.Contains("einzigen sichtbaren Content", docText, StringComparison.Ordinal);
+        Assert.Contains("Handoff-IDs", docText, StringComparison.Ordinal);
+        Assert.Contains("`operation` und `completeness`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("structuredContent", docText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("operationStatus", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("`capabilities`", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("`handoff=true`", docText, StringComparison.Ordinal);
@@ -205,7 +207,8 @@ public sealed class McpDocumentationSmokeTests
         Assert.DoesNotContain("Token-Schätzungen", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("Ein alter Client", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("ältere Partner", docText, StringComparison.Ordinal);
-        Assert.Contains("`contractVersion`, `target`,", docText, StringComparison.Ordinal);
+        Assert.Contains("Content-Marker `completeness`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("structuredContent", docText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("operationStatus", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("`capabilities`", docText, StringComparison.Ordinal);
     }

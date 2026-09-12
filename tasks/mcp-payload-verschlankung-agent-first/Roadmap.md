@@ -11,7 +11,7 @@ frischer Subagent, anschließend Prüfung und Commit.
 - [X] Slice 02 – Typisierte interne Ownership herstellen
 - [X] Slice 03 – Einen Agentenrenderer und das Contentbudget etablieren
 - [X] Slice 04 – `structuredContent` restlos hart entfernen
-- [ ] Slice 05 – Integrationstests und Dokumentation auf den Endzustand schneiden
+- [X] Slice 05 – Integrationstests und Dokumentation auf den Endzustand schneiden
 - [ ] Slice 06 – Agentische Verifikation und Release-Gate
 - [ ] Abschlussaudit – Scope prüfen und alle Findings proaktiv beheben
 
@@ -119,5 +119,33 @@ frischer Subagent, anschließend Prüfung und Commit.
   - `dotnet build` – 0 Warnungen, 0 Fehler.
   - MCP für `src/AiNetLinter.IntegrationTests`: `safeguard --minScore 10` ist
     10,0/10, `get_violations` meldet 0 und `find_dead_code` 0 Kandidaten. Der
-    einzige Magic-Values-Hinweis ist das verpflichtende Raw-Wire-Feldliteral
-    `"text"` und bleibt bewusst unverändert.
+  einzige Magic-Values-Hinweis ist das verpflichtende Raw-Wire-Feldliteral
+  `"text"` und bleibt bewusst unverändert.
+
+### Slice 05 – Integrationstests und Dokumentation auf den Endzustand schneiden (2026-09-12)
+
+- Die repräsentativen Integrationstests bleiben bewusst unverändert: Der
+  Raw-Wire-Vertrag bündelt Erfolg, leeres Ergebnis, Trunkierung und Fehler an
+  der echten MCP-/Prozessgrenze; der Produktionsguard schützt den Hard Cut.
+  Weitere fachliche Varianten gehören in die FastTests.
+- Regeln, Runtime-Agent-Guide, Bootstrap-, API- und Integrationsdokumentation
+  beschreiben ausschließlich den sichtbaren Content: kopierbare Handoff-IDs,
+  `operation`/`completeness`, `isError` und die Wiederholung mit dem im Fehler
+  genannten `minimumResponseBytes`. Die IsError-Policy trennt korrigierbare
+  Ergebnisse (`isError=false`) von echten Toolfehlern, ohne einen zweiten
+  Ausgabekanal zu beschreiben.
+- Die Agent-API-Matrix und ihre Smoke-Assertions prüfen den Content-only-
+  Vertrag; die frühere StructuredContent-Parität der separaten
+  Integrationstestverschlankung ist damit ausdrücklich obsolet. `README.md`,
+  `Docs/configuration.md` und `ainetlinter-rules.json` blieben unverändert,
+  weil kein CLI-, Konfigurations- oder Regelschema geändert wurde.
+- Verifikation: `dotnet build` (0 Warnungen, 0 Fehler), fokussierter
+  `McpDocumentationSmokeTests`-Lauf (6 bestanden), FastTests ohne Stress
+  (2507 bestanden) und Integrationstests ohne Stress (216 bestanden). Ein
+  erster vollständiger Integrationslauf scheiterte ausschließlich an der
+  zeitabhängigen doppelten Daemon-Ereigniszählung; der isolierte Test und der
+  vollständige Wiederholungslauf sind grün.
+- MCP: `safeguard` im MCP-Testscope 10,0/10, `get_violations` 0 und
+  `find_dead_code` 0 Kandidaten. `find_magic_values` meldet ausschließlich
+  vorbestehende Testliterale (`"opaque-init"`, Raw-Wire-Property `"text"`),
+  die für ihre Verträge nicht zu ändern sind.

@@ -98,12 +98,11 @@ der Antwort; fachliche Analysequalität (etwa partielle Assembly-Diagnostics)
 bleibt davon getrennt. Bei `RESPONSE_BUDGET_TOO_SMALL` enthält der Fehler
 `fieldPath=$.maxResponseBytes`, `requestedBytes` und `minimumResponseBytes`.
 Mit demselben Request und Snapshot ist dieser Mindestwert unmittelbar als
-`maxResponseBytes` wiederholbar; Text, Structured Content und Navigation werden
-gemeinsam in UTF-8 gemessen.
+`maxResponseBytes` wiederholbar; ausschließlich der sichtbare Content wird in
+UTF-8 gemessen.
 
-Stabile Handoff-IDs werden nur aus dem dafür vorgesehenen
-`structuredContent`-Feld `id` übernommen, nie aus Markdown,
-`docCommentId` oder einem Anzeigenamen. Bei Assembly-Tools trennt
+Stabile Handoff-IDs werden aus der im Content explizit als Handoff-ID
+ausgewiesenen Zeile übernommen, nie aus einem Anzeigenamen. Bei Assembly-Tools trennt
 `includeReferences` die Suchbreite: `false` bleibt für eine Root-ID root-only
 und öffnet für eine verifizierte Referenz-ID ausschließlich deren Owner;
 `true` erlaubt die begrenzte Referenz-Closure. Die Antwort weist angeforderten

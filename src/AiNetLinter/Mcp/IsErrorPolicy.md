@@ -7,11 +7,11 @@ ein Agent ein Tool aufgibt, selbst wenn die Bedingung trivial behebbar wäre
 der Text-Inhalt. Diese Policy legt fest, wann `IsError=true` gerechtfertigt ist und wann eine
 erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im Text liefert.
 
-Für zielgebundene Contract-v2-Antworten gilt zusätzlich und vorrangig: Die gemeinsame
-Navigationprojektion macht jeden strukturierten Fehlercode atomar zu
-`operation=error`, `completeness=not_applicable` und `isError=true`. Die Tabelle beschreibt
-die interne Vorprojektion der Toolhelfer; ein `Recoverable(...)`-Zwischenergebnis darf nicht
-ohne diese v2-Projektion an einen Ziel-Client gelangen.
+Für zielgebundene Antworten gilt zusätzlich: Der einzige sichtbare Content nennt
+bei Abweichungen `operation`, `completeness` und die nächste Aktion. `isError`
+bleibt dabei das Protokollsignal aus dieser Tabelle; ein `Recoverable(...)`-
+Ergebnis bleibt mit `isError=false` ein erfolgreich verarbeiteter, korrigierbarer
+Aufruf und wird als solcher in den Content projiziert.
 
 ## Policy-Tabelle
 
@@ -57,25 +57,12 @@ Review-Basis: alle `McpToolResults.Error(...)`/`.Recoverable(...)`-Aufrufe je To
 | `safeguard` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Exception in der Score-Berechnung) | *(keine dedizierte `INVALID_ARGUMENT`-Bedingung — `minScore`/`maxViolations` werden geclamped statt abgelehnt; ein normaler Score-Output ist auch bei `Passed=false` kein Fehler. Fehlen analysierbare Dokumente oder aktivierte Regeln, liefert der Tool-Output `status=not_decidable` bzw. `not_configured` ohne numerischen Score und ohne PASS-/0-Claim.)* |
 | `find_magic_values` | `SOLUTION_NOT_LOADED`; echte Malfunction (`ANALYSIS_FAILED`, unerwartete Roslyn-/Laufzeit-Exception im defensiven `try/catch`) | `INVALID_ARGUMENT` (unbekannter `valueType`, unbekannter `categoryFilter` — Hint nennt jeweils gueltige Werte); leere Treffermenge (`status=empty`, strukturiertes Kandidatenergebnis ohne Clean-Claim); Scope-Filter matched keine Datei (`status=not_decidable`, strukturiertes Ergebnis ohne globale Aussage); `minOccurrences`/`maxResults` werden geclamped statt abgelehnt |
 
-**Vor diesem Audit abweichend von der Policy** (jetzt korrigiert):
-`SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT` und `RESOURCE_NOT_FOUND` liefen ueber
-`McpToolResults.Error(...)` und setzten damit `IsError=true`, obwohl es sich in allen Faellen um
-erwartbare, durch praezisere Argumente behebbare Bedingungen handelt. Ebenso lief
-`get_impact`s `ANALYSIS_FAILED` bei unaufloesbarer `gitRef` ueber `Error(...)`. Fix: neue
-`McpToolResults.Recoverable(...)`-Methode (identisches Textformat, `IsError=false`), die
-`SymbolNotFound`/`AmbiguousSymbol`/`InvalidArgument`/`FileNotFound` intern nutzen; die direkten
-`Error(InvalidArgument, ...)`-Aufrufe in `FindSymbolTool` und `SearchPatternTool` sowie der
-`Error(AnalysisFailed, ...)`-Aufruf in `GetImpactTool` wurden auf `Recoverable(...)` umgestellt.
-`get_violations`s bisheriger Malfunction-Pfad lief ohne `IsError`-Flag ueberhaupt durch
-`McpToolResults.Text(...)` (also faktisch `IsError=false` fuer einen echten internen Fehler) —
-korrigiert auf `Error(...)` mit Retry-once-Hinweis, siehe `GetViolationsScanner.GetViolationsResult
-.IsMalfunction`.
-
 ## Verwendung
 
 - `McpToolResults.Error(...)` — nur fuer die drei `isError=true`-Kategorien oben.
-- `McpToolResults.Recoverable(...)` — interner Vorprojektionstyp für korrigierbare Bedingungen.
-  Nach `WithNavigation(...)` ist auch er ein Contract-v2-Fehler mit `IsError=true`.
+- `McpToolResults.Recoverable(...)` — interner Vorprojektionstyp für korrigierbare Bedingungen;
+  er bleibt auch nach `WithNavigation(...)` bei `IsError=false` und enthält die Anleitung im
+  sichtbaren Content.
 - `McpToolResults.SolutionNotLoaded()`, `SymbolNotFound(...)`, `AmbiguousSymbol(...)`,
   `InvalidArgument(...)`, `FileNotFound(...)`, `CompilationError(...)` — vordefinierte Kurzformen,
   die die richtige Wahl bereits treffen (siehe XML-Doc auf der jeweiligen Methode in

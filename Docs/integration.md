@@ -272,13 +272,12 @@ Relative, fehlende, nicht unterstützte oder auf ein
 Verzeichnis zeigende Pfade liefern `invalid_argument` mit Feldpfad und
 nächstem Schritt.
 
-Jede zielgebundene Toolantwort stellt unter `structuredContent.navigation` den
-finalen maschinenlesbaren Envelope bereit: `contractVersion`, `target`,
-`snapshot`, `status`, `scope` und `next`. Das tool-spezifische Ergebnis bleibt
-daneben am Root erhalten. IDs werden ausschließlich aus StructuredContent für
-Folgeaufrufe übernommen. Die beiden Resources spiegeln den Status als
-Textmetadaten; `get_server_health` liefert ihn auch bei optionalem Target,
-nicht aber im globalen ungebundenen Modus.
+Jede zielgebundene Toolantwort enthält im einzigen sichtbaren Content die
+Navigation mit `operation`, `completeness`, Target- und Snapshot-Hinweisen
+sowie gegebenenfalls einem nächsten Schritt. Tool-spezifische Evidenz und
+Handoff-IDs stehen ebenfalls im Content; nur diese ausdrücklich markierten IDs
+werden für Folgeaufrufe übernommen. `get_server_health` liefert den Status auch
+bei optionalem Target, nicht aber im globalen ungebundenen Modus.
 
 Für Source ist die konkrete Solution bindend: Der Analyse-Root ist nur ihr
 normalisiertes Elternverzeichnis, eine andere Solution wird nicht geraten.
@@ -295,9 +294,9 @@ begrenzte Samples an, `maxDiagnostics` wird serverseitig gedeckelt und muss
 positiv sein. `0` oder negative Werte liefern einen recoverable
 `INVALID_ARGUMENT`-Fehler mit `fieldPath=$.maxDiagnostics`; diese Validierung
 gilt über Stdio sowie den Thin-Client-/Daemon-Transport. Bei einem
-zielgebundenen Aufruf enthält `structuredContent.navigation.snapshot` die
-Felder `kind`, `fresh` und `fingerprint`. Der Fingerprint ist mit dem Snapshot
-des nachfolgenden passenden Analyseaufrufs korrelierbar.
+zielgebundenen Aufruf nennt der Content zum Snapshot die Felder `kind`, `fresh`
+und `fingerprint`. Der Fingerprint ist mit dem Snapshot des nachfolgenden
+passenden Analyseaufrufs korrelierbar.
 `report_observability_feedback` bleibt ungebunden.
 
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
@@ -482,8 +481,8 @@ und Einheit getrennt und dürfen nicht zusammengezählt werden. Zielgebundene
 Antworten folgen Contract v2: `navigation.status.operation` und
 `navigation.status.completeness` sind getrennt; bei
 `RESPONSE_BUDGET_TOO_SMALL` den gemeldeten `minimumResponseBytes` mit identischem
-Request und Snapshot wiederholen. Text, Structured Content und Navigation zählen
-gemeinsam zum UTF-8-Budget.
+Request und Snapshot wiederholen. Ausschließlich der sichtbare Content zählt zum
+UTF-8-Budget.
 
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 
@@ -503,8 +502,8 @@ Konkret:
 - Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`
 - Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "class")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "class")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
-- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
-- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur `structuredContent.id` als Handoff übernehmen, nicht eine Text-ID.
+- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
+- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur die im Content markierte Handoff-ID übernehmen.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
 - Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)

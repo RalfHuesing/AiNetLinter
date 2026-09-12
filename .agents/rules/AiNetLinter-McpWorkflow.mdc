@@ -20,7 +20,7 @@ Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) stand
 ## Standard-Parameter & Handoff
 
 - **`targetPath` (Pflicht)**: Absoluter Pfad zur `.sln`- oder `.slnx`-Datei des aktuellen Projekts (einmalig im Workspace ermitteln und für alle Aufrufe wiederverwenden).
-- **Folgeaufrufe & Handoff**: Ausschließlich kanonische IDs aus `structuredContent` (z. B. von `find_symbol`, `get_file_skeleton`, `get_feature_context`) verwenden – niemals Markdown oder Anzeigenamen parsen.
+- **Folgeaufrufe & Handoff**: Ausschließlich die im Content als Handoff-ID ausgewiesenen kanonischen IDs (z. B. von `find_symbol`, `get_file_skeleton`, `get_feature_context`) verwenden – niemals Anzeigenamen erraten oder aus freien Beschreibungen ableiten. Status und Vollständigkeitsmarker ebenfalls ausschließlich aus dem Content übernehmen.
 - **Budget-Limit**: Bei Fehler `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 - **Scoping vor Vollscan**: Analyse- & Audit-Tools (`find_magic_values`, `find_dead_code`, `metrics_tree`, `pattern_detect`) standardmäßig per `scopeFilter: "<pfad>"` auf den relevanten Bereich eingrenzen. Solution-weite Scans ohne Filter nur bei explizitem Gesamtaudit-Auftrag.
 
