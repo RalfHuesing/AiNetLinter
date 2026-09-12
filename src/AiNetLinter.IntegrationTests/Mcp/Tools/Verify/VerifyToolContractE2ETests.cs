@@ -105,6 +105,45 @@ public sealed class VerifyToolContractE2ETests
     }
 
     [Fact]
+    public async Task Verify_Changes_ProjectsDeterministicAdvisoryCandidatesWithoutBlockingTheGate()
+    {
+        using var fixture = CreateGitFixture();
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "AdvisoryProbe.cs"), """
+            namespace BaselineMini;
+
+            public sealed class AdvisoryProbe
+            {
+                private static int Unused() => 42;
+
+                public string Endpoint => "https://example.invalid";
+
+                public string BackupEndpoint => "https://example.invalid";
+            }
+            """);
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var first = await host.CallToolAsync("verify");
+        var second = await host.CallToolAsync("verify");
+
+        AssertVerifyResult(first, expectedError: false,
+            "verdict: pass",
+            "kind: advisory_candidate",
+            "requiresAgentJudgment: true",
+            "confidence:",
+            "evidenceBoundary:",
+            "counterIndicators: [Reflection, DI, Generatoren",
+            "category: dead_code",
+            "category: magic_value:",
+            "advisoryTotalCount: 2",
+            "advisoryCompleteness: complete");
+        var firstText = Assert.IsType<TextContentBlock>(Assert.Single(first.Content)).Text;
+        Assert.True(
+            firstText.IndexOf("category: dead_code", StringComparison.Ordinal)
+            < firstText.IndexOf("category: magic_value:", StringComparison.Ordinal));
+        Assert.Equal(firstText, Assert.IsType<TextContentBlock>(Assert.Single(second.Content)).Text);
+    }
+
+    [Fact]
     public async Task ToolsList_ContainsVerifyAndRetainsOnlyUnaffectedInspectionTools()
     {
         using var fixture = CreateGitFixture();

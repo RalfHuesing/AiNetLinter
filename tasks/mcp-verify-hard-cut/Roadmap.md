@@ -2,7 +2,7 @@
 
 - [X] Slice 01 – Öffentlichen `verify`-Vertrag festlegen und rot absichern
 - [X] Slice 02 – Gate-Kern mit festen `10.0`/`0`-Invarianten implementieren
-- [ ] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
+- [X] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
 - [ ] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 - [ ] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [ ] Gesamtaudit – gesamten Scope prüfen und Findings beheben
@@ -21,6 +21,12 @@
 - `verify` führt den festen Score-/Violation-Gatekern inklusive Contract-v2-Content-Projektion aus.
 - Build und sechs fokussierte E2E-Verträge grün; Legacy-Inventar bleibt bis Slice 04 absichtlich rot.
 - Commit: `d8194926043b7e4742b667728be417eed2dacf63`.
+
+### Slice 03
+
+- Dead-Code- und Magic-Value-Scanner liefern nur für `changes` advisory-Evidenz mit expliziter Unsicherheit.
+- Deterministische Projektion, vollständige Counts, Nichtblockierung und Solution-Ausschluss fokussiert grün geprüft.
+- Commit: ausstehend.
 
 ### Vorbereitung
 
