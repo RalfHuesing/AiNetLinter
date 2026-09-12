@@ -12,6 +12,7 @@ Nutzeranweisungen haben Vorrang.
 
 - AiNetLinter ist ein eigenständiges, statisch kompiliertes CLI-/MCP-Tool. Kein Plugin-System, kein dynamisches Assembly-Laden (`AssemblyLoadContext`), kein DI-Container.
 - **Universelles Tool & agentischer Fokus**: AiNetLinter dient der Analyse beliebiger externer C#/.NET-Codebasen. Niemals auf Besonderheiten von AiNetLinter überoptimieren (kein Dogfooding-Overfitting); Engine, Formatter und MCP-Tools bleiben generisch ohne hardcodierte repo-/projektspezifische Literale. Das Gesamtbild der agentischen Nutzung steht im Fokus: MCP-Tools, Metriken und Formate müssen maximale Informationsdichte, Ergonomie und Signal-to-Noise-Ratio für aufrufende KI-Agenten bieten.
+- **Tool-Composability & Zero-Transformation**: Ausgaben von MCP-Tools (insb. Symbol-IDs, Typen, Pfade in `structuredContent`) müssen ohne Parsing, Bereinigung oder Typkonvertierung 1:1 als Eingabeparameter für Folgetools nutzbar sein. Feldnamen und Schemas zwischen Output und Input über alle Tools hinweg symmetrisch halten.
 - Bevorzuge direkte Lösungen und unveränderliche Datenmodelle. Abstraktionen erfordern konkreten Mehrwert für Wiederverwendung, Verständlichkeit oder Testbarkeit.
 - Teure Roslyn-Zugriffe (`SyntaxTree`, `SemanticModel`) gezielt und nicht wiederholt ausführen.
 
