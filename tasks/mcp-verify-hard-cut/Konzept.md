@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 execution_mode: autonomous
 open_questions: []
 ---
@@ -9,13 +9,19 @@ open_questions: []
 ## Ziel und Produktentscheidung
 
 AiNetLinter veröffentlicht für die agentische Qualitätsentscheidung künftig
-genau ein MCP-Tool: `verify`. Es ersetzt die bisher getrennten öffentlichen
-Gate-, Score-, Lint- und kontextgebundenen Kandidatenwerkzeuge vollständig.
-Der Schnitt ist absichtlich hart:
-Nach der Umsetzung sind die ersetzten Toolnamen, deren Registrierungen,
-Schema-Varianten, DTOs, Formatter, Testpfade, Beispiele und Dokumentation
-nicht mehr vorhanden. Es gibt keine Aliase, Feature Flags, Legacy-Adapter,
-Dual-Read-/Dual-Write-Pfade oder Migrationshinweise.
+genau eine öffentliche Gate-Oberfläche: das MCP-Tool `verify`. Es ersetzt die
+bisher getrennten öffentlichen Gate-, Score-, eigenständigen Lint- und
+Kandidatenwerkzeuge vollständig. Kontextuelle Violations in semantischen
+Erkundungswerkzeugen bleiben reine Arbeitsevidenz und besitzen weder Verdict
+noch Gate-Semantik.
+
+Der Schnitt ist absichtlich hart: Nach der Umsetzung sind die vier ersetzten
+Toolnamen, deren Registrierungen, Schema-Varianten, öffentliche DTOs,
+Formatter, positive Testpfade, Beispiele und Endzustandsdokumentation nicht
+mehr vorhanden. Nur gezielte Negativtests des Toolinventars dürfen die
+entfernten Namen noch als Abwesenheitserwartung nennen. Es gibt keine Aliase,
+Feature Flags, Legacy-Adapter, Dual-Read-/Dual-Write-Pfade oder
+Migrationshinweise.
 
 Das Produktziel ist nicht, alle statischen Signale als einen großen Report zu
 versenden. `verify` beantwortet die Frage eines programmierenden Agenten:
@@ -28,8 +34,10 @@ Der Gate-Entscheid ist strikt: Ein entscheidbarer `pass` ist nur zulässig,
 wenn der Quality-Score exakt `10.0` und die Anzahl verbindlicher
 Lint-Verstöße exakt `0` ist. Diese Grenzwerte sind Teil des öffentlichen
 Vertrags, keine durch den Agenten veränderbaren Parameter. Ein nicht
-entscheidbarer, partieller, gekürzter oder fehlerhafter Lauf darf niemals als
-`pass` ausgegeben werden.
+entscheidbarer, partieller oder fehlerhafter Gatekern darf niemals als `pass`
+ausgegeben werden. Eine begrenzte advisory-Projektion bleibt davon getrennt:
+Sie nennt ihre vollständigen Counts und darf ein vollständiges Gate weder
+blockieren noch freigeben.
 
 ## Problem und agentische Nutzung
 
@@ -72,33 +80,46 @@ verify(
 - `targetPath` ist absolut und akzeptiert ausschließlich eine
   Source-Solution (`.sln` oder `.slnx`). `verify` ist explizit **Source-only**:
   `.dll`-, `.exe`- und andere Assembly-Ziele werden vor Lease, Decompilation
-  oder fachlicher Analyse als klarer, strukturierter
+  oder fachlicher Analyse als klarer, ausschließlich im Content beschriebener
   `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen, nicht still leer.
 - `scope` hat genau zwei Enum-Werte. Fehlt der Parameter, gilt `changes`.
   `solution` ist die bewusste vollständige Abschlussprüfung. Andere Werte
   liefern vor Analyse einen Contract-v2-`INVALID_ARGUMENT`-Fehler mit
   Feldpfad und den beiden gültigen Werten.
 - `changes` bedeutet den Git-Working-Tree-Diff gegenüber `HEAD`: gestagte,
-  ungestagte und relevante neue Source-Dateien. Die Solution wird weiterhin
-  vollständig als semantischer Kontext geladen; Evidenz und Kandidaten werden
-  auf die Änderungen und ihren notwendigen Impact begrenzt.
+  ungestagte und relevante neue Source-Dateien. Gatepopulation sind die
+  vollständigen aktuellen Versionen dieser geänderten Source-Dateien, nicht
+  nur einzelne Diff-Hunks. Score und verbindliche Violations beziehen sich auf
+  dieselbe effektive Gatepopulation.
+- Die Solution wird vollständig als semantischer Kontext geladen. Die
+  Impact-Closure dient ausschließlich Einordnung, Ranking und Handoffs; Befunde
+  in unveränderten Aufrufern erweitern die Gatepopulation nicht und können das
+  `changes`-Verdict nicht kippen.
+- Änderungen an Solution-, Projekt-, Regel- oder Generator-Konfiguration
+  erweitern die Gatepopulation konservativ auf die kleinste deterministisch
+  betroffene Projektmenge oder auf die gesamte Solution. Ist diese Erweiterung
+  nicht sicher bestimmbar, ist das Ergebnis `incomplete`.
 - Bei leerem oder nicht bestimmbaren Änderungskontext ist `changes` immer
   `incomplete`, nie `pass`. Die einzige Recovery ist der explizite Aufruf mit
   `scope: "solution"`.
-- Der Server verwendet ein festes, dokumentiertes Antwortbudget und gibt eine
-  deterministisch gerankte, kleine Menge ganzer Evidenzeinheiten aus. Es gibt
-  keinen clientseitigen Budget-, Paging- oder Detektorparameter. Vollständige
-  Counts bleiben sichtbar; nach einer Korrektur ruft der Agent denselben
-  einfachen Aufruf erneut auf.
+- Der Server verwendet ein festes, dokumentiertes Antwortbudget und gibt bei
+  Befunden eine deterministisch gerankte, kleine Menge ganzer
+  Evidenzeinheiten aus. Ein sauberer `pass` darf `entries=[]` liefern; der
+  nichtleere Gate-Summary ist dann die vollständige Aussage. Es gibt keinen
+  clientseitigen Budget-, Paging- oder Detektorparameter. Vollständige Counts
+  bleiben sichtbar; nach einer Korrektur ruft der Agent denselben einfachen
+  Aufruf erneut auf.
 
 ### Ausgang und Entscheidungslogik
 
-Jede zielgebundene Antwort verwendet Contract v2 mit genau einem
-`structuredContent.navigation.status` als Owner für Operation und
-Response-Vollständigkeit. Erfolg, Fehler, leere Kandidaten, Trunkierung und
-Analysequalität bleiben getrennte Achsen.
+Jede Antwort folgt dem Content-only-Hard-Cut: genau ein nichtleerer
+Text-`content`-Block, kein `structuredContent`; nur bei `error` zusätzlich
+`isError=true`. Contract v2 weist im Content genau einen Statusbereich als
+Owner für `operation`, `completeness` und Analysequalität aus. Gate-
+Entscheidbarkeit, Fehler, leere Kandidaten und advisory-Trunkierung bleiben
+getrennte Achsen.
 
-Die Fachwurzel enthält mindestens:
+Der Content enthält mindestens folgende eindeutig markierte Fachfelder:
 
 ```text
 verdict: pass | failed | incomplete | error
@@ -119,15 +140,22 @@ scope:
 - `failed`: Analyse ist entscheidbar; mindestens eine der beiden festen
   Gatebedingungen ist verletzt. Die Antwort enthält die bestgerankten,
   handlungsfähigen Evidenzeinträge sowie vollständige Counts.
-- `incomplete`: Der Scope, die Analyse oder die Evidenz genügt nicht für eine
-  Freigabeentscheidung. Score und Count dürfen nur ausgegeben werden, wenn
-  ihre Aussagegrenze eindeutig markiert ist; sie dürfen keinen Pass ableiten.
-- `error`: Request- oder exogener Fehler. Der MCP-Envelope hat `isError=true`,
-  `operation=error`, `completeness=not_applicable`, Code, Feldpfad soweit
-  möglich und genau eine strukturierte Recovery.
+- `incomplete`: Der Request ist valide, aber Scope, Regelkonfiguration,
+  Analysequalität oder Gate-Evidenz genügt nicht für eine
+  Freigabeentscheidung. Dazu gehören ein leerer oder nicht sicher bestimmbarer
+  Änderungskontext sowie eine fehlende oder uneinheitliche Regelkonfiguration.
+  Score und Count dürfen nur erscheinen, wenn ihre Aussagegrenze im Content
+  eindeutig markiert ist; sie dürfen keinen Pass ableiten. `isError` bleibt
+  dabei `false`.
+- `error`: Ungültiger Request, nicht unterstütztes Ziel oder exogener
+  Ausführungsfehler wie IO-/Infrastrukturversagen. Der MCP-Envelope hat
+  `isError=true`; der Content nennt `operation=error`,
+  `completeness=not_applicable`, Code, Feldpfad soweit möglich und genau eine
+  kopierbare Recovery.
 
 Evidenz zeigt pro Eintrag Regel/Kategorie, Severity, zuverlässige
-Quellzuordnung, kurze fachliche Begründung und einen kanonischen Handoff.
+Quellzuordnung, kurze fachliche Begründung und eine kanonische, kopierbare
+Handoff-ID im Content.
 Keine Volltext-Snippets, Betriebsdaten oder redundante Navigationszeilen sind
 Defaultinhalt. Die feste Projektion liefert stets ganze Evidenzeinheiten und
 nennt vollständige Counts statt die Antwort durch clientseitige Optionen
@@ -137,6 +165,13 @@ aufzublähen.
 
 Beide Scopes führen immer die verbindliche Lint-/Scoreentscheidung aus und
 zeigen die beiden unveränderlichen Akzeptanzbedingungen `10.0` und `0`.
+
+Bei `changes` stammen Score und verbindliche Violations ausschließlich aus der
+oben definierten Gatepopulation vollständiger geänderter Dateien oder ihrer
+konservativen Konfigurationserweiterung. Semantisch betroffene, aber
+unveränderte Dateien sind Kontext, nicht Gatepopulation. Eine unvollständige
+advisory-Auswahl verändert das Verdict nicht; ein unvollständiger Gatekern
+erzwingt dagegen `incomplete`.
 
 Nur `changes` ergänzt für den automatisch bestimmten Änderungskontext
 priorisierte advisory-Kandidaten aus den heutigen Dead-Code- und
@@ -174,9 +209,12 @@ liefert.
 Unberührt bleiben in diesem Task `pattern_detect`, `get_hotspots`,
 `metrics_tree` und `metrics_lookup` sowie die übrige semantische
 Erkundungsoberfläche (Suche, Symbol-, Feature-, Referenz-, Impact-, Datei- und
-Assemblytools). Auch eine spätere, weitergehende Konsolidierung zu
-`explore`/`inspect` ist eine eigene Produktentscheidung. Dieser Task darf sie
-weder vorwegnehmen noch ein universelles Mega-Tool bauen.
+Assemblytools). Insbesondere dürfen `get_feature_context` und `get_impact`
+weiterhin kontextuelle Violations als Arbeitsevidenz zeigen; sie liefern weder
+Gate-Summary noch Verdict und sind kein alternativer Abschlussnachweis. Auch
+eine spätere, weitergehende Konsolidierung zu `explore`/`inspect` ist eine
+eigene Produktentscheidung. Dieser Task darf sie weder vorwegnehmen noch ein
+universelles Mega-Tool bauen.
 
 ## Source of Truth und voraussichtlich betroffene Bereiche
 
@@ -193,7 +231,7 @@ Fachliche Wahrheit liefern in dieser Reihenfolge:
 
 Voraussichtlich betroffen sind die Analyse-Toolregistrierung, deren
 Argumentvalidierung und Capability-Matrix, Safeguard-/Violation-/Dead-Code-/
-Magic-Value-Toolpfade, gemeinsame Navigation- und Budgetprojektoren,
+Magic-Value-Toolpfade, gemeinsame Status- und Budgetprojektoren,
 Health-Capabilities, Fast- und Integrationstests sowie die Dogfood- und
 Server-Contracttests. Dokumentation und Arbeitsregeln umfassen insbesondere
 `Docs/agent-api.md`, `Docs/integration.md`, relevante Rationale-/Guide- und
@@ -207,31 +245,40 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 
 ## Muss-Kriterien
 
-1. `verify` ist das einzige registrierte öffentliche MCP-Tool für die oben
-   genannten Quality-Gate-, Violation-, Dead-Code- und Magic-Value-Anliegen;
-   alle vier ersetzten Namen fehlen aus Runtime, Schema, Tests, Guides und
-   Beispielen. Die ausdrücklich unberührten Pattern-, Hotspot- und
-   Metrikwerkzeuge bleiben unverändert registriert.
+1. `verify` ist das einzige registrierte öffentliche MCP-Tool für
+   Quality-Gate, eigenständige Violation-Prüfung sowie Dead-Code- und
+   Magic-Value-Kandidaten. Alle vier ersetzten Namen fehlen aus Runtime,
+   Schema, positiven Tests, Guides und Beispielen; gezielte Negativtests dürfen
+   nur ihre Abwesenheit im Inventar belegen. Kontextuelle Violations in
+   `get_feature_context` und `get_impact` bleiben ohne Gate-Semantik erhalten.
+   Die ausdrücklich unberührten Pattern-, Hotspot- und Metrikwerkzeuge bleiben
+   unverändert registriert.
 2. Ohne frei konfigurierbaren Grenzwert bedeutet ein entscheidbares `pass`
    stets Score `10.0` und `violationCount=0`; kein anderer Status darf diese
    Freigabe suggerieren.
 3. `verify(targetPath)` bestimmt seinen Änderungskontext ohne weiteren
-   Agentenparameter. Es prüft den festen Gatekern und ergänzt nur dort
-   handlungsfähige, nicht blockierende Dead-Code-/Magic-Value-Kandidaten.
+   Agentenparameter. Vollständige aktuelle Versionen geänderter Source-Dateien
+   bilden die Gatepopulation; Impact dient nur als Kontext. Konfigurations-
+   und Strukturänderungen erweitern die Population konservativ. Das Tool prüft
+   den festen Gatekern und ergänzt nur dort handlungsfähige, nicht blockierende
+   Dead-Code-/Magic-Value-Kandidaten.
 4. `verify(targetPath, scope: "solution")` ist die vollständige
    Abschlussprüfung und führt keine kontextlosen Heuristik-Kandidaten aus.
-5. Jeder valide Aufruf liefert mindestens Gate-Summary plus eine vollständige
-   fachliche Evidenzeinheit innerhalb des festen Serverbudgets, nie einen
-   erfolgreichen leeren oder ein unkontrolliert großes Report.
-6. Die Antwort nutzt Contract v2 atomar: Frühe Validierung,
-   Source-only-Assemblyfehler und fachliche Fehler haben einheitlich
-   `isError=true`, `operation=error`, `completeness=not_applicable`, Code,
-   Feldpfad und genau eine Recovery.
+5. Jeder valide Aufruf liefert einen nichtleeren Gate-Summary innerhalb des
+   festen Serverbudgets. `failed` liefert mindestens eine vollständige,
+   handlungsfähige Evidenzeinheit; andernfalls ist das Gate `incomplete`. Ein
+   sauberer `pass` darf eine leere Evidenzliste mit vollständigen Null-Counts
+   liefern. Kein Aufruf erzeugt einen unkontrolliert großen Report.
+6. Die Antwort nutzt Contract v2 content-only und atomar: Frühe
+   Requestvalidierung, Source-only-Assemblyfehler und exogene Fehler haben
+   einheitlich `isError=true`, `operation=error`,
+   `completeness=not_applicable`, Code, Feldpfad und genau eine Recovery.
 7. Scope, Generated-/Test-Ausschlüsse, Counts und Trunkierungsgründe werden
-   vor Analyse- und Antwortlimits bestimmt, klar benannt und zwischen Text und
-   StructuredContent nicht widersprüchlich dargestellt.
-8. Evidenz-Handoffs sind kanonisch, nur strukturiert vorhanden und mit den
-   weiter bestehenden semantischen Folgewerkzeugen direkt verwendbar.
+   vor Analyse- und Antwortlimits bestimmt und im einzigen Content klar
+   benannt.
+8. Evidenz-Handoffs sind kanonisch, im Content eindeutig markiert und mit den
+   weiter bestehenden semantischen Folgewerkzeugen ohne Transformation direkt
+   verwendbar.
 9. Die interne Wiederverwendung erzeugt keine zweite Status-, Fehler-, Scope-
    oder Budgethierarchie und keine Legacytypen mit alter öffentlicher
    Semantik.
@@ -241,10 +288,12 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 1. `tools/list` veröffentlicht `verify` mit ausschließlich den beschriebenen
    Eingaben, vollständigen Beschreibungen und korrekten Defaults; keiner der
    vier entfernten Toolnamen ist dort registriert. Die vier unberührten
-   Pattern-, Hotspot- und Metrikwerkzeuge bleiben im Inventar erhalten.
+   Pattern-, Hotspot- und Metrikwerkzeuge bleiben im Inventar erhalten;
+   `get_feature_context` und `get_impact` behalten ihre kontextuelle,
+   nicht-gatende Violation-Evidenz.
 2. `verify(targetPath)` für einen vollständig sauberen Änderungskontext liefert
-   `pass`, Score `10.0`, `violationCount=0`, vollständige Navigation und nur
-   die kontextbezogenen advisory-Kandidaten.
+   `pass`, Score `10.0`, `violationCount=0`, vollständige Statusmarker und
+   gegebenenfalls ausschließlich kontextbezogene advisory-Kandidaten.
 3. `verify(targetPath, scope: "solution")` für eine vollständig saubere
    Solution liefert `pass`, Score `10.0`, `violationCount=0` und keine
    Heuristik-Kandidatenliste.
@@ -252,10 +301,11 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
    `10.0` liefert `failed`,
    vollständige Counts und mindestens einen ausführbaren Evidenz-Handoff;
    `pass` ist ausgeschlossen.
-5. Ein leerer oder nicht bestimmbarer Working-Tree-Diff, ein unkonfigurierter,
-   unlesbarer oder fachlich nicht entscheidbarer Kontext liefert `incomplete`
-   statt Score `0`, `pass` oder Silent-Empty. Der leere Diff verweist allein
-   auf `scope: "solution"`.
+5. Ein leerer oder nicht bestimmbarer Working-Tree-Diff, ein unkonfigurierter
+   oder fachlich nicht entscheidbarer Kontext liefert `incomplete` statt Score
+   `0`, `pass` oder Silent-Empty. Der leere Diff verweist allein auf
+   `scope: "solution"`. Ungültige Requests sowie IO-/Infrastrukturfehler
+   liefern dagegen `error`.
 6. Nur im Änderungskontext erscheinen deterministisch gerankte,
    `requiresAgentJudgment=true`-Kandidaten. Sie verändern ein sonst
    erfolgreiches Gateurteil nicht.
@@ -267,8 +317,7 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
    Assemblyziel sind vollständig Contract-v2-konform und lassen einen
    anschließenden gültigen Aufruf unverändert funktionieren.
 9. Die feste Projektion ist deterministisch, enthält nur vollständige
-   Evidenzeinheiten und misst Text sowie StructuredContent inklusive
-   Navigation in UTF-8.
+   Evidenzeinheiten und misst ausschließlich den finalen Content in UTF-8.
 10. `verify` akzeptiert ausschließlich `.sln`-/`.slnx`-Source-Ziele. Ein
    Assembly-Ziel wird vor jeder Decompilation oder Analyse mit einem klaren,
    datensparsamen `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen. Keine
@@ -279,8 +328,9 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
     leerer Diff, Assemblyfehler sowie Legacy-Tool-Abwesenheit gegen einen
     frischen Host.
 12. Endzustandsdokumentation, Runtime-Schema, Agent-Guide, Workflowregel und
-    Testnamen enthalten nur den neuen Vertrag und keine
-    Migrations-/Historientexte.
+    positive Testnamen enthalten nur den neuen Vertrag und keine
+    Migrations-/Historientexte. Negativtests dürfen die vier Altnamen nur als
+    erwartete Abwesenheiten führen.
 
 ## Architektur- und Betriebssemantik
 
@@ -293,14 +343,22 @@ Entscheidungsantwort. Nur im Änderungskontext ergänzt er die beiden
 Kandidatenquellen. Scanner behalten vollständige Domänenresultate; toolnahe
 Projektoren wählen deterministisch ganze Evidenzeinheiten.
 
+Für `changes` bewerten Gatequellen dieselbe Population vollständiger aktueller
+Dateien. Diff-Hunks und Impact-Closure helfen bei Zuordnung und Priorisierung,
+sind aber kein eigener Gate-Scope. Unveränderte Impact-Dateien können daher
+Kontext oder Handoffs liefern, ihr bestehender Qualitätsstand beeinflusst das
+Verdict nicht. Konfigurations- und Strukturänderungen werden vor dem Gate auf
+den kleinsten sicher betroffenen Projekt- oder Solution-Scope erweitert.
+
 Die Gateentscheidung besitzt genau einen Owner. Advisory-Evidenz kann niemals
 den Gatezustand übersteuern. Bei konkurrierender oder fehlender Analyse
 gewinnt konservativ `incomplete`, nicht ein gemittelter Score. Git-Diff,
 Staging und relevante neue Dateien sind Teil der dokumentierten
 `changes`-Bestimmung. Änderungen an Solution-, Projekt-, Regel- oder
-Generator-Konfiguration erweitern den effektiven Analysekontext konservativ;
-ein nicht sicher bestimmbarer Kontext wird nicht geraten, sondern als
-`incomplete` ausgewiesen.
+Generator-Konfiguration erweitern die Gatepopulation konservativ; ein nicht
+sicher bestimmbarer Kontext wird nicht geraten, sondern als `incomplete`
+ausgewiesen. Begrenzte advisory-Evidenz bleibt davon unabhängig und nennt ihre
+vollständigen Counts.
 
 Keine Analyse führt Zielcode aus, lädt untersuchte Assemblies dynamisch oder
 ändert Source, Konfiguration oder Git-Zustand. `verify` ist read-only und
@@ -327,7 +385,7 @@ referenziert einen Legacy-Adapter.
 - Scoring- und Violationergebnis gemeinsam, aber ohne Vermischung ihrer
   Aussagegrenzen ausgeben.
 - `pass` nur bei beiden festen Bedingungen und ausreichender
-  Entscheidbarkeit erlauben; Fehler, feste Antwortprojektion und Navigation
+  Entscheidbarkeit erlauben; Fehler, feste Content-Projektion und Statusmarker
   contractweit vereinheitlichen.
 
 **Exit:** Gatefälle, Fehlerhüllen, Scope-Counts und die feste Projektion sind
@@ -355,10 +413,12 @@ bleibt frei von kontextlosem Kandidatenrauschen.
   keine Safeguard-/Violation-spezifische öffentliche Zwischenabstraktion
   zurücklassen.
 - Negativtests sichern, dass alte Toolnamen nicht registrierbar sind und kein
-  indirekter Legacypfad existiert.
+  alternativer Legacy-Gatepfad existiert. Kontextuelle Violations in
+  `get_feature_context` und `get_impact` bleiben ausdrücklich außerhalb dieser
+  Entfernung.
 
-**Exit:** Runtime und Source veröffentlichen nur `verify` als
-Qualitätsoberfläche.
+**Exit:** Runtime und Source veröffentlichen nur `verify` als Gate- und
+eigenständige Qualitätsprüfungsoberfläche.
 
 ### Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 
@@ -412,7 +472,8 @@ Fehler wäre. Der Abschlussnachweis erfolgt über
   Evidenzprojektion; keine frühere Toolliste als Übergang darstellen.
 - `Docs/integration.md` und der Runtime-Agent-Guide: einen Agentenfluss
   `Arbeitsänderungen → verify(targetPath) → Abschluss → verify(targetPath,
-  scope: "solution")` beschreiben.
+  scope: "solution")` beschreiben und kontextuelle Violations in Feature- und
+  Impact-Antworten klar vom Gate abgrenzen.
 - `.agents/rules/AiNetLinter-Richtlinien.mdc` und
   `.agents/rules/AiNetLinter-McpWorkflow.mdc`: alte Pflichtaufrufe,
   Tabellen und Scopehinweise konsistent durch `verify` ersetzen.
@@ -428,6 +489,7 @@ Fehler wäre. Der Abschlussnachweis erfolgt über
 | `verify` wird ein schwer verständliches Mega-Tool. | Nur `targetPath` und die zwei Scopewerte; keine Modi, Detektor-, Paging-, Budget- oder Schwellenwertflags. |
 | Kandidaten werden fälschlich als Gateblocker gelesen. | Getrennte `verdict`-Ownership, `advisory_candidate`, `requiresAgentJudgment` und keine Kandidatenwirkung auf den Gateentscheid. |
 | Der feste Score verdeckt unvollständige Analyse. | `pass` setzt Entscheidbarkeit und ausreichende Completeness voraus; sonst konservativ `incomplete`. |
+| Die Impact-Closure zieht Altbefunde unveränderter Dateien ins Änderungsgate. | Vollständige geänderte Dateien sind die Gatepopulation; Impact bleibt ausschließlich Kontext und Handoff. |
 | Das Entfernen öffentlicher Tools löscht nützliche Fachlogik. | Scanner nur nach klarer Ownership weiterverwenden; öffentliche DTO-/Formatterpfade trotzdem vollständig löschen. |
 | Breite Kandidatensuche erzeugt hohe Kosten und Rauschen. | Kandidaten nur im automatisch bestimmten Änderungskontext, stabile Top-Evidenz und feste Antwortprojektion. |
 | Ein leerer oder unklarer Git-Diff wird fälschlich als sauber gelesen. | Konservativ `incomplete` und eine einzige Recovery: `scope: "solution"`. |
@@ -454,7 +516,9 @@ Fehler wäre. Der Abschlussnachweis erfolgt über
 ## Offene Entscheidungen
 
 Keine. Die Parameteroberfläche ist bewusst auf `targetPath` und zwei
-Scopewerte begrenzt; fachliche Detailauswahl liegt beim Server. Der Draft
-bleibt bis zur ausdrücklichen Nutzerfreigabe `draft`; danach kann ein
-Orchestrator innerhalb dieses vollständig beschriebenen Scopes autonom
-umsetzen.
+Scopewerte begrenzt; fachliche Detailauswahl liegt beim Server. `verify` ist
+die einzige Gate-Oberfläche, während kontextuelle Violations explorativ
+bleiben. `changes` bewertet vollständige geänderte Dateien; Impact erweitert
+das Gate nicht. Das freigegebene Konzept kann innerhalb dieses vollständig
+beschriebenen Scopes autonom umgesetzt werden. Der Orchestrator startet nicht
+automatisch.
