@@ -6,13 +6,16 @@ alwaysApply: true
 
 # AiNetLinter MCP-First Workflow (C# Semantik)
 
-Für ALLE semantischen C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) MÜSSEN die MCP-Tools des Servers `AiNetLinter` verwendet werden.
-Sie liefern präzisen AST-Kontext in 1 Turn statt teurer Textsuch- und Datei-Lese-Kaskaden.
+Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) standardmäßig die semantischen MCP-Tools des Servers `AiNetLinter` anstelle manueller Textsuch-Kaskaden (`rg` + seitenweises Dateilesen) verwenden. Sie liefern präzisen AST-Kontext in 1 Turn.
 
-## ⛔ Strikte Werkzeug-Trennung
+## 🎯 Werkzeug-Wahl & Fallback-Strategie
 
-- ❌ **VERBOTEN für C#-Code:** Kein `rg`, `grep`, `find_in_files` oder seitenweises Dateilesen für C#-Symbole, Aufrufer oder Methoden.
-- ✅ **NUR für Nicht-C#:** `rg` / lokale Tools ausschließlich für JSON, Markdown, `.csproj`, Scripts, Konfigurationen oder Logs.
+- **MCP-First für C#-Semantik:** Für Symbole, Typen, Aufrufe, Hierarchien, Referenzen, Impact und Code-Audits immer zuerst `AiNetLinter` MCP-Tools nutzen.
+- **Wann `rg` / lokale Textsuche sinnvoll und erlaubt ist:**
+  - **Nicht-C#-Dateien:** JSON, YAML, `.csproj`, Markdown, Scripts, Configs, Logs.
+  - **Reine Textsuche:** Exakte String-Literale, Fehlermeldungen, Kommentare.
+  - **Pragmatischer Fallback:** Wenn ein MCP-Tool fehlschlägt, keine Treffer liefert oder unvollständig ist.
+  - **Gezielte Edits:** Wenn der exakte Zeilenbereich bereits bekannt ist.
 
 ## Standard-Parameter & Handoff
 
