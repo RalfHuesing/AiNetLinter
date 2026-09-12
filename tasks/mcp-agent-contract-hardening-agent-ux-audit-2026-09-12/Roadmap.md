@@ -45,7 +45,7 @@ Die folgenden beiden Befunde sind **nicht** für eine unkonzipierte Ad-hoc-Umset
 
 ## 2. Roadmap (Abarbeitungs-Checkliste)
 
-Die Umsetzung erfolgt strikt nach den [AiNetLinter-Richtlinien](../../.agents/rules/AiNetLinterRichtlinien.mdc): **Red-Test-First**, isolierte Commits, volle Gate-Verifikation.
+Die Umsetzung erfolgt strikt nach den [AiNetLinter-Richtlinien](../../.agents/rules/AiNetLinter-Richtlinien.mdc): **Red-Test-First**, isolierte Commits, volle Gate-Verifikation.
 
 ### Paket 1: Schema- & Envelope-Härtung (Critical Fixes)
 - [x] **1. B-01**: `get_index_scope` Non-C#-Routing von `fileFilter` auf `includePatterns` (Array) korrigieren
