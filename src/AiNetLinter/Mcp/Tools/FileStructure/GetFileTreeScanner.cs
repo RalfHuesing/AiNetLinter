@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
@@ -132,7 +131,6 @@ internal sealed class FileTreeAccumulator
         AddDirectoryMatch(relativePath, sizeBytes);
     }
 
-    // ainetlinter-disable MaxCognitiveComplexity — die Budget- und Cursorpfade werden hier gemeinsam rekalkuliert.
     internal FileTreeScanResult Build(TreeWalkStats walkStats)
     {
         EnsureDirectory(_rootRelativePath);
@@ -160,43 +158,68 @@ internal sealed class FileTreeAccumulator
             walkStats,
             next);
 
-        if (_input.MaxResponseBytes > 0)
+        var projection = new ResponseBudgetProjection(
+            shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next, payload);
+        projection = ApplyResponseBudget(projection);
+        return new FileTreeScanResult(projection.Payload, _displayTreeDepth);
+    }
+
+    private ResponseBudgetProjection ApplyResponseBudget(ResponseBudgetProjection projection)
+    {
+        if (_input.MaxResponseBytes <= 0) return projection;
+
+        projection = TrimFiles(projection, out var filesTrimmed);
+        projection = TrimDirectories(projection, out var directoriesTrimmed);
+        if (!filesTrimmed && !directoriesTrimmed) return projection;
+
+        var reasons = AddReason(projection.TruncationReasons, "maxResponseBytes").ToList();
+        projection = Rebuild(projection with { TruncationReasons = reasons, Next = CreateNext(reasons) });
+        projection = TrimFiles(projection, out _);
+        return TrimDirectories(projection, out _);
+    }
+
+    private ResponseBudgetProjection TrimFiles(ResponseBudgetProjection projection, out bool trimmed)
+    {
+        trimmed = false;
+        while (RenderedSize(projection.Payload) > _input.MaxResponseBytes && projection.ShownMatches.Count > 1)
         {
-            var responseTrimmed = false;
-            // Keep one representative file whenever matches exist. Directory summaries are
-            // reduced below; an empty file list would otherwise hide a materialized assembly
-            // source root behind response-budget metadata only.
-            while (SerializedSize(payload) > _input.MaxResponseBytes && shownMatches.Count > 1)
-            {
-                shownMatches.RemoveAt(shownMatches.Count - 1);
-                responseTrimmed = true;
-                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
-            }
-
-            while (SerializedSize(payload) > _input.MaxResponseBytes && visibleDirectories.Count > 1)
-            {
-                var removeIndex = visibleDirectories.Count - 1;
-                if (visibleDirectories[removeIndex].Path.Equals(_rootRelativePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    removeIndex--;
-                }
-
-                if (removeIndex < 0) break;
-                visibleDirectories = visibleDirectories.Where((_, index) => index != removeIndex).ToArray();
-                responseTrimmed = true;
-                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
-            }
-
-            if (responseTrimmed)
-            {
-                truncationReasons = AddReason(truncationReasons, "maxResponseBytes").ToList();
-                next = CreateNext(truncationReasons);
-                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
-            }
+            projection.ShownMatches.RemoveAt(projection.ShownMatches.Count - 1);
+            projection = Rebuild(projection);
+            trimmed = true;
         }
 
-        return new FileTreeScanResult(payload, _displayTreeDepth);
+        return projection;
     }
+
+    private ResponseBudgetProjection TrimDirectories(ResponseBudgetProjection projection, out bool trimmed)
+    {
+        trimmed = false;
+        while (RenderedSize(projection.Payload) > _input.MaxResponseBytes && projection.VisibleDirectories.Count > 1)
+        {
+            var removeIndex = projection.VisibleDirectories.Count - 1;
+            if (projection.VisibleDirectories[removeIndex].Path.Equals(_rootRelativePath, StringComparison.OrdinalIgnoreCase)) removeIndex--;
+            if (removeIndex < 0) break;
+            projection = Rebuild(projection with
+            {
+                VisibleDirectories = projection.VisibleDirectories.Where((_, index) => index != removeIndex).ToArray(),
+            });
+            trimmed = true;
+        }
+
+        return projection;
+    }
+
+    private ResponseBudgetProjection Rebuild(ResponseBudgetProjection projection) => projection with
+    {
+        Payload = CreatePayload(
+            projection.ShownMatches,
+            projection.VisibleDirectories,
+            projection.SortedMatches,
+            projection.TruncationReasons,
+            projection.Warnings,
+            projection.WalkStats,
+            projection.Next),
+    };
 
     // ainetlinter-disable MaxMethodParameterCount — die Payload-Felder stammen aus einer einzigen Scan-Phase.
     private FileTreePayload CreatePayload(
@@ -236,8 +259,18 @@ internal sealed class FileTreeAccumulator
                 ReturnedDirectoryCount: directories.Count),
             Next: next);
 
-    private static int SerializedSize(FileTreePayload payload) =>
-        JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+    private int RenderedSize(FileTreePayload payload) =>
+        Encoding.UTF8.GetByteCount(GetFileTreeRenderer.Render(new FileTreeScanResult(payload, _displayTreeDepth)));
+
+    private sealed record ResponseBudgetProjection(
+        List<FileTreeCandidate> ShownMatches,
+        IReadOnlyList<FileTreeDirectoryEntry> VisibleDirectories,
+        IReadOnlyList<FileTreeCandidate> SortedMatches,
+        IReadOnlyList<string> TruncationReasons,
+        IReadOnlyList<string> Warnings,
+        TreeWalkStats WalkStats,
+        FileTreeNext Next,
+        FileTreePayload Payload);
 
     private static IReadOnlyList<string> AddReason(IReadOnlyList<string> reasons, string reason) =>
         reasons.Contains(reason, StringComparer.Ordinal)

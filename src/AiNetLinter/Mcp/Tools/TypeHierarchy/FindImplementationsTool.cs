@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -328,7 +326,7 @@ internal static class FindImplementationsTool
     internal static CallToolResult ApplyResponseBudget(FindImplementationsResultDto dto, int maxResponseBytes)
     {
         var current = dto;
-        while (CombinedBytes(current) > maxResponseBytes && current.Implementations.Count > 0)
+        while (VisibleTextBytes(current) > maxResponseBytes && current.Implementations.Count > 0)
         {
             var implementations = current.Implementations.Take(current.Implementations.Count - 1).ToList();
             var reasons = current.TruncationReasons.Contains("maxResponseBytes", StringComparer.Ordinal)
@@ -342,9 +340,10 @@ internal static class FindImplementationsTool
                 TruncationReasons = reasons,
             };
         }
-        if (CombinedBytes(current) > maxResponseBytes)
+        var minimumResponseBytes = VisibleTextBytes(current);
+        if (minimumResponseBytes > maxResponseBytes)
         {
-            return BudgetTooSmall(maxResponseBytes);
+            return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
         }
         return McpToolResults.Text(FormatResultText(current));
     }
@@ -355,21 +354,21 @@ internal static class FindImplementationsTool
             "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
             "$.maxResponseBytes");
 
-    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Error(
+    private static CallToolResult BudgetTooSmall(int budget, int minimumResponseBytes) => McpToolResults.Error(
         LinterErrorCodes.ResponseBudgetTooSmall,
         $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Implementierungsprojektion.",
-        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Implementierungen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));
+        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Implementierungen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes", RequestedBytes: budget, MinimumResponseBytes: minimumResponseBytes));
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        return Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes
+        var minimumResponseBytes = Mcp.Wire.McpResponseSize.From(result).TotalBytes;
+        return minimumResponseBytes <= maxResponseBytes
             ? result
-            : BudgetTooSmall(maxResponseBytes);
+            : BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
     }
 
-    private static int CombinedBytes(FindImplementationsResultDto dto) =>
-        Encoding.UTF8.GetByteCount(FormatResultText(dto))
-        + JsonSerializer.SerializeToUtf8Bytes(dto, McpJsonOptions.Default).Length;
+    private static int VisibleTextBytes(FindImplementationsResultDto dto) =>
+        Encoding.UTF8.GetByteCount(FormatResultText(dto));
 
     internal static string FormatResultText(FindImplementationsResultDto dto)
     {

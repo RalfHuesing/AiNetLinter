@@ -355,9 +355,10 @@ internal static partial class GetSymbolBodyTool
             truncated = true;
         }
 
-        if (CombinedBytes(kept, requestedCount, truncated) > maxResponseBytes)
+        var minimumResponseBytes = CombinedBytes(kept, requestedCount, truncated);
+        if (minimumResponseBytes > maxResponseBytes)
         {
-            return BudgetTooSmall(maxResponseBytes);
+            return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
         }
 
         return CreateResult(kept, requestedCount, truncated);
@@ -389,13 +390,15 @@ internal static partial class GetSymbolBodyTool
         return Encoding.UTF8.GetByteCount(text);
     }
 
-    private static CallToolResult BudgetTooSmall(int budget) =>
+    private static CallToolResult BudgetTooSmall(int budget, int minimumResponseBytes) =>
         McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Symbol-Body-Projektion.",
             new McpErrorParameters(
                 Hint: "maxResponseBytes erhöhen; Symbol-Bodies werden nur als vollständige Einheiten gekürzt.",
-                FieldPath: "$.maxResponseBytes"));
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: budget,
+                MinimumResponseBytes: minimumResponseBytes));
 
     private static CallToolResult InvalidResponseBudget() =>
         McpToolResults.InvalidArgument(

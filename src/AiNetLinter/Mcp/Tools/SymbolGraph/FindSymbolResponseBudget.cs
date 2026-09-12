@@ -19,14 +19,16 @@ internal static class FindSymbolResponseBudget
 {
     internal static CallToolResult Apply(CallToolResult result, int maxResponseBytes)
     {
-        if (McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        var minimumResponseBytes = McpResponseSize.From(result).TotalBytes;
+        if (minimumResponseBytes <= maxResponseBytes) return result;
         return McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={maxResponseBytes} ist zu klein für die fachliche Mindestprojektion.",
             new McpErrorParameters(
                 Hint: "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Symbol-Entries gekürzt.",
                 FieldPath: "$.maxResponseBytes",
-                RequestedBytes: maxResponseBytes));
+                RequestedBytes: maxResponseBytes,
+                MinimumResponseBytes: minimumResponseBytes));
     }
 
 }

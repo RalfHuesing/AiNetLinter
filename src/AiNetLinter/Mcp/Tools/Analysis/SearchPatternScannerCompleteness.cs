@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
+using System.Text;
 using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
@@ -109,7 +109,15 @@ internal static class SearchPatternScannerCompleteness
                 options.ExcludePatterns),
             options.Matches,
             shown);
-        return JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length
+        var result = new SearchPatternScanResult(
+            payload,
+            options.Completeness.TotalMatchedLineCount,
+            options.ScannerParameters.MaxResults,
+            options.ScannerParameters.MaxFiles,
+            options.ScannerParameters.MaxResponseBytes,
+            options.ScannerParameters.Pattern,
+            options.ScannerParameters.IsRegex);
+        return Encoding.UTF8.GetByteCount(SearchPatternTextFormatter.Format(result))
             > options.ScannerParameters.MaxResponseBytes;
     }
 

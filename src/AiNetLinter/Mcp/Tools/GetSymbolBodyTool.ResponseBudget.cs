@@ -9,12 +9,13 @@ internal static partial class GetSymbolBodyTool
 {
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (maxResponseBytes <= 0 || Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes)
+        var minimumResponseBytes = Mcp.Wire.McpResponseSize.From(result).TotalBytes;
+        if (maxResponseBytes <= 0 || minimumResponseBytes <= maxResponseBytes)
         {
             return result;
         }
 
-        return BudgetTooSmall(maxResponseBytes);
+        return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
     }
 
 }

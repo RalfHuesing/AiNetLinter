@@ -4,8 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
@@ -97,18 +95,19 @@ internal static class GetTypeHierarchyTool
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
-        return BudgetTooSmall(maxResponseBytes);
+        var minimumResponseBytes = Mcp.Wire.McpResponseSize.From(result).TotalBytes;
+        if (minimumResponseBytes <= maxResponseBytes) return result;
+        return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
     }
 
     private static CallToolResult ApplyResponseBudget(TypeHierarchyPayload payload, int maxResponseBytes)
     {
         var current = payload;
-        while (CombinedBytes(current) > maxResponseBytes && current.DiRegistrations.Count > 0)
+        while (VisibleTextBytes(current) > maxResponseBytes && current.DiRegistrations.Count > 0)
         {
             current = current with { DiRegistrations = current.DiRegistrations.Take(current.DiRegistrations.Count - 1).ToList() };
         }
-        while (CombinedBytes(current) > maxResponseBytes && current.Subtypes.Count > 0)
+        while (VisibleTextBytes(current) > maxResponseBytes && current.Subtypes.Count > 0)
         {
             var subtypes = current.Subtypes.Take(current.Subtypes.Count - 1).ToList();
             current = current with
@@ -122,18 +121,16 @@ internal static class GetTypeHierarchyTool
             };
         }
         var text = GetTypeHierarchyFormatter.FormatText(current);
-        if (Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(current, McpJsonOptions.Default).Length > maxResponseBytes)
+        var minimumResponseBytes = Encoding.UTF8.GetByteCount(text);
+        if (minimumResponseBytes > maxResponseBytes)
         {
-            return BudgetTooSmall(maxResponseBytes);
+            return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
         }
         return McpToolResults.Text(text);
     }
 
-    private static int CombinedBytes(TypeHierarchyPayload payload)
-    {
-        var text = GetTypeHierarchyFormatter.FormatText(payload);
-        return Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
-    }
+    private static int VisibleTextBytes(TypeHierarchyPayload payload) =>
+        Encoding.UTF8.GetByteCount(GetTypeHierarchyFormatter.FormatText(payload));
 
     private static CallToolResult InvalidResponseBudget() =>
         McpToolResults.InvalidArgument(
@@ -141,8 +138,8 @@ internal static class GetTypeHierarchyTool
             "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
             "$.maxResponseBytes");
 
-    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Error(
+    private static CallToolResult BudgetTooSmall(int budget, int minimumResponseBytes) => McpToolResults.Error(
         LinterErrorCodes.ResponseBudgetTooSmall,
         $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Typ-Hierarchie.",
-        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Hierarchie-Einträge werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));
+        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Hierarchie-Einträge werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes", RequestedBytes: budget, MinimumResponseBytes: minimumResponseBytes));
 }

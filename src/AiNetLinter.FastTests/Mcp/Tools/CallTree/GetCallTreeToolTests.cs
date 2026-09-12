@@ -133,7 +133,7 @@ public sealed partial class GetCallTreeToolTests
     }
 
     [Fact]
-    public async Task ApplyFinalResponseBudget_RejectsOversizedContentWithActionableError()
+    public async Task ApplyFinalResponseBudget_ReportsExactRetryForOversizedContent()
     {
         var oversized = new CallToolResult
         {
@@ -144,8 +144,9 @@ public sealed partial class GetCallTreeToolTests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.NotEqual(true, result.IsError);
-        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
-        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, StringComparison.Ordinal);
+        Assert.Contains("minimumResponseBytes: 1545", text, StringComparison.Ordinal);
+        Assert.Contains("retry: denselben Aufruf mit maxResponseBytes=1545 wiederholen.", text, StringComparison.Ordinal);
     }
 
     [Fact]

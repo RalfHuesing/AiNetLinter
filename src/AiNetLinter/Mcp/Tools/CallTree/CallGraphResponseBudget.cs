@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
@@ -34,12 +35,17 @@ internal static partial class CallGraphResponseBudget
         }
 
         var text = CreateText(graph, format, edges, hints, budgetTruncated, maxResponseBytes);
-        if (Encoding.UTF8.GetByteCount(text) > maxResponseBytes)
+        var minimumResponseBytes = Encoding.UTF8.GetByteCount(text);
+        if (minimumResponseBytes > maxResponseBytes)
         {
-            return McpToolResults.InvalidArgument(
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.ResponseBudgetTooSmall,
                 "maxResponseBytes ist zu klein, um den festen Call-Graph-Envelope vollständig auszugeben.",
-                "maxResponseBytes erhöhen oder symbolIdentifier/scopeType verfeinern.",
-                "$.maxResponseBytes");
+                new McpErrorParameters(
+                    Hint: "maxResponseBytes erhöhen oder symbolIdentifier/scopeType verfeinern.",
+                    FieldPath: "$.maxResponseBytes",
+                    RequestedBytes: maxResponseBytes,
+                    MinimumResponseBytes: minimumResponseBytes));
         }
 
         return McpToolResults.Text(text);

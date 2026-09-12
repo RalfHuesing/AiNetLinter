@@ -4,8 +4,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -93,8 +91,9 @@ internal static partial class FindReferencesTool
         var traversal = await CallGraphTraversal.ExpandAsync(new ReferenceTraversalRequest(solution, symbol!, request.Depth, Math.Max(1, request.MaxResults), ct, AssemblySymbolIdentity: state.HandoffSymbolIdentity, ScopeFilter: scopeFilter));
         traversal = traversal with { Scope = new FindSymbolScopeDto(McpScopeValues.ToWireValue(request.ScopeType), request.IncludeGenerated) };
         var formatted = ProjectResponseBudget(traversal, request.MaxResponseBytes, symbol!.ToDisplayString());
-        return CombinedBytes(formatted) > request.MaxResponseBytes
-            ? BudgetTooSmall(request.MaxResponseBytes)
+        var minimumResponseBytes = VisibleTextBytes(formatted);
+        return minimumResponseBytes > request.MaxResponseBytes
+            ? BudgetTooSmall(request.MaxResponseBytes, minimumResponseBytes)
             : McpToolResults.Text(formatted.Text);
     }
 
@@ -105,7 +104,7 @@ internal static partial class FindReferencesTool
     {
         var current = traversal;
         var formatted = Format(current, symbolIdentifier);
-        while (CombinedBytes(formatted) > maxResponseBytes && current.CallSites.Count > 0)
+        while (VisibleTextBytes(formatted) > maxResponseBytes && current.CallSites.Count > 0)
         {
             var callSites = current.CallSites.Take(current.CallSites.Count - 1).ToList();
             current = current with
@@ -131,9 +130,8 @@ internal static partial class FindReferencesTool
                 ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
 
-    private static int CombinedBytes(TransitiveCallGraphFormatResult formatted) =>
-        Encoding.UTF8.GetByteCount(formatted.Text)
-        + JsonSerializer.SerializeToUtf8Bytes(formatted.StructuredPayload, McpJsonOptions.Default).Length;
+    private static int VisibleTextBytes(TransitiveCallGraphFormatResult formatted) =>
+        Encoding.UTF8.GetByteCount(formatted.Text);
 
     private static CallToolResult InvalidResponseBudget() =>
         McpToolResults.InvalidArgument(
@@ -141,15 +139,17 @@ internal static partial class FindReferencesTool
             "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
             "$.maxResponseBytes");
 
-    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Error(
+    private static CallToolResult BudgetTooSmall(int budget, int minimumResponseBytes) => McpToolResults.Error(
         LinterErrorCodes.ResponseBudgetTooSmall,
         $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Referenzprojektion.",
-        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Referenzen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));
+        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Referenzen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes", RequestedBytes: budget, MinimumResponseBytes: minimumResponseBytes));
 
+    // ainetlinter-disable DuplicateCode -- der Tool-spezifische Mindestprojektionsfehler bewahrt den Referenz-Kontext.
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
-        return BudgetTooSmall(maxResponseBytes);
+        var minimumResponseBytes = Mcp.Wire.McpResponseSize.From(result).TotalBytes;
+        if (minimumResponseBytes <= maxResponseBytes) return result;
+        return BudgetTooSmall(maxResponseBytes, minimumResponseBytes);
     }
 
     /// <summary>

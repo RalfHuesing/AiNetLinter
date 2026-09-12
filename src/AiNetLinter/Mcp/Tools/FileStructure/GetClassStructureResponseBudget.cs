@@ -3,10 +3,10 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Wire;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -15,11 +15,16 @@ internal static class GetClassStructureResponseBudget
 {
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (maxResponseBytes <= 0 || McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
-        return McpToolResults.InvalidArgument(
+        var minimumResponseBytes = McpResponseSize.From(result).TotalBytes;
+        if (maxResponseBytes <= 0 || minimumResponseBytes <= maxResponseBytes) return result;
+        return McpToolResults.Recoverable(
+            LinterErrorCodes.ResponseBudgetTooSmall,
             "maxResponseBytes ist zu klein für die fachliche Klassenstruktur-Antwort.",
-            "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
-            "$.maxResponseBytes");
+            new McpErrorParameters(
+                Hint: "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: maxResponseBytes,
+                MinimumResponseBytes: minimumResponseBytes));
     }
 
     internal static string RenderBudgetText(
@@ -101,8 +106,6 @@ internal static class GetClassStructureResponseBudget
             ? text
             : null;
 
-    internal static int CombinedResponseBytes(string text, ClassStructurePayload payload) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+    internal static int VisibleTextBytes(string text) => Encoding.UTF8.GetByteCount(text);
 
 }
