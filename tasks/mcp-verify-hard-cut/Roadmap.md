@@ -7,6 +7,10 @@
 - [X] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [X] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [X] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
+- [ ] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
+- [ ] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
+- [ ] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
+- [ ] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
 
 ## Durchführungsprotokoll
 
@@ -51,6 +55,12 @@
 - Nachlauf entfernte einen obsoleten Legacy-Tooltest (`47223793`) und verflachte Verify-Hinweisquellen (`6b98b410`).
 - `dotnet build`: 0 Warnungen/Fehler; FastTests: 2473/2473; IntegrationTests: 230/230 (ohne `Stress`).
 - `git diff --check` und Working Tree sauber; Commit: `d4c145a290353932eebb7586b53824dc9560d42e`.
+
+### Folgeaudit – Vorbereitung
+
+- Read-only-Audit identifizierte fehlende finale UTF-8-Budgetmessung und wiederholte Advisory-Scans pro Datei.
+- Öffentliche Legacytools bleiben entfernt; keine Rückkehr zu granularen Legacy-Einstiegspunkten.
+- Commit: ausstehend.
 
 ### Vorbereitung
 
