@@ -62,12 +62,7 @@ internal static class SafeguardTool
         var hint = BuildSufficiencyHint(score);
         var text = score.Summary + BuildTopViolationText(score) +
             (string.IsNullOrEmpty(hint) ? string.Empty : "\n\n" + hint);
-        return new CallToolResult
-        {
-            IsError = false,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(score, McpJsonOptions.Default),
-        };
+        return McpToolResults.Text(text);
     }
 
     private static string BuildTopViolationText(ScoreResult score)

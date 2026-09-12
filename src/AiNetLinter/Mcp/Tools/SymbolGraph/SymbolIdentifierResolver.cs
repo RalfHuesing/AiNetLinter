@@ -254,7 +254,7 @@ internal static class SymbolIdentifierResolver
         {
             error = McpToolResults.InvalidArgument(
                 "Die Handoff-ID ist nicht kanonisch.",
-                hint: "Eine ID aus dem StructuredContent des aktuellen find_symbol-Ergebnisses kopieren.",
+                hint: "Eine ID direkt aus der aktuellen find_symbol-Antwort kopieren.",
                 fieldPath: "$.symbolIdentifier");
             return false;
         }

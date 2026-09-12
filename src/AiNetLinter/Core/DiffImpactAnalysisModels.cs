@@ -112,7 +112,7 @@ internal sealed record DiffAnalysisRequest(
     int ChangedSymbolCap = int.MaxValue);
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
+/// Evidenzeintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
 /// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
 /// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
 /// </summary>

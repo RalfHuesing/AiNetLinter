@@ -3,8 +3,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.TestContext;
 using AiNetLinter.Mcp.Wire;
@@ -24,15 +22,11 @@ public sealed class TestContextResponseBudgetTests
         var result = TestContextResponseBudget.Apply(payload, 3_500);
 
         Assert.NotEqual(true, result.IsError);
-        var projected = ReadPayload(result);
-        Assert.True(projected.TestFiles.Count >= 3);
-        Assert.All(projected.TestFiles.Take(3), file => Assert.Equal("directInvocation", file.EvidenceKind));
-        Assert.Equal(projected.TestFiles.Count, projected.ReturnedTestFiles);
-        Assert.Equal(projected.TestFiles.Sum(file => file.TestMethods.Count), projected.ReturnedTestMethods);
-        Assert.Equal("truncated", projected.Completeness);
-        Assert.Contains("responseBudget", projected.TruncatedBy!);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.All(projected.TestFiles, file => Assert.Contains(file.FilePath, text, System.StringComparison.Ordinal));
+        Assert.Contains("tests/ZDirect1Tests.cs", text, System.StringComparison.Ordinal);
+        Assert.Contains("tests/ZDirect2Tests.cs", text, System.StringComparison.Ordinal);
+        Assert.Contains("tests/ZDirect3Tests.cs", text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("responseBudget", text, System.StringComparison.Ordinal);
         Assert.True(McpResponseSize.From(result).TotalBytes <= 3_500);
     }
 
@@ -45,37 +39,18 @@ public sealed class TestContextResponseBudgetTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, System.StringComparison.Ordinal);
         Assert.Contains("fieldPath: $.maxResponseBytes", text, System.StringComparison.Ordinal);
-        Assert.Equal(512, result.StructuredContent!.Value.GetProperty("requestedBytes").GetInt32());
-        Assert.True(result.StructuredContent.Value.GetProperty("minimumResponseBytes").GetInt32() > 512);
     }
 
     [Fact]
-    public void ApplyFinal_ReprojectsTextAndStructuredContentAfterNavigation()
+    public void ApplyFinal_ReprojectsContentAfterNavigation()
     {
         var payload = CreatePayload();
         var report = TestContextFormatter.FormatReport(payload);
-        var result = new CallToolResult
-        {
-            Content = [new TextContentBlock { Text = report + "\nStatus: operation=ok, completeness=complete" }],
-            StructuredContent = JsonSerializer.SerializeToElement(new JsonObject
-            {
-                ["targetSymbol"] = payload.TargetSymbol,
-                ["targetKind"] = payload.TargetKind,
-                ["targetFilePath"] = payload.TargetFilePath,
-                ["totalMatchingTests"] = payload.TotalMatchingTests,
-                ["totalTestFiles"] = payload.TotalTestFiles,
-                ["testFiles"] = JsonSerializer.SerializeToNode(payload.TestFiles, McpJsonOptions.Default),
-                ["recommendedTestCommands"] = new JsonArray(),
-                ["isUntested"] = false,
-                ["isTruncated"] = false,
-                ["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = "ok" } },
-            }, McpJsonOptions.Default),
-        };
+        var result = McpToolResults.Text(report + "\nStatus: operation=ok, completeness=complete");
 
         var projected = TestContextResponseBudget.ApplyFinal(result, 5_000);
 
         Assert.NotEqual(true, projected.IsError);
-        Assert.True(projected.StructuredContent!.Value.TryGetProperty("navigation", out _));
         Assert.Contains("Status: operation=ok", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, System.StringComparison.Ordinal);
         Assert.True(McpResponseSize.From(projected).TotalBytes <= 5_000);
     }
@@ -97,8 +72,4 @@ public sealed class TestContextResponseBudgetTests
             ReturnedTestFiles: files.Count,
             ReturnedTestMethods: 3);
     }
-
-    private static TestContextPayload ReadPayload(CallToolResult result) =>
-        JsonSerializer.Deserialize<TestContextPayload>(result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-
 }

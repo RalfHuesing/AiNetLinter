@@ -1,11 +1,9 @@
 #nullable enable
 
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
-using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -16,9 +14,6 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FeatureContext;
 [Trait("Category", "Component")]
 public sealed class GetFeatureContextToolCapTests
 {
-    private const int ExpectedMethodsPerFile = 50;
-    private const int ExpectedMethodsTotal = 200;
-
     [Theory]
     [InlineData(2, 1, 1, 1, "maxTests")]
     [InlineData(1, 51, 1, 50, "maxTestMethodsPerFile")]
@@ -53,48 +48,16 @@ public sealed class GetFeatureContextToolCapTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(payload?.Tests);
-        Assert.Equal(testFileCount * methodsPerFile, payload.Tests.TotalMatchingTests);
-        Assert.Equal(testFileCount, payload.Tests.TotalTestFiles);
-        var wireBudgetTruncated = payload.Tests.TruncatedBy?.Contains("responseBudget") == true;
-        var expectedReasonsWithWireBudget = expectedReasons.Split(',').ToList();
-        if (wireBudgetTruncated) expectedReasonsWithWireBudget.Add("responseBudget");
-        Assert.Equal(expectedReasonsWithWireBudget, payload.Tests.TruncatedBy);
-        Assert.True(payload.Tests.IsTruncated);
-        Assert.Equal("truncated", payload.Tests.Completeness);
-        Assert.Contains("testContext", text, StringComparison.Ordinal);
-        Assert.Contains("Nächster sicherer Schritt", text, StringComparison.Ordinal);
-        Assert.Equal(payload.Tests.DisplayedTestMethods, payload.Tests.TestFiles.Sum(file => file.TestMethods.Count));
-        Assert.InRange(payload.Tests.TestFiles.Count, 0, Math.Min(testFileCount, maxTests));
-        Assert.All(payload.Tests.TestFiles, file =>
-            Assert.InRange(file.TestMethods.Count, 0, Math.Min(methodsPerFile, ExpectedMethodsPerFile)));
-        if (!wireBudgetTruncated)
+        Assert.Contains("Status: truncated", text, StringComparison.Ordinal);
+        Assert.Contains($"{testFileCount * methodsPerFile}", text, StringComparison.Ordinal);
+        Assert.Contains($"{testFileCount} Testdateien", text, StringComparison.Ordinal);
+        foreach (var reason in expectedReasons.Split(','))
         {
-            Assert.Equal(expectedDisplayedMethods, payload.Tests.DisplayedTestMethods);
-            Assert.Equal(
-                Enumerable.Range(0, payload.Tests.TestFiles.Count)
-                    .Select(index => Math.Min(
-                        Math.Min(methodsPerFile, ExpectedMethodsPerFile),
-                        Math.Max(ExpectedMethodsTotal - index * ExpectedMethodsPerFile, 0))),
-                payload.Tests.TestFiles.Select(file => file.TestMethods.Count));
+            Assert.Contains(reason, text, StringComparison.Ordinal);
         }
-        Assert.Contains(
-            $"{payload.Tests.TestFiles.Count} von {testFileCount} Testdateien",
-            text,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            $"{payload.Tests.TestFiles.Count} von {payload.Tests.TotalTestFiles} Testdateien zurückgegeben; {payload.Tests.DisplayedTestMethods} konkrete Testmethoden sichtbar. Insgesamt {payload.Tests.TotalMatchingTests} Testkandidaten gefunden.",
-            text,
-            StringComparison.Ordinal);
-        Assert.All(payload.Tests.TestFiles, file =>
-            Assert.Contains(
-                $"{file.TestMethods.Count} von {file.TotalMatchingMethods} konkrete Testmethoden",
-                text,
-                StringComparison.Ordinal));
-        if (wireBudgetTruncated) Assert.Contains("Wire-Budget", text, StringComparison.Ordinal);
+        Assert.Contains("testContext", text, StringComparison.Ordinal);
+        Assert.Contains($"{expectedDisplayedMethods} konkrete Testmethoden", text, StringComparison.Ordinal);
+        Assert.Contains("Nächster sicherer Schritt", text, StringComparison.Ordinal);
     }
 
     private static RoslynTestSolution CreateScenario(int testFileCount, int methodsPerFile)

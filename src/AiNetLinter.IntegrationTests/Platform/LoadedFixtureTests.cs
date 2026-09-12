@@ -105,7 +105,6 @@ public sealed class LoadedFixtureTests
             "Baseline/SourceFileCatalogRegistrationStressTests.cs",
             "Baseline/SourceFileCatalogRegistrationTests.cs",
             "Fixtures/LoadFixtureMeasurementsTests.cs",
-            "Mcp/Tools/SymbolGraph/GetImpactToolIntegrationTests.cs",
             "Platform/LoadedFixture.cs",
         ], callers);
     }

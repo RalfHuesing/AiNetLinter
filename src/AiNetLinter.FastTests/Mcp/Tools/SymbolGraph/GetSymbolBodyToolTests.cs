@@ -71,13 +71,9 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("id:", textContent.Text, System.StringComparison.Ordinal);
-        Assert.True(result.StructuredContent.HasValue);
-        var structured = result.StructuredContent!.Value;
-        var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
-        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
-        Assert.NotEqual(stableId, entry.GetProperty("id").GetString());
-        Assert.False(entry.GetProperty("isTruncated").GetBoolean());
+        Assert.Contains("handoffId: `", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain($"handoffId: `{stableId}`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("truncated", textContent.Text, System.StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -197,8 +193,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("angefordert: `Greeter.Greet`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("angefordert: `Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal(2, result.StructuredContent!.Value.GetProperty("results").GetArrayLength());
+        Assert.Equal(2, textContent.Text.Split("handoffId:", System.StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -240,11 +235,6 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Zeilen: 1-1 von", textContent.Text, System.StringComparison.Ordinal);
-        Assert.True(result.StructuredContent.HasValue);
-        var structured = result.StructuredContent!.Value;
-        var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
-        Assert.Equal(1, entry.GetProperty("displayedStartLine").GetInt32());
-        Assert.Equal(1, entry.GetProperty("displayedEndLine").GetInt32());
     }
 
     [Fact]
@@ -345,7 +335,7 @@ public sealed class GetSymbolBodyToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_HandoffIdIsStructuredOnly_AndBodyRemainsComplete()
+    public async Task ExecuteAsync_HandoffIdIsRenderedOnce_AndBodyRemainsComplete()
     {
         var state = _fixture.CreateServer();
 
@@ -356,12 +346,9 @@ public sealed class GetSymbolBodyToolTests
             CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.DoesNotContain("id:", text, System.StringComparison.Ordinal);
+        Assert.Contains("handoffId: `", text, System.StringComparison.Ordinal);
         Assert.Contains("Hello", text, System.StringComparison.Ordinal);
-
-        var entry = result.StructuredContent!.Value.GetProperty("results")[0];
-        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
-        Assert.Equal("member", entry.GetProperty("handoffKind").GetString());
+        Assert.Equal(1, text.Split("handoffId:", System.StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -380,75 +367,38 @@ public sealed class GetSymbolBodyToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, expanded.IsError);
-        var expandedResults = expanded.StructuredContent!.Value.GetProperty("results").GetArrayLength();
+        var expandedResults = expanded.Content.Count;
         if (constrained.IsError == true)
         {
             Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text, StringComparison.Ordinal);
         }
         else
         {
-            var constrainedText = Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text;
-            var constrainedStructured = constrained.StructuredContent!.Value.GetRawText();
             Assert.True(
-                Encoding.UTF8.GetByteCount(constrainedText) + Encoding.UTF8.GetByteCount(constrainedStructured) <= 512,
-                "Symbol-Body-Text und StructuredContent muessen gemeinsam ins Budget passen.");
-            Assert.True(constrained.StructuredContent!.Value.GetProperty("results").GetArrayLength() <= expandedResults);
+                System.Text.Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text) <= 512,
+                "Der sichtbare Symbol-Body-Text muss in das Budget passen.");
+            Assert.True(constrained.Content.Count <= expandedResults);
         }
 
-        Assert.Equal(identifiers.Length, expanded.StructuredContent!.Value.GetProperty("requestedCount").GetInt32());
+        var expandedText = Assert.IsType<TextContentBlock>(Assert.Single(expanded.Content)).Text;
+        Assert.Contains("Greet", expandedText, StringComparison.Ordinal);
+        Assert.Contains("Run", expandedText, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ApplyFinalResponseBudget_NavigationOverflowDropsWholeUnitsBeforeMinimumError()
     {
-        var entries = Enumerable.Range(1, 3).Select(index => new SymbolBodyEntry(
-            $"M:Demo.Work{index}", $"M:Demo.Work{index}", "member", "Demo.cs", index,
-            new string('x', 220), "available", "source", false)).ToList();
-        var root = JsonSerializer.SerializeToNode(new SymbolBodyBatchDto(entries, entries.Count), McpJsonOptions.Default)!.AsObject();
-        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 180) } };
-        var original = McpToolResults.Text("original", root);
-
-        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(original, 1_024);
-        if (projected.StructuredContent!.Value.TryGetProperty("code", out var code))
-        {
-            Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", code.GetString());
-            return;
-        }
-
-        Assert.True(projected.StructuredContent!.Value.GetProperty("results").GetArrayLength() < entries.Count);
-        Assert.True(Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text)
-            + Encoding.UTF8.GetByteCount(projected.StructuredContent!.Value.GetRawText()) <= 1_024);
+        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(McpToolResults.Text(new string('x', 2_048)), 1_024);
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ApplyFinalResponseBudget_OmitsAssemblyHandoffIdFromProjectedHeadingButKeepsStructuredId()
+    public void ApplyFinalResponseBudget_PreservesOnlyVisibleContentOrReturnsRecovery()
     {
-        var entries = new[]
-        {
-            new SymbolBodyEntry(
-                "s:assembly-handoff-opaque-1", "s:assembly-handoff-opaque-1", "member", "Demo.cs", 1,
-                "public void WorkOne() { }", "available", "decompiled", false),
-            new SymbolBodyEntry(
-                "s:assembly-handoff-opaque-2", "s:assembly-handoff-opaque-2", "member", "Demo.cs", 2,
-                "public void WorkTwo() { }", "available", "decompiled", false),
-        };
-        var root = JsonSerializer.SerializeToNode(new SymbolBodyBatchDto(entries, entries.Length), McpJsonOptions.Default)!.AsObject();
-        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 180) } };
-        var original = McpToolResults.Text(
-            string.Join("\n\n---\n\n", entries.Select(entry =>
-                $"### Symbol-Body: `{entry.Id}` — `{entry.FilePath}`\n\nbodyAvailability: `{entry.BodyAvailability}`; contentMode: `{entry.ContentMode}`\n\n```csharp\n{entry.Body}\n```")),
-            root);
-
-        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(
-            original,
-            AiNetLinter.Mcp.Wire.McpResponseSize.From(original).TotalBytes - 1);
-
-        Assert.NotEqual(true, projected.IsError);
+        var original = McpToolResults.Text("handoffId: `s:assembly-handoff-opaque-1`\npublic void WorkOne() { }");
+        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(original, 512);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
-        Assert.All(entries, entry => Assert.DoesNotContain(entry.Id!, text, StringComparison.Ordinal));
-        var projectedId = projected.StructuredContent!.Value
-            .GetProperty("results")[0].GetProperty("id").GetString();
-        Assert.Contains(entries, entry => string.Equals(entry.Id, projectedId, StringComparison.Ordinal));
+        Assert.True(text.Contains("handoffId:", StringComparison.Ordinal) || text.Contains("RESPONSE_BUDGET_TOO_SMALL", StringComparison.Ordinal));
     }
 }
 

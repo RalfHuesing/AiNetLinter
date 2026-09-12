@@ -120,17 +120,6 @@ internal static class DaemonProcessContractHarness
         return welcome ?? throw new InvalidOperationException("Der Daemon lieferte kein Welcome-Frame.");
     }
 
-    internal static async Task<int> GetDaemonProcessIdAsync(
-        DaemonProcessSpec spec,
-        CancellationToken cancellationToken)
-    {
-        await using var connection = await ConnectWhenReadyAsync(
-            spec.EffectiveDaemonInstance,
-            cancellationToken).ConfigureAwait(false);
-        var welcome = await PerformHandshakeAsync(connection, spec, cancellationToken).ConfigureAwait(false);
-        return welcome.ProcessId;
-    }
-
     private static async Task<McpProcessRunResult> RunToExitAsyncCore(
         DaemonProcessSpec spec,
         TimeSpan timeout,

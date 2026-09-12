@@ -24,7 +24,6 @@ internal static class GetIndexScopeTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var (text, entries, population) = await GetIndexScopeScanner.BuildBreakdownAsync(solution, ct);
-        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
         var payload = new IndexScopePayload(
             entries,

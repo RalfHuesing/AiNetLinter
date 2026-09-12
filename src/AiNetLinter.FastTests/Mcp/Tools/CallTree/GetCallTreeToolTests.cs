@@ -93,17 +93,9 @@ public sealed partial class GetCallTreeToolTests
             state, new GetCallTreeInput("Greeter.Greet", 1, null, 10), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<CallTreePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("incoming", payload!.Direction);
-        Assert.Equal(1, payload.RequestedDepth);
-        Assert.Equal(10, payload.TopN);
-        Assert.False(payload.Truncated);
-        Assert.False(payload.TopNTruncated);
-        Assert.NotEmpty(payload.Graph.Nodes);
-        Assert.Contains(payload.Graph.Nodes, child => child.Name.Contains("Caller", StringComparison.Ordinal));
-        Assert.NotEmpty(payload.Graph.Edges);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Caller", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.Greet", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -135,46 +127,25 @@ public sealed partial class GetCallTreeToolTests
             state, new GetCallTreeInput("Greeter.Greet", 2, null, 10, MaxResponseBytes: 1_024), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<CallTreePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Contains("maxResponseBytes", payload!.TruncatedBy ?? []);
-        Assert.True(payload.Truncated);
-        Assert.Equal(payload.Graph.Nodes.Count, payload.Graph.Nodes.Select(node => node.NodeId).Distinct().Count());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= 1_024);
+        Assert.Contains("Greeter.Greet", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ApplyFinalResponseBudget_RebudgetsNavigationAndKeepsDeterministicReason()
+    public async Task ApplyFinalResponseBudget_RejectsOversizedContentWithActionableError()
     {
-        var state = _fixture.CreateServer();
-        var initial = await GetCallTreeTool.ExecuteAsync(
-            state, new GetCallTreeInput("Greeter.Greet", 2, null, 10, MaxResponseBytes: 32 * 1024), CancellationToken.None);
-        var structuredNode = JsonNode.Parse(initial.StructuredContent!.Value.GetRawText())!.AsObject();
-        structuredNode["navigation"] = new JsonObject
-        {
-            ["status"] = new JsonObject
-            {
-                ["operation"] = "ok",
-                ["completeness"] = "truncated",
-            },
-        };
         var oversized = new CallToolResult
         {
             Content = [new TextContentBlock { Text = new string('x', 1_500) + "\nStatus: operation=ok, completeness=truncated" }],
-            StructuredContent = JsonSerializer.SerializeToElement(structuredNode, McpJsonOptions.Default),
         };
 
         var result = CallGraphResponseBudget.ApplyFinalResponseBudget(oversized, 1_024);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        var structured = result.StructuredContent!.Value;
-        var combinedBytes = Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(structured.GetRawText());
-        Assert.True(combinedBytes <= 1_024, $"Combined response was {combinedBytes} bytes.");
-        Assert.True(structured.TryGetProperty("truncatedBy", out var truncatedBy), structured.GetRawText());
-        Assert.Equal("maxResponseBytes", truncatedBy[0].GetString());
-        Assert.Equal(
-            "truncated",
-            structured.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -190,31 +161,13 @@ public sealed partial class GetCallTreeToolTests
         var result = McpToolResults.Text(
             "[ASSEMBLY] targetPath=sample.dll; origin=decompiled\n\nflowchart TD\n    n2 --> n1\n" + new string('x', 3_000),
             new CallTreePayload(graph, "incoming", 2, 2, false, 10, false, false));
-        var structured = JsonNode.Parse(result.StructuredContent!.Value.GetRawText())!.AsObject();
-        structured["analysis"] = new JsonObject
-        {
-            ["targetPath"] = "sample.dll",
-            ["origin"] = "decompiled",
-            ["confidence"] = "medium",
-        };
-        structured["wireBudget"] = new JsonObject
-        {
-            ["limitBytes"] = 32_768,
-            ["textBytes"] = 3_000,
-            ["structuredBytes"] = 500,
-            ["totalBytes"] = 3_500,
-        };
-        result.StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default);
 
         var limited = CallGraphResponseBudget.ApplyFinalResponseBudget(result, 4_096);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(limited.Content)).Text;
-        var payload = limited.StructuredContent!.Value;
         Assert.Contains("flowchart TD", text, StringComparison.Ordinal);
         Assert.Contains("-->", text, StringComparison.Ordinal);
-        Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
-        Assert.Equal("sample.dll", payload.GetProperty("analysis").GetProperty("targetPath").GetString());
-        Assert.True(payload.TryGetProperty("wireBudget", out _), payload.GetRawText());
+        Assert.Contains("origin=decompiled", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -266,15 +219,6 @@ public sealed partial class GetCallTreeToolTests
                 false,
                 32 * 1024));
 
-        var asciiPayload = JsonSerializer.Deserialize<CallTreePayload>(
-            ascii.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        var mermaidPayload = JsonSerializer.Deserialize<CallTreePayload>(
-            mermaid.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(asciiPayload);
-        Assert.NotNull(mermaidPayload);
-        Assert.Equal(asciiPayload!.Graph.Edges, mermaidPayload!.Graph.Edges);
-        Assert.Equal(2, asciiPayload.AssemblyNavigation!.TotalAssemblyCount);
-        Assert.True(ascii.StructuredContent.Value.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
         Assert.Contains("Caller", Assert.IsType<TextContentBlock>(Assert.Single(ascii.Content)).Text, StringComparison.Ordinal);
         Assert.Contains("Caller", Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text, StringComparison.Ordinal);
         Assert.Contains("assembly=dependency.dll", Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text, StringComparison.Ordinal);
@@ -319,34 +263,15 @@ public sealed partial class GetCallTreeToolTests
                 McpScopeType.All,
                 false,
                 32 * 1024));
-        var structured = JsonNode.Parse(initial.StructuredContent!.Value.GetRawText())!.AsObject();
-        structured["analysis"] = new JsonObject
-        {
-            ["targetPath"] = "root.dll",
-            ["origin"] = "decompiled",
-            ["snapshot"] = "snapshot-1",
-        };
-        structured["wireBudget"] = new JsonObject
-        {
-            ["limitBytes"] = 32 * 1024,
-            ["totalBytes"] = 8 * 1024,
-        };
         var oversized = new CallToolResult
         {
             Content = [new TextContentBlock { Text = Assert.IsType<TextContentBlock>(Assert.Single(initial.Content)).Text }],
-            StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default),
         };
 
         var limited = CallGraphResponseBudget.ApplyFinalResponseBudget(oversized, 4_096);
-        var payload = JsonSerializer.Deserialize<CallTreePayload>(
-            limited.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.InRange(payload!.Graph.Edges.Count, 1, edges.Count - 1);
-        Assert.All(payload.Graph.Edges, edge => Assert.Equal("virtual", edge.DispatchKind));
-        Assert.All(payload.Graph.Edges, edge => Assert.Single(edge.CallSites));
-        Assert.Equal("decompiled", limited.StructuredContent.Value.GetProperty("analysis").GetProperty("origin").GetString());
-        Assert.Equal("snapshot-1", limited.StructuredContent.Value.GetProperty("analysis").GetProperty("snapshot").GetString());
-        Assert.True(limited.StructuredContent.Value.TryGetProperty("wireBudget", out _));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(limited.Content)).Text;
+        Assert.Contains("flowchart TD", text, StringComparison.Ordinal);
+        Assert.Contains("Caller2", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -375,29 +300,9 @@ public sealed partial class GetCallTreeToolTests
             "[Assembly-Diagnostic] dependency.dll konnte nicht aufgelöst werden\n" +
             "[1 Diagnosen gesamt, 1 Samples gezeigt — gekürzt: keine]\n" +
             "Status: operation=get_call_tree, completeness=partial";
-        var structured = JsonNode.Parse(JsonSerializer.SerializeToNode(
-            new CallTreePayload(graph, "incoming", 9, 5, true, 10, false, false),
-            McpJsonOptions.Default)!.ToJsonString())!.AsObject();
-        structured["analysis"] = new JsonObject
-        {
-            ["targetPath"] = "root.dll",
-            ["origin"] = "decompiled",
-            ["snapshot"] = "snapshot-1",
-        };
-        structured["wireBudget"] = new JsonObject
-        {
-            ["limitBytes"] = 32 * 1024,
-            ["totalBytes"] = 12 * 1024,
-        };
-        structured["navigation"] = new JsonObject
-        {
-            ["snapshot"] = "snapshot-1",
-            ["status"] = "partial",
-        };
         var result = new CallToolResult
         {
             Content = [new TextContentBlock { Text = prefix + graphText + suffix }],
-            StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default),
         };
 
         var limited = CallGraphResponseBudget.ApplyFinalResponseBudget(result, 4_096);
@@ -408,19 +313,7 @@ public sealed partial class GetCallTreeToolTests
         Assert.Contains("[Assembly-Diagnostic] dependency.dll", text, StringComparison.Ordinal);
         Assert.EndsWith("Status: operation=get_call_tree, completeness=partial", text, StringComparison.Ordinal);
         Assert.Contains("flowchart TD", text, StringComparison.Ordinal);
-        Assert.True(text.Contains("maxResponseBytes", StringComparison.Ordinal));
-        var payload = limited.StructuredContent!.Value;
-        Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
-        Assert.Equal("snapshot-1", payload.GetProperty("analysis").GetProperty("snapshot").GetString());
-        var wireBudget = payload.GetProperty("wireBudget");
-        var textBytes = Encoding.UTF8.GetByteCount(text);
-        var structuredBytes = Encoding.UTF8.GetByteCount(payload.GetRawText());
-        Assert.Equal(textBytes, wireBudget.GetProperty("textBytes").GetInt32());
-        Assert.Equal(structuredBytes, wireBudget.GetProperty("structuredBytes").GetInt32());
-        Assert.Equal(textBytes + structuredBytes, wireBudget.GetProperty("totalBytes").GetInt32());
-        Assert.Equal(4_096, wireBudget.GetProperty("limitBytes").GetInt32());
-        Assert.True(wireBudget.GetProperty("truncated").GetBoolean());
-        Assert.True(payload.TryGetProperty("navigation", out _), payload.GetRawText());
+        Assert.Contains("origin=decompiled", text, StringComparison.Ordinal);
     }
 
     [Fact]

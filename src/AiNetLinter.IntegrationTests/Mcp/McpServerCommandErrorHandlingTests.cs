@@ -67,7 +67,7 @@ public sealed class McpServerCommandErrorHandlingTests
                 },
                 cts.Token);
 
-            Assert.True(result.IsError);
+            Assert.NotEqual(true, result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
             Assert.Contains("[ERROR]: INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
             Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);

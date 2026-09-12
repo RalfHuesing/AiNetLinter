@@ -146,24 +146,8 @@ internal static partial class McpArgumentValidationFilter
                     return ProjectFilterError(context, validationError);
                 }
                 var result = await next(context, cancellationToken).ConfigureAwait(false);
-                return EnsureNavigationEnvelope(context, result);
+                return result;
             }));
-    }
-
-    private static CallToolResult EnsureNavigationEnvelope(
-        RequestContext<CallToolRequestParams> context,
-        CallToolResult result)
-    {
-        if (result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
-            && structured.TryGetProperty("code", out var code)
-            && code.ValueKind == JsonValueKind.String
-            && !string.IsNullOrWhiteSpace(code.GetString())
-            && !structured.TryGetProperty("navigation", out _))
-        {
-            return ProjectFilterError(context, result);
-        }
-
-        return result;
     }
 
     private static CallToolResult ProjectFilterError(

@@ -101,14 +101,6 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Contains("# Solution Overview", textContent.Text);
         Assert.Contains("SymbolGraphMini", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.NotNull(payload!.Projects);
-        Assert.NotEmpty(payload.Projects!);
-        Assert.Equal(1, payload.RequestedDepth);
-        Assert.Equal(1, payload.EffectiveDepth);
-        Assert.False(payload.DepthWasClamped);
     }
 
     [Fact]
@@ -134,11 +126,10 @@ public sealed class GetNamespaceTreeToolTests
             state, new GetNamespaceTreeInput(Project: "SymbolGraphMini", Depth: 99, IncludeTypes: false), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(99, payload!.RequestedDepth);
-        Assert.Equal(GetNamespaceTreeTool.MaxDepthCap, payload.EffectiveDepth);
-        Assert.True(payload.DepthWasClamped);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("99", text, StringComparison.Ordinal);
+        Assert.Contains(GetNamespaceTreeTool.MaxDepthCap.ToString(), text, StringComparison.Ordinal);
+        Assert.Contains("gekappt", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -230,7 +221,7 @@ public sealed class GetNamespaceTreeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_MaxResponseBytes_ProjectsSameVisibleTypesIntoTextAndStructuredContent()
+    public async Task ExecuteAsync_MaxResponseBytes_ProjectsVisibleTypesIntoText()
     {
         var source = "namespace BudgetNs {\n" + string.Join("\n", System.Linq.Enumerable.Range(1, 40)
             .Select(i => $"public class Type{i} {{ }}")) + "\n}";
@@ -243,14 +234,10 @@ public sealed class GetNamespaceTreeToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.True(payload!.Truncated, result.StructuredContent!.Value.GetRawText());
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 1024);
-        Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Equal(payload.ShownCount, payload.Types!.Count);
-        Assert.All(payload.Types, type => Assert.Contains(type.Name, text, StringComparison.Ordinal));
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 1024);
+        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
+        Assert.Contains("Type1", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -305,13 +292,10 @@ public sealed class GetNamespaceTreeToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
-        Assert.Equal(1, payload.TotalCount);
-        Assert.Equal(1, payload.ShownCount);
-        Assert.False(payload.Truncated);
-        Assert.Equal("Contract.Leaf", Assert.Single(payload.Namespaces!).Namespace);
-        Assert.Equal("DirectLeafType", Assert.Single(payload.Types!).Name);
-        Assert.Null(payload.Next);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Contract.Leaf", text, StringComparison.Ordinal);
+        Assert.Contains("DirectLeafType", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxResponseBytes", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -327,11 +311,10 @@ public sealed class GetNamespaceTreeToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
-        Assert.Equal(0, payload.TotalCount);
-        Assert.Equal(0, payload.ShownCount);
-        Assert.False(payload.Truncated);
-        Assert.Null(payload.Next);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("# Namespaces in Projekt 'NamespaceProject' unter 'Contract.Missing'", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExistingType", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxResponseBytes", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -352,13 +335,10 @@ public sealed class GetNamespaceTreeToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
-        var root = Assert.Single(payload.Namespaces!);
-        Assert.Equal("DirectRootType", Assert.Single(root.Types!).Name);
-        Assert.Equal("Contract.Root.Child", Assert.Single(root.SubNamespaces!).Namespace);
-        Assert.Equal(2, payload.TotalCount);
-        Assert.Equal(2, payload.ShownCount);
-        Assert.False(payload.Truncated);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("DirectRootType", text, StringComparison.Ordinal);
+        Assert.Contains("Contract.Root.Child", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxResponseBytes", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -380,10 +360,11 @@ public sealed class GetNamespaceTreeToolTests
         var constrained = await GetNamespaceTreeTool.ExecuteAsync(server, input, CancellationToken.None);
 
         Assert.True(constrained.IsError);
-        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", constrained.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal("$.maxResponseBytes", constrained.StructuredContent!.Value.GetProperty("fieldPath").GetString());
-        Assert.Equal(512, constrained.StructuredContent!.Value.GetProperty("requestedBytes").GetInt32());
-        var minimumResponseBytes = constrained.StructuredContent!.Value.GetProperty("minimumResponseBytes").GetInt32();
+        var constrainedText = Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text;
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", constrainedText, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.maxResponseBytes", constrainedText, StringComparison.Ordinal);
+        Assert.Contains("maxResponseBytes=512", constrainedText, StringComparison.Ordinal);
+        var minimumResponseBytes = int.Parse(System.Text.RegularExpressions.Regex.Match(constrainedText, "minimumResponseBytes: (\\d+)").Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         Assert.True(minimumResponseBytes > 512);
 
         var retry = await GetNamespaceTreeTool.ExecuteAsync(
@@ -392,9 +373,7 @@ public sealed class GetNamespaceTreeToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, retry.IsError);
-        var retryPayload = retry.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
-        Assert.Equal(1, retryPayload.TotalCount);
-        Assert.Equal(1, retryPayload.ShownCount);
-        Assert.Equal(typeName, Assert.Single(retryPayload.Types!).Name);
+        var retryText = Assert.IsType<TextContentBlock>(Assert.Single(retry.Content)).Text;
+        Assert.Contains(typeName, retryText, StringComparison.Ordinal);
     }
 }

@@ -1,8 +1,6 @@
 #nullable enable
 
 using System;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -16,7 +14,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 /// <summary>
 /// Tool-Layer-Tests fuer <see cref="PatternDetectTool"/>: Validierung (unbekannte pattern-IDs,
 /// leerer Filter = alle Patterns), IsError-Policy (SOLUTION_NOT_LOADED, recoverable
-/// INVALID_ARGUMENT) und StructuredContent-Form. Pattern 1:1 von <c>GetViolationsToolTests</c>
+/// INVALID_ARGUMENT) sowie fachlicher Content-Ausgabe. Pattern 1:1 von <c>GetViolationsToolTests</c>
 /// uebernommen.
 /// </summary>
 [Trait("Category", "Component")]
@@ -39,30 +37,20 @@ public sealed class PatternDetectToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_NullPatternsFilter_ReturnsAllSixPatternsInStructuredContent()
+    public async Task ExecuteAsync_NullPatternsFilter_ReportsAllSixPatternIdsInContent()
     {
         var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, null, null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.Equal(6, json["patterns"]!.AsArray().Count);
-        Assert.All(json["patterns"]!.AsArray(), pattern =>
-        {
-            Assert.NotNull(pattern!["status"]);
-            Assert.NotNull(pattern["cause"]);
-            Assert.NotNull(pattern["confidence"]);
-            if (string.Equals((string?)pattern["status"], "empty", StringComparison.Ordinal))
-            {
-                Assert.Null(pattern["next"]);
-            }
-            else
-            {
-                Assert.NotNull(pattern["next"]);
-            }
-        });
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("god-class", text, StringComparison.Ordinal);
+        Assert.Contains("async-void", text, StringComparison.Ordinal);
+        Assert.Contains("long-method", text, StringComparison.Ordinal);
+        Assert.Contains("public-without-doc", text, StringComparison.Ordinal);
+        Assert.Contains("empty-catch", text, StringComparison.Ordinal);
+        Assert.Contains("feature-envy", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -73,22 +61,21 @@ public sealed class PatternDetectToolTests
         var result = await PatternDetectTool.ExecuteAsync(state, [], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.Equal(6, json["patterns"]!.AsArray().Count);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("6 Patterns", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_SinglePatternFilter_ReturnsOnlyThatPatternInStructuredContent()
+    public async Task ExecuteAsync_SinglePatternFilter_ReportsOnlyRequestedPatternInContent()
     {
         var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, ["async-void"], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        var patterns = json["patterns"]!.AsArray();
-        Assert.Single(patterns);
-        Assert.Equal("async-void", (string)patterns[0]!["id"]!);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("async-void", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("god-class", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -115,7 +102,6 @@ public sealed class PatternDetectToolTests
         var result = await PatternDetectTool.ExecuteAsync(state, null, "DoesNotExistAnywhere", PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("nicht entscheidbar", textContent.Text, StringComparison.Ordinal);
     }

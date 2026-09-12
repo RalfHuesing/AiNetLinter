@@ -91,7 +91,7 @@ public sealed class WiringProjectContractTests
         Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains(".dll/.exe", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("structuredContent.navigation", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Content enthält Status", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
     }
 
@@ -259,11 +259,6 @@ public sealed class WiringProjectContractTests
         Assert.StartsWith("[WARN]", degradedText, StringComparison.Ordinal);
         Assert.Contains("letzten guten Solution-Stand", degradedText, StringComparison.Ordinal);
         Assert.Contains("kernantwort", degradedText, StringComparison.Ordinal);
-        Assert.NotNull(degraded.StructuredContent);
-        Assert.Equal("payload", degraded.StructuredContent!.Value.GetProperty("value").GetString());
-        Assert.True(degraded.StructuredContent.Value.GetProperty("degraded").GetBoolean());
-        Assert.Equal("stale", degraded.StructuredContent.Value.GetProperty("freshness").GetString());
-        Assert.Equal("refresh-failed", degraded.StructuredContent.Value.GetProperty("degradedReason").GetString());
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.False(server.HasDegradedAnswerState);
         var healed = await ExecuteProjectAsync(
@@ -373,8 +368,8 @@ public sealed class WiringProjectContractTests
                 MaxDiagnostics: maxDiagnostics));
 
         Assert.False(result.IsError);
-        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal("$.maxDiagnostics", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
+        Assert.Contains("$.maxDiagnostics", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]

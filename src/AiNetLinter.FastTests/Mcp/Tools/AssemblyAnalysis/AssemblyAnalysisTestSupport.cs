@@ -1,21 +1,28 @@
 #nullable enable
 
-using System.Linq;
-using System.Text.Json;
-using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
 internal static class AssemblyAnalysisTestSupport
 {
-    internal static T Deserialize<T>(CallToolResult result)
+    private static readonly Regex ContinuationTokenPattern = new(
+        "continuationToken: `(?<token>[^`]+)`",
+        RegexOptions.CultureInvariant);
+
+    internal static string TextOf(CallToolResult result)
     {
-        Assert.True(result.StructuredContent.HasValue, TextOf(result));
-        return JsonSerializer.Deserialize<T>(result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(string.IsNullOrWhiteSpace(block.Text));
+        return block.Text;
     }
 
-    internal static string TextOf(CallToolResult result) =>
-        string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+    internal static string ContinuationTokenOf(CallToolResult result)
+    {
+        var match = ContinuationTokenPattern.Match(TextOf(result));
+        Assert.True(match.Success, TextOf(result));
+        return match.Groups["token"].Value;
+    }
 }

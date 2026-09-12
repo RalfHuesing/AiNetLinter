@@ -14,8 +14,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/> — Argument-Validierung, Fehlerbehandlung,
-/// <c>StructuredContent</c>-ist-Objekt-Regressionstest (siehe
-/// <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar) und End-zu-End-Wiring gegen eine
+/// fachliche Kandidatenausgabe und End-zu-End-Wiring gegen eine
 /// selbst gebaute In-Memory-Solution mit einem echten exact-Klon-Paar.
 /// </summary>
 [Trait("Category", "Component")]
@@ -88,7 +87,7 @@ public sealed class DuplicateDetectionToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_StructuredContent_IsJsonObjectNotArray()
+    public async Task ExecuteAsync_ExactClone_ReportsCandidateClusterInContent()
     {
         using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
         var state = context.CreateServer();
@@ -96,10 +95,9 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent.Value.GetProperty("clusters").ValueKind);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("summary").ValueKind);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Duplikat-Kandidatencluster", text, StringComparison.Ordinal);
+        Assert.Contains("exact", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,8 +116,8 @@ public sealed class DuplicateDetectionToolTests
         Assert.Contains("B.cs", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Evidenzgrenze", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Countercheck", textContent.Text, StringComparison.Ordinal);
-        Assert.Equal("candidate", result.StructuredContent!.Value.GetProperty("resultType").GetString());
-        Assert.False(result.StructuredContent.Value.GetProperty("deletionClaim").GetBoolean());
+        Assert.Contains("candidate", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("keine semantische oder Laufzeitgleichheit", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -187,10 +185,7 @@ public sealed class DuplicateDetectionToolTests
         Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("maxResults erhoehen", textContent.Text, StringComparison.Ordinal);
 
-        var summary = result.StructuredContent!.Value.GetProperty("summary");
-        Assert.True(summary.GetProperty("truncated").GetBoolean());
-        Assert.Equal(2, summary.GetProperty("totalClusters").GetInt32());
-        Assert.Equal(1, summary.GetProperty("shownClusters").GetInt32());
+        Assert.Contains("2 Cluster gesamt, 1 gezeigt", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -232,8 +227,8 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "production"), CancellationToken.None);
 
-        var summary = result.StructuredContent!.Value.GetProperty("summary");
-        Assert.Equal(0, summary.GetProperty("totalClusters").GetInt32());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Keine Duplikat-Cluster", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -247,8 +242,8 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "tests"), CancellationToken.None);
 
-        var summary = result.StructuredContent!.Value.GetProperty("summary");
-        Assert.Equal(0, summary.GetProperty("totalClusters").GetInt32());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Keine Duplikat-Cluster", text, StringComparison.Ordinal);
     }
 
     [Fact]

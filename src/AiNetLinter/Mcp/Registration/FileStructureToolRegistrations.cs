@@ -108,7 +108,7 @@ internal static class FileStructureToolRegistrations
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Die Assembly-Navigation bleibt an Target und Snapshot gebunden. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
-        "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree; " +
+        "includeLineCount: Zeilenzaehlung (Default false). Der Content enthält fileTree; " +
         "summary, exclusions und completeness unterscheiden physische Dateien, angefordert ausgeschlossene " +
         "Dateien sowie uebersprungene Standard- und Reparse-Point-Verzeichnisse.";
 
@@ -153,7 +153,7 @@ internal static class FileStructureToolRegistrations
         "Drilldown. depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
         "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
         "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Obergrenze der Eintraege (Default 50, Cap 200). " +
-        "maxResponseBytes: kombinierte UTF-8-Grenze für finalen Text, StructuredContent, Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Text und StructuredContent werden aus derselben Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
+        "maxResponseBytes: UTF-8-Grenze für finalen Content einschließlich Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Das Budget wird nach der finalen Textprojektion geprüft.";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -202,9 +202,9 @@ internal static class FileStructureToolRegistrations
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT; Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
-        "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
+        "Truncation-Meta-Zeile sowie TotalMemberCount und ShownMemberCount im Content. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). Der angefragte Typ bleibt als markierter Seed sichtbar, auch wenn eine Partial-Location außerhalb des Scopes liegt. " +
-        "maxResponseBytes: kombinierte UTF-8-Grenze für finalen Text, StructuredContent, Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Text und StructuredContent werden aus derselben Member-Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
+        "maxResponseBytes: UTF-8-Grenze für finalen Content einschließlich Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Das Budget wird nach der finalen Textprojektion geprüft.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -235,7 +235,9 @@ internal static class FileStructureToolRegistrations
 
     private const string GetFileSkeletonDescription =
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
-        "ohne die Bodies zu lesen — StructuredContent.files[].types[].members[] enthält dieselben Einheiten " +
+        "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
+        "ohne die Bodies zu lesen — der Content enthält dieselben Einheiten " +
+        "mit stabilen Handoff-IDs fuer direkte Folge-Calls an get_symbol_body. " +
         "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
         "maxResponseBytes: kombinierte UTF-8-Grenze der finalen Wire-Nutzlast (Default 24576, Minimum 512, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
@@ -300,8 +302,8 @@ internal static class FileStructureToolRegistrations
         "scopeType: 'production' [Default], 'tests' oder 'all' zur Auswahl von Produktions- bzw. Testdateien. " +
         "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
         "Auslastungsschwelle in Prozent (Default 80, Bereich 0-100). Ergebnisse bleiben " +
-        "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
-         "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
+        "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; der Content " +
+        "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
 
     private static async Task<CallToolResult> ExecuteWithUnknownArgumentGuardAsync(
         RequestContext<CallToolRequestParams> context,

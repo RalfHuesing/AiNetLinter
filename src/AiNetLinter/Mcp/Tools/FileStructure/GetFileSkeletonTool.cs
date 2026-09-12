@@ -152,21 +152,7 @@ internal static class GetFileSkeletonTool
         text = string.Empty;
         structured = new JsonObject();
 
-        var textBlock = result.Content.OfType<TextContentBlock>().FirstOrDefault();
-        if (textBlock is null || result.StructuredContent is not { ValueKind: JsonValueKind.Object } value)
-        {
-            return false;
-        }
-
-        var parsed = JsonNode.Parse(value.GetRawText()) as JsonObject;
-        if (parsed is null)
-        {
-            return false;
-        }
-
-        text = textBlock.Text;
-        structured = parsed;
-        return true;
+        return false;
     }
 
     private static bool FitsBudget(string text, object structured, int maxResponseBytes) =>
@@ -197,7 +183,6 @@ internal static class GetFileSkeletonTool
         {
             IsError = result.IsError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
-            StructuredContent = JsonSerializer.SerializeToElement(finalNode, McpJsonOptions.Default),
         };
     }
 

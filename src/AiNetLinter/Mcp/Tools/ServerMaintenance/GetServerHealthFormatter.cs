@@ -157,6 +157,7 @@ internal static class GetServerHealthFormatter
     {
         if (assembly.DiagnosticsSummary is not { } summary || summary.TotalCount <= 0)
         {
+            builder.AppendLine("- Diagnosen: keine");
             return;
         }
 

@@ -119,7 +119,7 @@ public sealed class McpArgumentValidationFilterTests
 
         AssertFilterError(error, $"$.{requiredField}");
         var projected = McpArgumentValidationFilter.ProjectFilterError(error!, null, "C:\\virtual\\fixture.slnx");
-        Assert.True(projected.StructuredContent!.Value.TryGetProperty("navigation", out _));
+        Assert.Contains("fieldPath", TextOf(projected), System.StringComparison.Ordinal);
     }
 
     [Theory]
@@ -274,8 +274,8 @@ public sealed class McpArgumentValidationFilterTests
     {
         Assert.NotNull(result);
         Assert.NotEqual(true, result!.IsError);
-        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal(fieldPath, result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("INVALID_ARGUMENT", TextOf(result), System.StringComparison.Ordinal);
+        Assert.Contains($"fieldPath: {fieldPath}", TextOf(result), System.StringComparison.Ordinal);
     }
 
     private static void AssertProjectedFilterError(
@@ -287,6 +287,8 @@ public sealed class McpArgumentValidationFilterTests
         var projected = McpArgumentValidationFilter.ProjectFilterError(error!, null, "C:\\virtual\\fixture.slnx");
         var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(projected.Content)).Text;
         Assert.Contains(textFragment, text, System.StringComparison.Ordinal);
-        Assert.True(projected.StructuredContent!.Value.TryGetProperty("navigation", out _));
+        Assert.Contains(textFragment, TextOf(projected), System.StringComparison.Ordinal);
     }
+    private static string TextOf(ModelContextProtocol.Protocol.CallToolResult result) =>
+        Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
 }

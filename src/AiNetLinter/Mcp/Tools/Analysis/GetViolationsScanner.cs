@@ -32,7 +32,7 @@ internal static class GetViolationsScanner
 {
     /// <summary>
     /// Default-Obergrenze fuer die Anzahl gezeigter Violations (Text-Tabellen und
-    /// StructuredContent gleichermassen) — analog zu <c>find_symbol</c>/<c>find_references</c>
+    /// agentischen Content gleichermassen) — analog zu <c>find_symbol</c>/<c>find_references</c>
     /// und <see cref="PatternDetect.PatternDetectScanner.DefaultMaxResultsPerPattern"/>. Vor
     /// Einfuehrung dieses Limits gab <c>get_violations</c> auf einer Solution mit vielen
     /// bestehenden Verstoessen (z. B. beim Erstlauf gegen ein fremdes Projekt) die komplette,
@@ -316,7 +316,7 @@ internal sealed record GetViolationsScannerParameters(
 /// steuert in <see cref="GetViolationsTool"/> die Wahl zwischen Sufficiency-Hinweis und
 /// Trunkierungs-Meta (analog zum <c>isTruncated</c>-Muster in <c>FindReferencesTool</c>).
 /// <paramref name="Violations"/> traegt die gefilterten/sortierten/trunkierten Violations fuer
-/// <c>StructuredContent</c> — bleibt <see langword="null"/> bei einer Malfunction (kein
+/// agentischen Content — bleibt <see langword="null"/> bei einer Malfunction (kein
 /// sinnvoller Teil-Payload).
 /// </summary>
 internal sealed record GetViolationsResult(

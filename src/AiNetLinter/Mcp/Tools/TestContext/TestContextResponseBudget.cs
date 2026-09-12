@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Tools.TestContext;
 
 /// <summary>
 /// Fachliche Budgetprojektion fuer <c>get_test_context</c>. Sie waehlt ganze
-/// Testkandidaten aus und baut Text und StructuredContent aus derselben Auswahl.
+/// Testkandidaten aus und baut den Text aus derselben Auswahl.
 /// </summary>
 internal static class TestContextResponseBudget
 {
@@ -48,51 +48,9 @@ internal static class TestContextResponseBudget
 
     internal static CallToolResult ApplyFinal(CallToolResult result, int maxResponseBytes)
     {
-        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock)
-        {
-            return result;
-        }
-
-        // Post-navigation budget callbacks also receive recoverable errors. Their
-        // structured error envelope is not a TestContextPayload and must remain intact.
-        if (!structured.TryGetProperty("testFiles", out _)) return result;
-
-        TestContextPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<TestContextPayload>(structured.GetRawText(), McpJsonOptions.Default);
-        }
-        catch (JsonException)
-        {
-            return result;
-        }
-
-        if (payload is null) return result;
-        var navigation = (JsonNode.Parse(structured.GetRawText()) as JsonObject)?["navigation"]?.DeepClone();
-        var navigationText = ExtractNavigationText(textBlock.Text, payload);
-        var budget = NormalizeBudget(maxResponseBytes);
-        var original = Prepare(payload);
-        if (Fits(original, budget, navigation, navigationText)) return result;
-
-        var minimum = MarkResponseBudgetTruncation(TakeCandidates(original, ProtectedCandidateCount(original)), original);
-        if (!Fits(minimum, budget, navigation, navigationText))
-        {
-            return BudgetTooSmall(budget, SizeOf(minimum, navigation, navigationText));
-        }
-
-        var current = original;
-        while (!Fits(MarkResponseBudgetTruncation(current, original), budget, navigation, navigationText))
-        {
-            if (current.TestFiles.Count <= ProtectedCandidateCount(original))
-            {
-                return BudgetTooSmall(budget, SizeOf(minimum, navigation, navigationText));
-            }
-
-            current = TakeCandidates(current, current.TestFiles.Count - 1);
-        }
-
-        return CreateResult(MarkResponseBudgetTruncation(current, original), navigation, navigationText);
+        return McpResponseSize.From(result).TotalBytes <= NormalizeBudget(maxResponseBytes)
+            ? result
+            : BudgetTooSmall(NormalizeBudget(maxResponseBytes), McpResponseSize.From(result).TotalBytes);
     }
 
     private static TestContextPayload Prepare(TestContextPayload payload) => payload with
@@ -142,13 +100,10 @@ internal static class TestContextResponseBudget
     {
         var text = TestContextFormatter.FormatReport(payload);
         if (!string.IsNullOrWhiteSpace(navigationText)) text += "\n" + navigationText;
-        var structured = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject ?? new JsonObject();
-        if (navigation is not null) structured["navigation"] = navigation.DeepClone();
         return new CallToolResult
         {
             IsError = false,
             Content = [new TextContentBlock { Text = text }],
-            StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default),
         };
     }
 

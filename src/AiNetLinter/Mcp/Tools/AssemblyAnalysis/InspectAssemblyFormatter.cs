@@ -32,6 +32,7 @@ internal static class InspectAssemblyFormatter
         AppendHeader(builder, payload);
         AppendNamespaces(builder, payload.Namespaces, payload.TotalNamespaces, publicOnly);
         AppendTypes(builder, payload, publicOnly);
+        AppendContinuation(builder, payload.ContinuationToken);
         AppendReferences(builder, payload.References, payload.ReferenceSummary);
         AppendReferenceSessions(
             builder,
@@ -125,6 +126,14 @@ internal static class InspectAssemblyFormatter
         foreach (var type in payload.Types) AppendType(builder, type);
     }
 
+    private static void AppendContinuation(StringBuilder builder, string? continuationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(continuationToken))
+        {
+            builder.AppendLine($"Fortsetzung: continuationToken: `{continuationToken}` unverändert mit derselben Abfrage verwenden.");
+        }
+    }
+
     private static string VisibilityLabel(bool publicOnly) => publicOnly ? "Öffentliche " : string.Empty;
 
     private static void AppendType(StringBuilder builder, AssemblyTypeDto type)
@@ -133,9 +142,15 @@ internal static class InspectAssemblyFormatter
         var memberCount = type.MembersTruncated
             ? $", Member {type.Members.Count} von {type.TotalMembers} gezeigt{FormatTruncation(true, type.TruncatedBy)}"
             : $", {type.TotalMembers} Member";
-        builder.AppendLine($"- `{qualifiedName}` ({type.Kind}, {type.Accessibility}{memberCount})");
-        foreach (var member in type.Members) builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
+        builder.AppendLine($"- `{qualifiedName}`{FormatHandoffId(type.Id)} ({type.Kind}, {type.Accessibility}{memberCount})");
+        foreach (var member in type.Members)
+        {
+            builder.AppendLine($"  - {member.Kind}: `{member.Signature}`{FormatHandoffId(member.Id)}");
+        }
     }
+
+    private static string FormatHandoffId(string? id) =>
+        string.IsNullOrWhiteSpace(id) ? string.Empty : $"; handoffId: `{id}`";
 
     private static string FormatTruncation(bool truncated, IReadOnlyList<string>? reasons) =>
         truncated

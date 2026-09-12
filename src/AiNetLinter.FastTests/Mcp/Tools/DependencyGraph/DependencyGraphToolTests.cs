@@ -139,16 +139,16 @@ public sealed class DependencyGraphToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_StructuredContent_IsJsonObjectNotArray()
+    public async Task ExecuteAsync_RendersGraphEdgesInContent()
     {
         var state = _fixture.CreateServer();
 
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Caller.cs", null, "outgoing", 1, 50), CancellationToken.None);
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent.Value.GetProperty("edges").ValueKind);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
+        Assert.Contains("Abhaengigkeiten", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -168,12 +168,13 @@ public sealed class DependencyGraphToolTests
                 IncludeGenerated: false),
             CancellationToken.None);
 
-        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal("$.scopeType", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.scopeType", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScopeAndGeneratedControls_AreProjectedOnceInStructuredContent()
+    public async Task ExecuteAsync_ScopeAndGeneratedControls_AreRenderedInContent()
     {
         var state = _fixture.CreateServer();
 
@@ -189,11 +190,9 @@ public sealed class DependencyGraphToolTests
                 IncludeGenerated: false),
             CancellationToken.None);
 
-        var payload = result.StructuredContent!.Value;
-        Assert.Equal("production", payload.GetProperty("scope").GetProperty("requestedType").GetString());
-        Assert.False(payload.GetProperty("scope").GetProperty("includeGenerated").GetBoolean());
-        Assert.True(payload.GetProperty("nodes").GetArrayLength() >= 1);
-        Assert.True(payload.GetProperty("excludedEdgeCount").GetInt32() >= 0);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("production", text, StringComparison.Ordinal);
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]

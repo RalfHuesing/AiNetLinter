@@ -55,7 +55,7 @@ public sealed class StructureToolResponseBudgetContractTests
     }
 
     [Fact]
-    public async Task PublicDefaultsAndMaximumProduceWireResponses()
+    public async Task PublicDefaultsAndMaximumProduceVisibleResponses()
     {
         using var context = new McpInMemoryTestContext();
         var server = context.CreateServer();
@@ -69,7 +69,7 @@ public sealed class StructureToolResponseBudgetContractTests
 
         Assert.All(
             new[] { defaultNamespace, maximumNamespace, defaultClass, maximumClass, defaultSkeleton, maximumSkeleton },
-            result => Assert.NotNull(result.StructuredContent));
+            result => Assert.NotEmpty(TextOf(result)));
     }
 
     [Fact]

@@ -38,7 +38,7 @@ public sealed class DiffImpactAnalyzer
 
     /// <summary>
     /// Wie <see cref="AnalyzeAsync"/>, liefert die <see cref="CallSiteEntry"/>-Liste statt fertig
-    /// formatierter Strings — Grundlage fuer <c>get_impact</c>s <c>StructuredContent</c>
+    /// formatierter Strings — Grundlage fuer die vollständige Evidenz von <c>get_impact</c>
     /// (Git-Diff-Zweig). Duenner Wrapper auf <see cref="AnalyzeDiffAsync"/>: die Ausgabe (inklusive
     /// Reihenfolge) bleibt feldidentisch zum Traversal-Ergebnis des strukturierten Kerns.
     /// </summary>
@@ -278,7 +278,7 @@ public sealed class DiffImpactAnalyzer
     /// <summary>
     /// Wie <see cref="FindCallSitesAsync"/>, liefert die strukturierten <see cref="CallSiteEntry"/>
     /// statt fertig formatierter Strings — Grundlage fuer <c>find_references</c>/<c>get_impact</c>s
-    /// <c>StructuredContent</c> (depth=1-Flachfall bzw. Symbol-Branch).
+    /// agentischen Content (depth=1-Flachfall bzw. Symbol-Branch).
     /// </summary>
     internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(
         ISymbol symbol, Solution solution, CancellationToken ct = default)
@@ -346,7 +346,7 @@ public sealed class DiffImpactAnalyzer
 
     /// <summary>Formatiert <see cref="CallSiteEntry"/> identisch zum bisherigen Text-Format von
     /// <see cref="FindCallSitesAsync"/> — einzige Quelle der Wahrheit, damit Text und
-    /// <c>StructuredContent</c> nie auseinanderdriften.</summary>
+    /// der agentische Content deterministisch bleibt.</summary>
     internal static string FormatCallSite(CallSiteEntry entry) =>
         $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
 

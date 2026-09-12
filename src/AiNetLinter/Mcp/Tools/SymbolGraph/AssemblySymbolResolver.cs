@@ -93,7 +93,7 @@ internal static class AssemblySymbolResolver
             ? (handoff, null)
             : (null, McpToolResults.InvalidArgument(
                 "Die Handoff-ID ist nicht kanonisch.",
-                hint: "Eine ID aus dem StructuredContent des aktuellen Ergebnisses kopieren.",
+                hint: "Eine ID direkt aus dem aktuellen Ergebnis kopieren.",
                 fieldPath: "$.symbolIdentifier"));
     }
 

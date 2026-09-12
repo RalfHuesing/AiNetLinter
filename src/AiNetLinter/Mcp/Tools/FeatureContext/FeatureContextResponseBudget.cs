@@ -17,7 +17,7 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 
 /// <summary>
 /// Fachliche Budgetprojektion fuer <c>get_feature_context</c>. Die Auswahl wird einmal
-/// typisiert getroffen und daraus werden Text und StructuredContent gemeinsam erzeugt.
+/// typisiert getroffen und erst danach als agentischer Text gerendert.
 /// </summary>
 internal static class FeatureContextResponseBudget
 {
@@ -60,57 +60,7 @@ internal static class FeatureContextResponseBudget
         return CreateResult(MarkTruncated(current, candidate), navigation: null, navigationText: null);
     }
 
-    internal static CallToolResult ApplyFinal(CallToolResult result, int maxResponseBytes)
-    {
-        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || !structured.TryGetProperty("declaration", out _)
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock) return result;
-
-        FeatureContextPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-                structured.GetRawText(), McpJsonOptions.Default);
-        }
-        catch (JsonException)
-        {
-            return result;
-        }
-
-        if (payload is null) return result;
-
-        var budget = NormalizeBudget(maxResponseBytes);
-        var structuredNode = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        var navigation = structuredNode?["navigation"]?.DeepClone();
-        var navigationText = ExtractNavigationText(textBlock.Text);
-        var candidate = Prepare(payload);
-        if (FitsFinal(candidate, budget, navigation, navigationText))
-        {
-            return WithWireBudget(result, budget, candidate);
-        }
-
-        var minimum = ReduceToMinimum(candidate);
-        var truncated = MarkTruncated(minimum, candidate);
-        if (!FitsFinal(truncated, budget, navigation, navigationText))
-        {
-            return BudgetTooSmall(budget, MinimumBytesFinal(truncated, navigation, navigationText));
-        }
-
-        var current = candidate;
-        while (!FitsFinal(MarkTruncated(current, candidate), budget, navigation, navigationText))
-        {
-            var next = RemoveLowestPriorityUnit(current, candidate);
-            if (ReferenceEquals(next, current))
-            {
-                return BudgetTooSmall(budget, MinimumBytesFinal(truncated, navigation, navigationText));
-            }
-
-            current = next;
-        }
-
-        var projected = MarkTruncated(current, candidate);
-        return WithWireBudget(CreateResult(projected, navigation, navigationText), budget, projected);
-    }
+    internal static CallToolResult ApplyFinal(CallToolResult result, int maxResponseBytes) => result;
 
     private static int NormalizeBudget(int maxResponseBytes) =>
         maxResponseBytes <= 0 ? DefaultMaxResponseBytes : maxResponseBytes;
@@ -312,19 +262,6 @@ internal static class FeatureContextResponseBudget
         string? navigationText) =>
         McpResponseSize.From(CreateResult(payload, navigation, navigationText)).TotalBytes;
 
-    private static bool FitsFinal(
-        FeatureContextPayload payload,
-        int budget,
-        JsonNode? navigation,
-        string? navigationText) =>
-        McpResponseSize.From(WithWireBudget(CreateResult(payload, navigation, navigationText), budget, payload)).TotalBytes <= budget;
-
-    private static int MinimumBytesFinal(
-        FeatureContextPayload payload,
-        JsonNode? navigation,
-        string? navigationText) =>
-        McpResponseSize.From(WithWireBudget(CreateResult(payload, navigation, navigationText), 0, payload)).TotalBytes;
-
     private static CallToolResult CreateResult(
         FeatureContextPayload payload,
         JsonNode? navigation,
@@ -333,13 +270,10 @@ internal static class FeatureContextResponseBudget
         var text = FeatureContextFormatter.FormatReport(payload);
         if (!string.IsNullOrWhiteSpace(navigationText)) text += "\n" + navigationText.Trim();
 
-        var structured = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject ?? new JsonObject();
-        if (navigation is not null) structured["navigation"] = navigation.DeepClone();
         return new CallToolResult
         {
             IsError = false,
             Content = [new TextContentBlock { Text = text }],
-            StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default),
         };
     }
 
@@ -352,54 +286,6 @@ internal static class FeatureContextResponseBudget
                 FieldPath: "$.maxResponseBytes",
                 RequestedBytes: budget,
                 MinimumResponseBytes: minimumBytes));
-
-    private static CallToolResult WithWireBudget(
-        CallToolResult result,
-        int budget,
-        FeatureContextPayload payload)
-    {
-        var node = JsonNode.Parse(result.StructuredContent!.Value.GetRawText())!.AsObject();
-        var textBytes = Encoding.UTF8.GetByteCount(result.Content.OfType<TextContentBlock>().First().Text);
-        var truncated = HasResponseBudgetTruncation(payload);
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            node["wireBudget"] = new JsonObject
-            {
-                ["limitBytes"] = budget,
-                ["textBytes"] = textBytes,
-                ["structuredBytes"] = 0,
-                ["totalBytes"] = 0,
-                ["truncated"] = truncated,
-            };
-            var structuredBytes = Encoding.UTF8.GetByteCount(node.ToJsonString(McpJsonOptions.Default));
-            var wireBudget = node["wireBudget"]!.AsObject();
-            wireBudget["structuredBytes"] = structuredBytes;
-            wireBudget["totalBytes"] = textBytes + structuredBytes;
-            var projected = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
-            var candidate = ReplaceStructuredContent(result, projected);
-            if (McpResponseSize.From(candidate).StructuredBytes == structuredBytes) return candidate;
-        }
-
-        return ReplaceStructuredContent(result, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
-    }
-
-    private static CallToolResult ReplaceStructuredContent(CallToolResult result, JsonElement structuredContent) => new()
-    {
-        IsError = result.IsError,
-        Content = result.Content,
-        StructuredContent = structuredContent,
-    };
-
-    private static bool HasResponseBudgetTruncation(FeatureContextPayload payload) =>
-        payload.Callers?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true
-        || payload.Tests?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true
-        || payload.Violations?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true;
-
-    private static string? ExtractNavigationText(string text)
-    {
-        var index = text.IndexOf("## Navigation", StringComparison.Ordinal);
-        return index < 0 ? null : text[index..].Trim();
-    }
 
     private static int MetricPriority(string status) =>
         status.Equals(ThresholdStatus.Violation, StringComparison.OrdinalIgnoreCase) ? 0

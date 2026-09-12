@@ -26,7 +26,7 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
             CancellationToken.None);
-        var firstPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(first);
+        var firstToken = AssemblyAnalysisTestSupport.ContinuationTokenOf(first);
 
         var unbound = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
@@ -36,7 +36,7 @@ public sealed partial class AssemblyAnalysisToolTests
 
         var changedQuery = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
-            new InspectAssemblyArguments(assemblyPath, "Probe", null, null, true, 1, Cursor: firstPayload.ContinuationToken),
+            new InspectAssemblyArguments(assemblyPath, "Probe", null, null, true, 1, Cursor: firstToken),
             CancellationToken.None);
         Assert.Contains("INVALID_ARGUMENT", AssemblyAnalysisTestSupport.TextOf(changedQuery), StringComparison.Ordinal);
     }

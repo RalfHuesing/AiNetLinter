@@ -119,9 +119,9 @@ internal static class SymbolGraphToolRegistrations
         "0 oder negative Werte liefern INVALID_ARGUMENT. " +
         "maxResponseBytes: Wirebudget (Default 16 KiB, Cap 64 KiB). " +
         "includeReferences (Default false): bei Assembly-Zielen auch die bounded Referenz-Assemblies " +
-        "durchsuchen und Herkunft/Completeness in structuredContent ausgeben. " +
+        "durchsuchen und Herkunft/Vollständigkeit im Content ausgeben. " +
         "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
-        "Liefert strukturierte FindSymbolBatchDto in structuredContent.";
+        "Liefert vollständige, direkt nutzbare Symbol-Evidenz im Content.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -175,11 +175,13 @@ internal static class SymbolGraphToolRegistrations
         "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
         "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
         "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
-        "depth: mindestens 1 (Default 1, hard cap 3; 0 oder negative Werte liefern INVALID_ARGUMENT) liefert immer structuredContent.callSites plus " +
+        "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
+        "depth: mindestens 1 (Default 1, hard cap 3; 0 oder negative Werte liefern INVALID_ARGUMENT) liefert Call-Sites mit " +
+        "Vollständigkeit, Tiefe, Herkunft und getrennten Trunkierungsgründen im Content; die " +
         "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
         "Traversierung ist hart auf 200 besuchte Knoten begrenzt. includeReferences (Default false): " +
         "bei Assembly-Zielen bounded Referenz-Assemblies einbeziehen und partielle Diagnosen " +
-        "sowie Herkunft in structuredContent ausgeben. scopeType: 'all' (Default), 'production' oder 'tests'; " +
+        "sowie Herkunft im Content ausgeben. scopeType: 'all' (Default), 'production' oder 'tests'; " +
         "includeGenerated: false (Default), generierte Dokumente nur bei true einbeziehen.";
 
     private static void AddGetCallTree(
@@ -226,7 +228,7 @@ internal static class SymbolGraphToolRegistrations
         "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben. " +
         "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
-        "maxResponseBytes: kombiniertes UTF-8-Wirebudget für Text und StructuredContent (Default 32768, Maximum 65536); gekürzt werden ganze Graph-Kanten.";
+        "maxResponseBytes: UTF-8-Budget für den Content (Default 32768, Maximum 65536); gekürzt werden ganze Graph-Kanten.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,

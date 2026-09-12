@@ -87,19 +87,15 @@ public sealed class GetFileSkeletonToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ValidRelativePath_ReturnsStructuredTypesMembersAndStableIds()
+    public async Task ExecuteAsync_ValidRelativePath_RendersTypesAndMembers()
     {
         var result = await GetFileSkeletonTool.ExecuteAsync(
             _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
 
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value;
-        var file = Assert.Single(payload.GetProperty("files").EnumerateArray());
-        var type = Assert.Single(file.GetProperty("types").EnumerateArray());
-        Assert.Contains("T:", type.GetProperty("id").GetString(), StringComparison.Ordinal);
-        var members = type.GetProperty("members").EnumerateArray().ToList();
-        Assert.Contains(members, member => member.GetProperty("signature").GetString()!.Contains("Greet", StringComparison.Ordinal));
-        Assert.All(members, member => Assert.Contains(":", member.GetProperty("id").GetString(), StringComparison.Ordinal));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter", text, StringComparison.Ordinal);
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+        Assert.Contains("public", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -233,25 +229,14 @@ public sealed class GetFileSkeletonToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_HandoffIdsAreStructuredOnly_AndKindsRemainSelectable()
+    public async Task ExecuteAsync_HandoffIdsAreRenderedAsAgentCallableEvidence()
     {
         var result = await GetFileSkeletonTool.ExecuteAsync(
             _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greeter", text, StringComparison.Ordinal);
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id:", text, StringComparison.Ordinal);
-
-        var type = result.StructuredContent!.Value.GetProperty("files")[0]
-            .GetProperty("types")[0];
-        Assert.StartsWith("s:", type.GetProperty("id").GetString(), StringComparison.Ordinal);
-        Assert.Equal("type", type.GetProperty("handoffKind").GetString());
-
-        var members = type.GetProperty("members").EnumerateArray().ToList();
-        Assert.NotEmpty(members);
-        Assert.All(members, member =>
-        {
-            Assert.StartsWith("s:", member.GetProperty("id").GetString(), StringComparison.Ordinal);
-            Assert.Equal("member", member.GetProperty("handoffKind").GetString());
-        });
     }
 }

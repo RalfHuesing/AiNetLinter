@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -167,21 +166,9 @@ public sealed partial class GetTestContextToolTests
         Assert.Contains("dotnet test", textContent.Text);
         Assert.Contains("--filter FullyQualifiedName~CalculatorTests", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.Equal("CoreLib.Calculator", structured.TargetSymbol);
-        Assert.False(structured.IsUntested);
-        Assert.Equal(2, structured.TotalMatchingTests);
-        var testFile = Assert.Single(structured.TestFiles);
-        Assert.Equal("CalculatorTests", testFile.TestClassName);
-        Assert.Equal("typeNamingConvention", testFile.EvidenceKind);
-        Assert.Equal("low", testFile.Confidence);
-        Assert.Equal(2, testFile.TotalTestCount);
-        Assert.Empty(testFile.TestMethods);
+        Assert.Contains("typeNamingConvention", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("confidence=low", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("2 Tests auf Klassenebene", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -240,12 +227,7 @@ public sealed partial class GetTestContextToolTests
             kind: "class",
             maxResults: 50,
             CancellationToken.None);
-        var handoffId = Assert.IsType<string>(discovery.StructuredContent!.Value
-            .GetProperty("results")[0]
-            .GetProperty("matches")[0]
-            .GetProperty("id")
-            .GetString());
-        Assert.StartsWith("s:", handoffId, System.StringComparison.Ordinal);
+        var handoffId = ExtractHandoffId(Assert.IsType<TextContentBlock>(Assert.Single(discovery.Content)).Text);
 
         var result = await GetTestContextTool.ExecuteAsync(
             state,
@@ -253,14 +235,9 @@ public sealed partial class GetTestContextToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("CoreLib.Calculator", payload!.TargetSymbol);
-        Assert.Equal(handoffId, payload.Id);
-        Assert.Equal(2, payload.TotalMatchingTests);
-        Assert.DoesNotContain(handoffId, Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("CoreLib.Calculator", text, System.StringComparison.Ordinal);
+        Assert.Contains("CalculatorTests", text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -272,17 +249,9 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("Calculator.Add"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.False(structured.IsUntested);
-        Assert.Equal(1, structured.TotalMatchingTests);
-        var testFile = Assert.Single(structured.TestFiles);
-        Assert.Contains("Add_ReturnsSum", testFile.TestMethods);
-        Assert.DoesNotContain("Multiply_ReturnsProduct", testFile.TestMethods);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Add_ReturnsSum", text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("Multiply_ReturnsProduct", text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -294,16 +263,7 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("WorkerService"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.False(structured.IsUntested);
-        Assert.Equal(1, structured.TotalMatchingTests);
-        var testFile = Assert.Single(structured.TestFiles);
-        Assert.Equal("WorkerCoversTests", testFile.TestClassName);
+        Assert.Contains("WorkerCoversTests", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -315,16 +275,7 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("TypeofTarget"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.False(structured.IsUntested);
-        Assert.Equal(1, structured.TotalMatchingTests);
-        var testFile = Assert.Single(structured.TestFiles);
-        Assert.Equal("TypeofReferencerTests", testFile.TestClassName);
+        Assert.Contains("TypeofReferencerTests", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -342,18 +293,6 @@ public sealed partial class GetTestContextToolTests
         Assert.Contains("tests/CoreLib.Tests/UntestedServiceTests.cs", textContent.Text);
         Assert.DoesNotContain("vollständig", textContent.Text, StringComparison.OrdinalIgnoreCase);
 
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.True(structured.IsUntested);
-        Assert.Equal("empty", structured.Completeness);
-        Assert.Equal("static-test-candidates-only", structured.EvidenceBoundary);
-        Assert.Equal(0, structured.TotalMatchingTests);
-        Assert.Empty(structured.TestFiles);
-        Assert.Equal("tests/CoreLib.Tests/UntestedServiceTests.cs", structured.SuggestedTestFilePath);
     }
 
     [Fact]
@@ -365,14 +304,7 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions(SymbolIdentifier: "Calculator"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.Equal("CoreLib.Calculator", structured.TargetSymbol);
-        Assert.Equal(2, structured.TotalMatchingTests);
+        Assert.Contains("CoreLib.Calculator", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -384,18 +316,6 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("Calculator", MaxResults: 0), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default)!;
-
-        Assert.NotNull(structured);
-        Assert.Equal(2, structured.TotalMatchingTests);
-        Assert.Single(structured.TestFiles);
-        Assert.Equal("complete", structured.Completeness);
-        Assert.Empty(structured.TruncatedBy!);
-        Assert.Equal(1, structured.ReturnedTestFiles);
-        Assert.Null(structured.NextStep);
         Assert.Contains("vollständig", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -447,14 +367,9 @@ public sealed partial class GetTestContextToolTests
         var result = await GetTestContextTool.ExecuteAsync(
             state, new TestContextOptions("Calculator.Add", MaxResults: 1), CancellationToken.None);
 
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-        Assert.Equal("truncated", structured.Completeness);
-        Assert.Equal(new[] { "maxResults" }, structured.TruncatedBy);
-        Assert.Equal(2, structured.TotalTestFiles);
-        Assert.Equal(1, structured.ReturnedTestFiles);
-        Assert.Contains("testContext", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("maxResults erhöhen", structured.NextStep, StringComparison.Ordinal);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Status:** `truncated`", text, StringComparison.Ordinal);
+        Assert.Contains("maxResults", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -476,16 +391,19 @@ public sealed partial class GetTestContextToolTests
         var allWithGenerated = await GetTestContextTool.ExecuteAsync(state,
             new TestContextOptions("Calculator.Add", Scope: new McpScopeInput(McpScopeType.All, true)), CancellationToken.None);
 
-        var productionPayload = production.StructuredContent!.Value.Deserialize<TestContextPayload>(McpJsonOptions.Default)!;
-        var testsPayload = tests.StructuredContent!.Value.Deserialize<TestContextPayload>(McpJsonOptions.Default)!;
-        var generatedPayload = allWithGenerated.StructuredContent!.Value.Deserialize<TestContextPayload>(McpJsonOptions.Default)!;
-        Assert.True(productionPayload.IsUntested);
-        Assert.Empty(productionPayload.TestFiles);
-        Assert.Equal("production", productionPayload.Scope!.RequestedType);
-        Assert.Single(testsPayload.TestFiles);
-        Assert.Equal(1, testsPayload.ExcludedTestFileCount);
-        Assert.Equal(2, generatedPayload.TestFiles.Count);
-        Assert.Contains(generatedPayload.TestFiles, file => file.SourceKind == "generated");
-        Assert.DoesNotContain(testsPayload.TestFiles, file => file.SourceKind == "generated");
+        var productionText = Assert.IsType<TextContentBlock>(Assert.Single(production.Content)).Text;
+        var testsText = Assert.IsType<TextContentBlock>(Assert.Single(tests.Content)).Text;
+        var generatedText = Assert.IsType<TextContentBlock>(Assert.Single(allWithGenerated.Content)).Text;
+        Assert.Contains("keine direkten Tests", productionText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CalculatorTests", testsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CalculatorGeneratedTests", testsText, StringComparison.Ordinal);
+        Assert.Contains("CalculatorGeneratedTests", generatedText, StringComparison.Ordinal);
+    }
+
+    private static string ExtractHandoffId(string text)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(text, "handoffId: `(?<id>s:[^`]+)`");
+        Assert.True(match.Success, text);
+        return match.Groups["id"].Value;
     }
 }

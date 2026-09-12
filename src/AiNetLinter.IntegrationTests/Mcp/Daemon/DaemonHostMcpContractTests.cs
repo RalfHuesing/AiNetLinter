@@ -94,22 +94,12 @@ public sealed class DaemonHostMcpContractTests
             registry,
             composition);
 
-        Assert.True(result.IsError);
-        var payload = StructuredOf(result);
-        Assert.Equal(LinterErrorCodes.InvalidAssembly, payload.GetProperty("code").GetString());
-        Assert.Equal(nativeAssemblyPath, payload.GetProperty("context").GetString());
-        Assert.Contains(".dll oder .exe mit IL", payload.GetProperty("message").GetString(), StringComparison.Ordinal);
-        Assert.Equal(
-            McpToolResults.InvalidAssemblyHint,
-            payload.GetProperty("hint").GetString());
-        Assert.False(payload.GetProperty("recoverable").GetBoolean());
-        var navigation = payload.GetProperty("navigation");
-        Assert.Equal(2, navigation.GetProperty("contractVersion").GetInt32());
-        Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
-        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
-        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Equal(LinterErrorCodes.InvalidAssembly, navigation.GetProperty("status").GetProperty("code").GetString());
-        Assert.Equal("not_applicable", navigation.GetProperty("analysis").GetProperty("quality").GetString());
+        Assert.NotEqual(true, result.IsError);
+        var text = TextOf(result);
+        Assert.Contains(LinterErrorCodes.InvalidAssembly, text, StringComparison.Ordinal);
+        Assert.Contains(nativeAssemblyPath, text, StringComparison.Ordinal);
+        Assert.Contains(".dll oder .exe mit IL", text, StringComparison.Ordinal);
+        Assert.Contains(McpToolResults.InvalidAssemblyHint, text, StringComparison.Ordinal);
     }
 
     private static async Task<(CallToolResult Inspect, CallToolResult Extensions)> RunAssemblySessionAsync(
@@ -226,14 +216,7 @@ public sealed class DaemonHostMcpContractTests
         Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
         Assert.Contains("TargetOnly", text, StringComparison.Ordinal);
 
-        var payload = StructuredOf(result);
-        Assert.Equal("decompiled", payload.GetProperty("origin").GetProperty("originKind").GetString());
-        var type = Assert.Single(payload.GetProperty("types").EnumerateArray());
-        Assert.Equal("TargetOnly", type.GetProperty("name").GetString());
-        Assert.Equal(1, type.GetProperty("members").GetArrayLength());
-        Assert.Equal(2, type.GetProperty("totalMembers").GetInt32());
-        Assert.True(type.GetProperty("membersTruncated").GetBoolean());
-        Assert.Equal("SelectedMember", type.GetProperty("members")[0].GetProperty("name").GetString());
+        Assert.Contains("SelectedMember", text, StringComparison.Ordinal);
     }
 
     private static void AssertDecompiledExtensions(CallToolResult result)
@@ -243,20 +226,9 @@ public sealed class DaemonHostMcpContractTests
         Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
         Assert.Contains("TargetOnlyExtension", text, StringComparison.Ordinal);
 
-        var payload = StructuredOf(result);
-        Assert.Equal("decompiled", payload.GetProperty("origin").GetProperty("originKind").GetString());
-        Assert.Equal(1, payload.GetProperty("totalExtensions").GetInt32());
-        var extension = Assert.Single(payload.GetProperty("extensions").EnumerateArray());
-        Assert.Equal("TargetOnlyExtension", extension.GetProperty("name").GetString());
-        Assert.Equal("Target", extension.GetProperty("namespace").GetString());
     }
 
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 
-    private static JsonElement StructuredOf(CallToolResult result)
-    {
-        Assert.NotNull(result.StructuredContent);
-        return result.StructuredContent!.Value;
-    }
 }

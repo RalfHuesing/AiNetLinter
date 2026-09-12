@@ -50,7 +50,7 @@ public sealed class FindSymbolToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("fieldPath:", textContent.Text, System.StringComparison.Ordinal);
-        Assert.StartsWith("$.namePatterns", result.StructuredContent!.Value.GetProperty("fieldPath").GetString(), System.StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.namePatterns", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class FindSymbolToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("namePatterns darf keine leeren Elemente enthalten.", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal("$.namePatterns[1]", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("fieldPath: $.namePatterns[1]", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class FindSymbolToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
-        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("fieldPath: $.maxResults", textContent.Text, StringComparison.Ordinal);
     }
 
 
@@ -113,29 +113,22 @@ public sealed class FindSymbolToolTests
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: tenPatterns, kind: null, maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Equal(10, batch.Results.Count);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Symbol-Suche: `Pattern1`", text, StringComparison.Ordinal);
+        Assert.Contains("Symbol-Suche: `Pattern10`", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_KnownSymbol_StructuredContentDeserializesToFindSymbolBatchDto()
+    public async Task ExecuteAsync_KnownSymbol_RendersMatchingClass()
     {
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greeter"], kind: "class", maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        var singleResult = Assert.Single(batch.Results);
-        Assert.Equal("Greeter", singleResult.NamePattern);
-        Assert.Contains(singleResult.Matches, entry => entry.FilePath.Contains("Greeter.cs", System.StringComparison.Ordinal) && entry.Kind == "class");
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Symbol-Suche: `Greeter`", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        Assert.Contains("class", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -153,10 +146,7 @@ public sealed class FindSymbolToolTests
                 Pattern: "Greeter"));
 
         Assert.NotEqual(true, result.IsError);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.Equal("Greeter", Assert.Single(batch!.Results).NamePattern);
+        Assert.Contains("Symbol-Suche: `Greeter`", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -174,10 +164,7 @@ public sealed class FindSymbolToolTests
                 Pattern: "Greeter"));
 
         Assert.NotEqual(true, result.IsError);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.Equal("Greeter", Assert.Single(batch!.Results).NamePattern);
+        Assert.Contains("Symbol-Suche: `Greeter`", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -195,10 +182,7 @@ public sealed class FindSymbolToolTests
                 Pattern: "Greeter"));
 
         Assert.NotEqual(true, result.IsError);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.Equal("Greeter", Assert.Single(batch!.Results).NamePattern);
+        Assert.Contains("Symbol-Suche: `Greeter`", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -208,14 +192,9 @@ public sealed class FindSymbolToolTests
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greeting"], kind: "record", maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        var matches = Assert.Single(batch!.Results).Matches;
-        var match = Assert.Single(matches);
-        Assert.Equal("record", match.Kind);
-        Assert.Contains("GreetingRecord", match.Name, System.StringComparison.Ordinal);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("GreetingRecord", text, StringComparison.Ordinal);
+        Assert.Contains("record", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -225,10 +204,7 @@ public sealed class FindSymbolToolTests
         var result = await FindSymbolTool.ExecuteAsync(
             fixture.CreateServer(), ["GreetingRecord"], kind: "class", maxResults: 50, CancellationToken.None);
 
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Empty(Assert.Single(batch!.Results).Matches);
+        Assert.Contains("Keine Treffer", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -243,14 +219,6 @@ public sealed class FindSymbolToolTests
         Assert.Contains("Symbol-Suche: `Caller`", textContent.Text);
         Assert.Contains("---", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Equal(2, batch.Results.Count);
-        Assert.Equal("Greeter", batch.Results[0].NamePattern);
-        Assert.Equal("Caller", batch.Results[1].NamePattern);
     }
 
     [Fact]
@@ -266,14 +234,6 @@ public sealed class FindSymbolToolTests
         Assert.Contains("Symbol-Suche: `NonExistentXyz`", textContent.Text);
         Assert.Contains("Keine Treffer fuer 'NonExistentXyz'", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Equal(2, batch.Results.Count);
-        Assert.NotEmpty(batch.Results[0].Matches);
-        Assert.Empty(batch.Results[1].Matches);
     }
 
     [Fact]
@@ -286,12 +246,6 @@ public sealed class FindSymbolToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Single(textContent.Text.Split("Symbol-Suche: `Greeter`").Skip(1));
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Single(batch.Results);
     }
 
     [Fact]
@@ -301,14 +255,9 @@ public sealed class FindSymbolToolTests
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["greeter", "Greeter"], kind: null, maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(batch);
-        Assert.Equal(2, batch.Results.Count);
-        Assert.Equal("greeter", batch.Results[0].NamePattern);
-        Assert.Equal("Greeter", batch.Results[1].NamePattern);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Symbol-Suche: `greeter`", text, StringComparison.Ordinal);
+        Assert.Contains("Symbol-Suche: `Greeter`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -425,7 +374,7 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_HandoffIdIsStructuredOnly_AndEntryDoesNotRepeatRootMetadata()
+    public async Task ExecuteAsync_HandoffEvidenceDoesNotLeakTransportMetadata()
     {
         using var fixture = new McpInMemoryTestContext();
 
@@ -436,15 +385,7 @@ public sealed class FindSymbolToolTests
         Assert.DoesNotContain("id:", text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("handoff=", text, System.StringComparison.Ordinal);
 
-        var match = result.StructuredContent!.Value
-            .GetProperty("results")[0]
-            .GetProperty("matches")[0];
-        Assert.StartsWith("s:", match.GetProperty("id").GetString(), System.StringComparison.Ordinal);
-        Assert.Equal("type", match.GetProperty("handoffKind").GetString());
-        Assert.False(match.TryGetProperty("targetPath", out _));
-        Assert.False(match.TryGetProperty("snapshot", out _));
-        Assert.False(match.TryGetProperty("handoff", out _));
-        Assert.False(match.TryGetProperty("allowedFollowUpTools", out _));
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -460,11 +401,6 @@ public sealed class FindSymbolToolTests
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
         Assert.Contains("OtherCaller.cs", text, System.StringComparison.Ordinal);
 
-        var matches = result.StructuredContent!.Value.GetProperty("results")[0]
-            .GetProperty("matches").EnumerateArray().ToList();
-        Assert.True(matches.Count >= 2);
-        Assert.Equal(matches.Count, matches.Select(match => match.GetProperty("id").GetString()).Distinct().Count());
-        Assert.All(matches, match => Assert.Equal("member", match.GetProperty("handoffKind").GetString()));
     }
 }
 

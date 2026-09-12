@@ -57,32 +57,15 @@ public sealed class GetImpactToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SymbolIdentifierGivenDepth1_StructuredContentDeserializesToCallSiteEntries()
+    public async Task ExecuteAsync_SymbolIdentifierGivenDepth1_RendersCallSiteEntries()
     {
-        // Symbol-Branch depth=1 bekommt StructuredContent, analog find_references.
         var state = _fixture.CreateServer();
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value;
-        var callSites = payload.GetProperty("callSites");
-        var handoff = payload.GetProperty("handoff");
-        Assert.Equal("symbolIdentifier", handoff.GetProperty("acceptedAs").GetString());
-        Assert.NotEqual(JsonValueKind.Undefined, handoff.GetProperty("followUpsByKind").GetProperty("member").ValueKind);
-        foreach (var callSite in callSites.EnumerateArray())
-        {
-            Assert.False(callSite.TryGetProperty("handoff", out _));
-            Assert.False(callSite.TryGetProperty("targetPath", out _));
-            Assert.False(callSite.TryGetProperty("snapshot", out _));
-            Assert.False(callSite.TryGetProperty("allowedFollowUpTools", out _));
-        }
-
-        var entries = callSites
-            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
+        var text = TextOf(result);
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -97,11 +80,7 @@ public sealed class GetImpactToolTests
         Assert.Contains("Auswirkungsanalyse (Impact)", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Betroffene Projekte", textContent.Text, StringComparison.Ordinal);
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.True(result.StructuredContent!.Value.TryGetProperty("affectedProjects", out var affectedProjectsProp));
-        var affectedProjects = affectedProjectsProp.Deserialize<List<string>>(McpJsonOptions.Default);
-        Assert.NotNull(affectedProjects);
-        Assert.True(result.StructuredContent!.Value.TryGetProperty("testImpact", out _));
+        Assert.Contains("Test", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -141,7 +120,6 @@ public sealed class GetImpactToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("kein Git-Repository", textContent.Text, StringComparison.Ordinal);
-        Assert.Equal("not_git_repository", result.StructuredContent!.Value.GetProperty("impactStatus").GetString());
     }
 
     [Fact]
@@ -170,16 +148,14 @@ public sealed class GetImpactToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
-        Assert.NotNull(result.StructuredContent);
-        Assert.NotEmpty(result.StructuredContent!.Value.GetProperty("callSites").EnumerateArray());
-        Assert.Equal(2, result.StructuredContent.Value.GetProperty("completeness").GetProperty("effectiveDepth").GetInt32());
+        Assert.Contains("transitiver Aufrufer", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifier_Depth2RealCallerChain_ReturnsBothLevels()
     {
         // Symbol-Branch auf echter Kette A <- B <- C: Ebene 1 (Aufruf in B) und Ebene 2
-        // (Aufruf in C) im StructuredContent mit korrekter Herkunft je Ebene.
+        // (Aufruf in C) im Content mit korrekter Herkunft je Ebene.
         using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
             new ProjectSpec("ChainProbe", [
                 ("Chain.cs", """
@@ -193,27 +169,15 @@ public sealed class GetImpactToolTests
                     }
                     """)
             ])));
-        var (symbolB, _) = await FindReferencesTool.ResolveSymbolAsync(
-            context.Solution, "ChainProbe.Runner.MethodB", CancellationToken.None);
-        Assert.NotNull(symbolB);
         var state = context.CreateServer();
 
         var result = await GetImpactTool.ExecuteAsync(
             state, new GetImpactInput(null, "ChainProbe.Runner.MethodA", 50, 2), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("callSites")
-            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        var level1 = entries!.Single(entry => entry.Depth == 1);
-        Assert.Equal("Runner.MethodA", level1.SymbolName);
-        Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
-        var level2 = entries!.Single(entry => entry.Depth == 2);
-        Assert.Equal("Runner.MethodB", level2.SymbolName);
-        Assert.StartsWith("s:", level2.ReachedFromSymbolId, StringComparison.Ordinal);
-        Assert.NotNull(level2.Id);
-        Assert.Equal("member", level2.HandoffKind);
+        var text = TextOf(result);
+        Assert.Contains("Chain.cs", text, StringComparison.Ordinal);
+        Assert.Equal(2, text.Split("Chain.cs", StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -294,10 +258,9 @@ public sealed class GetImpactToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ChangeContextWithoutRepository_ReturnsEmptyContractStructureWithSufficiencyHint()
+    public async Task ExecuteAsync_ChangeContextWithoutRepository_RendersEmptyContract()
     {
-        // Kein Repo / leerer Diff ist KEIN Fehlerfall: leere, aber vertragsgueltige Struktur
-        // samt Sufficiency-Hinweis (nichts wurde trunkiert).
+        // Kein Repo / leerer Diff ist KEIN Fehlerfall: der Content macht den leeren Kontext sichtbar.
         var state = _fixture.CreateServer();
 
         var result = await GetImpactTool.ExecuteAsync(
@@ -307,16 +270,9 @@ public sealed class GetImpactToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
 
-        Assert.NotNull(result.StructuredContent);
-        var structured = result.StructuredContent!.Value;
-        Assert.Equal("gitDiff", structured.GetProperty("mode").GetString());
-        Assert.Equal("change-context", structured.GetProperty("detailLevel").GetString());
-        Assert.Empty(structured.GetProperty("changedFiles").EnumerateArray());
-        Assert.Empty(structured.GetProperty("changedSymbols").EnumerateArray());
-        Assert.Empty(structured.GetProperty("testAssociations").EnumerateArray());
-        Assert.Empty(structured.GetProperty("violations").EnumerateArray());
-        var completeness = structured.GetProperty("completeness");
-        Assert.Equal(0, completeness.GetProperty("changedSymbolsTotal").GetInt32());
-        Assert.False(completeness.GetProperty("symbolsTruncated").GetBoolean());
+        Assert.Contains("kein Git-Repository", textContent.Text, StringComparison.Ordinal);
     }
+
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

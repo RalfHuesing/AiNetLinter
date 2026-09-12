@@ -43,27 +43,18 @@ public sealed partial class AssemblyAnalysisToolTests
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-        var type = Assert.Single(payload.Types);
-        Assert.Equal("Probe.Api", type.Namespace);
-        Assert.Equal("PublicApi", type.Name);
-        Assert.StartsWith("a:", type.Id, StringComparison.Ordinal);
-        Assert.All(type.Members, member => Assert.StartsWith("a:", member.Id, StringComparison.Ordinal));
-        Assert.Equal(payload.TotalTypes, payload.TotalCount);
-        Assert.Equal(payload.ShownCount, payload.ReturnedCount);
-        Assert.Equal(payload.Truncated, payload.IsTruncated);
-        Assert.Contains("Probe.Api", payload.Namespaces);
-        Assert.Contains(type.Members, member => member.Name == "Name" && member.Kind == "property");
-        Assert.Contains(type.Members, member => member.Name == "Changed" && member.Kind == "event");
-        Assert.DoesNotContain(type.Members, member => member.Name is "get_Name" or "set_Name" or "add_Changed");
-        Assert.Equal(3, type.Members.Count(member => member.Name is "Convert" or "Echo"));
-        Assert.Contains(type.Members, member => member.Name == "Echo" && member.GenericParameters.Contains("T") && member.Constraints.Any(constraint => constraint.StartsWith("T:", StringComparison.Ordinal)));
-        Assert.Contains(type.Attributes, attribute => attribute.Contains("Obsolete", StringComparison.Ordinal));
-        Assert.Equal("complete", payload.Completeness);
-        Assert.Equal("decompiled", payload.Origin?.OriginKind);
-        Assert.NotNull(payload.Origin);
-        Assert.EndsWith(".cs", payload.Origin!.GeneratedDocumentPath, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(payload.Origin.GeneratedDocumentPath));
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
+        Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Api.PublicApi`; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("property: `Probe.Api.PublicApi.Name`", text, StringComparison.Ordinal);
+        Assert.Contains("event: `Probe.Api.PublicApi.Changed`", text, StringComparison.Ordinal);
+        Assert.Contains("Convert(string value)", text, StringComparison.Ordinal);
+        Assert.Contains("Convert(int value)", text, StringComparison.Ordinal);
+        Assert.Contains("Echo<T>(T value)", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("get_Name", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("set_Name", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("add_Changed", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,16 +72,11 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        Assert.Single(payload.Types);
-        Assert.Equal(2, payload.TotalTypes);
-        Assert.True(payload.Truncated);
-        Assert.StartsWith("v1.1.", payload.ContinuationToken, StringComparison.Ordinal);
-        Assert.Equal(2, payload.TotalCount);
-        Assert.Equal(1, payload.ReturnedCount);
-        Assert.Equal("complete", payload.Completeness);
-        Assert.DoesNotContain(payload.Diagnostics, diagnostic => diagnostic.Contains("unrelated.dll", StringComparison.OrdinalIgnoreCase));
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Öffentliche API-Typen: 1 von 2 (gekürzt: maxResults)", text, StringComparison.Ordinal);
+        Assert.StartsWith("v1.1.", AssemblyAnalysisTestSupport.ContinuationTokenOf(result), StringComparison.Ordinal);
+        Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("unrelated.dll", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -108,17 +94,18 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
             CancellationToken.None);
-        var firstPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(first);
+        var firstText = AssemblyAnalysisTestSupport.TextOf(first);
+        var firstToken = AssemblyAnalysisTestSupport.ContinuationTokenOf(first);
         var second = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
-            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1, Cursor: firstPayload.ContinuationToken),
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1, Cursor: firstToken),
             CancellationToken.None);
-        var secondPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(second);
+        var secondText = AssemblyAnalysisTestSupport.TextOf(second);
 
-        Assert.NotEqual(firstPayload.Types[0].Id, secondPayload.Types[0].Id);
-        Assert.Equal(3, secondPayload.TotalCount);
-        Assert.Equal(1, secondPayload.ReturnedCount);
-        Assert.StartsWith("v1.2.", secondPayload.ContinuationToken, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Alpha`", firstText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`Probe.Alpha`", secondText, StringComparison.Ordinal);
+        Assert.Contains("Öffentliche API-Typen: 1 von 3", secondText, StringComparison.Ordinal);
+        Assert.StartsWith("v1.2.", AssemblyAnalysisTestSupport.ContinuationTokenOf(second), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -148,14 +135,11 @@ public sealed partial class AssemblyAnalysisToolTests
             """);
 
         var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(null, new FindAssemblyExtensionsArguments(assemblyPath, null, "Mark", "Probe.Extensions", 100), CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
-
-        var extension = Assert.Single(payload.Extensions);
-        Assert.Equal("Mark", extension.Name);
-        Assert.StartsWith("a:", extension.Id, StringComparison.Ordinal);
-        Assert.Equal("not_decidable", extension.Applicability);
-        Assert.Equal(["value", "count"], extension.Parameters.Select(parameter => parameter.Name).ToArray());
-        Assert.Equal("complete", payload.Completeness);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Assembly-Extensions: 1 von 1", text, StringComparison.Ordinal);
+        Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Extensions.Mark` für `object` — not_decidable; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("Signatur: `string Probe.Extensions.Extensions.Mark(object value, int count)`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -177,11 +161,10 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new FindAssemblyExtensionsArguments(assemblyPath, "Consumer.Person", null, null, 100),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
-
-        Assert.Empty(payload.Extensions);
-        Assert.Equal(0, payload.TotalExtensions);
-        Assert.Null(payload.ConsumerProject);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Assembly-Extensions: 0 von 0", text, StringComparison.Ordinal);
+        Assert.Contains("Receiver: `Consumer.Person`", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Consumer:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -215,10 +198,18 @@ public sealed partial class AssemblyAnalysisToolTests
                 null,
                 new FindAssemblyExtensionsArguments(assemblyPath, receiverType, null, null, 100),
                 CancellationToken.None);
-            var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
+            var text = AssemblyAnalysisTestSupport.TextOf(result);
 
-            Assert.Equal(receiverType, payload.ReceiverType);
-            Assert.Equal(expectedNames, payload.Extensions.Select(extension => extension.Name).ToArray());
+            Assert.Contains($"Receiver: `{receiverType}`", text, StringComparison.Ordinal);
+            foreach (var expectedName in expectedNames)
+            {
+                Assert.Contains($".{expectedName}` für", text, StringComparison.Ordinal);
+            }
+
+            if (expectedNames.Length == 0)
+            {
+                Assert.Contains("Assembly-Extensions: 0 von 0", text, StringComparison.Ordinal);
+            }
         }
     }
 
@@ -249,14 +240,10 @@ public sealed partial class AssemblyAnalysisToolTests
                 100,
                 IncludeReferences: true),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        Assert.Equal("complete", payload.Completeness);
-        Assert.DoesNotContain(payload.Diagnostics, diagnostic => diagnostic.Contains("ConsumerDependency", StringComparison.Ordinal));
-        var dependency = Assert.Single(payload.References, reference => reference.Name == "ConsumerDependency");
-        Assert.True(dependency.Resolved);
-        Assert.Equal(dependency.ResolvedPath, Path.GetFullPath(dependency.ResolvedPath!));
-        Assert.Contains(dependency.ResolvedPath!, AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
+        Assert.Contains("ConsumerDependency", text, StringComparison.Ordinal);
+        Assert.Contains($"Pfad `{Path.GetFullPath(dependencyPath)}`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -273,11 +260,11 @@ public sealed partial class AssemblyAnalysisToolTests
             "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
             dependencyPath);
 
-        var defaultPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyToolDispatch.ExecuteAsync(
+        var defaultResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, "UsesDependency", null, true, 100),
-            CancellationToken.None));
-        var explicitFalsePayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyToolDispatch.ExecuteAsync(
+            CancellationToken.None);
+        var explicitFalseResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
                 assemblyPath,
@@ -287,7 +274,7 @@ public sealed partial class AssemblyAnalysisToolTests
                 true,
                 100,
                 IncludeReferences: false),
-            CancellationToken.None));
+            CancellationToken.None);
         var explicitTrueResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
@@ -299,16 +286,14 @@ public sealed partial class AssemblyAnalysisToolTests
                 100,
                 IncludeReferences: true),
             CancellationToken.None);
-        var explicitTruePayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(explicitTrueResult);
+        var defaultText = AssemblyAnalysisTestSupport.TextOf(defaultResult);
+        var explicitFalseText = AssemblyAnalysisTestSupport.TextOf(explicitFalseResult);
+        var explicitTrueText = AssemblyAnalysisTestSupport.TextOf(explicitTrueResult);
 
-        AssertReferenceDetailsExcluded(defaultPayload);
-        AssertReferenceDetailsExcluded(explicitFalsePayload);
-        Assert.True(explicitTruePayload.ReferenceSummary!.TotalReferenceCount >= 1);
-        Assert.True(explicitTruePayload.ReferenceDetailsIncluded);
-        Assert.Contains(
-            explicitTruePayload.References,
-            reference => reference.Name == "TargetedDependency");
-        Assert.Contains("TargetedDependency", AssemblyAnalysisTestSupport.TextOf(explicitTrueResult), StringComparison.Ordinal);
+        AssertReferenceDetailsExcluded(defaultText);
+        AssertReferenceDetailsExcluded(explicitFalseText);
+        Assert.Contains("Referenzen: 2 von 2", explicitTrueText, StringComparison.Ordinal);
+        Assert.Contains("TargetedDependency", explicitTrueText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -326,9 +311,6 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, "Value", null, true, 100),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        Assert.Equal("7.8.9.10", payload.Identity?.Version);
         Assert.Contains("Version 7.8.9.10", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
     }
 
@@ -358,13 +340,10 @@ public sealed partial class AssemblyAnalysisToolTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-        var dependency = Assert.Single(payload.References, reference => reference.Name == "VersionedDependency");
-
-        Assert.False(dependency.Resolved);
-        Assert.Null(dependency.ResolvedPath);
-        Assert.Contains(payload.Diagnostics, diagnostic => diagnostic.Contains("Identitätsgleich", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("nicht aufgelöst", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.OrdinalIgnoreCase);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("VersionedDependency, Version 1.0.0.0", text, StringComparison.Ordinal);
+        Assert.Contains("nicht aufgelöst", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("identitätsgleicher", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -376,11 +355,9 @@ public sealed partial class AssemblyAnalysisToolTests
         File.Delete(dependencyPath);
 
         var result = await InspectAssemblyToolDispatch.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100), CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        Assert.Equal("partial", payload.Completeness);
-        Assert.Contains(payload.Diagnostics, diagnostic => diagnostic.Contains("MissingDependency", StringComparison.Ordinal));
-        Assert.Contains("partial", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.OrdinalIgnoreCase);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Vollständigkeit: `partial`", text, StringComparison.Ordinal);
+        Assert.Contains("MissingDependency", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -463,15 +440,10 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.True(resolution.References.Count < AssemblyReferenceResolver.MaxReferenceNodes);
     }
 
-    private static void AssertReferenceDetailsExcluded(InspectAssemblyPayload payload)
+    private static void AssertReferenceDetailsExcluded(string text)
     {
-        Assert.Empty(payload.References);
-        Assert.Empty(payload.ReferenceSessions!);
-        Assert.False(payload.ReferenceDetailsIncluded);
-        Assert.True(payload.ReferenceSummary!.TotalReferenceCount >= 1);
-        Assert.Equal(0, payload.ReferenceSummary.ShownReferenceCount);
-        Assert.True(payload.ReferenceSummary.ReferencesTruncated);
-        Assert.Equal(0, payload.ReferenceSummary.ShownReferenceSessionCount);
-        Assert.False(payload.ReferenceSummary.ReferenceSessionsTruncated);
+        Assert.Contains("Referenzen: 0 von", text, StringComparison.Ordinal);
+        Assert.Contains("Referenzdetails nicht angefordert; includeReferences=true", text, StringComparison.Ordinal);
+        Assert.Contains("Referenz-Sessions: 0 von 0", text, StringComparison.Ordinal);
     }
 }

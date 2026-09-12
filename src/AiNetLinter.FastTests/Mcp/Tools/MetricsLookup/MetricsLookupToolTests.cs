@@ -1,12 +1,10 @@
 #nullable enable
 
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.FastTests.Fixtures;
-using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -66,22 +64,16 @@ public sealed class MetricsLookupToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SingleSymbol_AlwaysReturnsBatchDto()
+    public async Task ExecuteAsync_SingleSymbol_ReportsResolvedSymbolInContent()
     {
         var state = _fixture.CreateServer();
 
         var result = await MetricsLookupTool.ExecuteAsync(state, ["Greeter.Greet"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        Assert.Equal(1, batch.RequestedCount);
-        var dto = Assert.Single(batch.Results);
-        Assert.Equal("Greet", dto.SymbolName);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+        Assert.Contains("Method:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -97,21 +89,8 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("Schwellwert-Abgleich", textContent.Text);
         Assert.Contains("[OK]", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.Equal("Greet", dto.SymbolName);
-        Assert.NotNull(dto.MethodMetrics);
-        Assert.Equal(1, dto.MethodMetrics.TotalParameters);
-        Assert.Equal(1, dto.MethodMetrics.EffectiveParameters);
-        Assert.Equal(1, dto.MethodMetrics.CyclomaticComplexity);
-        Assert.NotEmpty(dto.ThresholdChecks);
-        Assert.Contains(dto.ThresholdChecks, c => c.Metric == MetricNames.LineCount && c.Status == ThresholdStatus.Ok);
-        Assert.Contains(dto.ThresholdChecks, c => c.Metric == MetricNames.CyclomaticComplexity && c.Status == ThresholdStatus.Ok);
+        Assert.Contains("Parameter-Anzahl (effektiv)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Zyklomatische Komplexität", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -126,20 +105,8 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("Greeter", textContent.Text);
         Assert.Contains("AI-Context-Footprint", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.Equal("Greeter", dto.SymbolName);
-        Assert.NotNull(dto.TypeMetrics);
-        Assert.True(dto.TypeMetrics.CodeLines > 0);
-        Assert.True(dto.TypeMetrics.AiContextFootprint > 0);
-        Assert.True(dto.TypeMetrics.TotalMemberCount >= 2);
-        Assert.Contains(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxLineCount);
-        Assert.Contains(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.AIContextFootprint);
+        Assert.Contains("Typ-Struktur", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Members:", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -153,17 +120,8 @@ public sealed class MetricsLookupToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Prefix", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.Equal("Prefix", dto.SymbolName);
-        Assert.NotNull(dto.PropertyMetrics);
-        Assert.True(dto.PropertyMetrics.HasGetter);
-        Assert.True(dto.PropertyMetrics.HasSetter);
+        Assert.Contains("Property-Details", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Getter & Setter", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -212,19 +170,10 @@ public sealed class MetricsLookupToolTests
         var result = await MetricsLookupTool.ExecuteAsync(state, ["ComplexClass.ComplexMethod"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.NotNull(dto.MethodMetrics);
-        Assert.Equal(5, dto.MethodMetrics.TotalParameters);
-        Assert.Equal(5, dto.MethodMetrics.EffectiveParameters);
-
-        Assert.Contains(dto.ThresholdChecks, c => c.Metric == MetricNames.ParameterCount && c.Status == ThresholdStatus.Violation);
-        Assert.Contains(dto.ThresholdChecks, c => c.Metric == MetricNames.CyclomaticComplexity && c.Status == ThresholdStatus.Violation);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Parameter-Anzahl (effektiv)", text, StringComparison.Ordinal);
+        Assert.Contains("Zyklomatische Komplexität", text, StringComparison.Ordinal);
+        Assert.Contains("[VIOLATION]", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -263,18 +212,9 @@ public sealed class MetricsLookupToolTests
         var result = await MetricsLookupTool.ExecuteAsync(state, ["ParamTestClass.Execute"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.NotNull(dto.MethodMetrics);
-        Assert.Equal(3, dto.MethodMetrics.TotalParameters);
-        Assert.Equal(2, dto.MethodMetrics.EffectiveParameters);
-        Assert.Single(dto.MethodMetrics.IgnoredParameters);
-        Assert.Contains("ct (CancellationToken)", dto.MethodMetrics.IgnoredParameters[0]);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Parameter-Anzahl (effektiv)", text, StringComparison.Ordinal);
+        Assert.Contains("ct (CancellationToken)", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -304,19 +244,8 @@ public sealed class MetricsLookupToolTests
         var result = await MetricsLookupTool.ExecuteAsync(state, ["UserDto"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.NotNull(dto.TypeMetrics);
-        // 4 properties + 1 method = 5 members (plus default ctor if emitted, exactly 5 countable declared members)
-        Assert.Equal(4, dto.TypeMetrics.PropertyCount);
-        Assert.Equal(1, dto.TypeMetrics.MethodCount);
-        Assert.Equal(5, dto.TypeMetrics.PublicMemberCount);
-        Assert.Equal(5, dto.TypeMetrics.TotalMemberCount);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Members:** 5 gesamt (5 public, 1 Methoden, 4 Properties)", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -356,17 +285,10 @@ public sealed class MetricsLookupToolTests
         var result = await MetricsLookupTool.ExecuteAsync(state, ["AppSettingsConfig"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.NotNull(dto.TypeMetrics);
-        Assert.Equal(6, dto.TypeMetrics.PublicMemberCount);
-        var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxPublicMembersPerType);
-        Assert.Equal(ThresholdStatus.Ok, check.Status);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Public Member Anzahl", text, StringComparison.Ordinal);
+        Assert.Contains("6", text, StringComparison.Ordinal);
+        Assert.Contains("[OK]", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -425,17 +347,9 @@ public sealed class MetricsLookupToolTests
         var result = await MetricsLookupTool.ExecuteAsync(state, ["Sample.LongSimpleMethod"], CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        var dto = Assert.Single(batch.Results);
-        Assert.NotNull(dto.MethodMetrics);
-        var check = Assert.Single(dto.ThresholdChecks, c => c.RuleId == LinterRuleIds.MaxMethodLineCount);
-        Assert.Equal(20, check.Limit);
-        Assert.Equal(ThresholdStatus.Ok, check.Status);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("<= 20", text, StringComparison.Ordinal);
+        Assert.Contains("[OK]", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -454,17 +368,6 @@ public sealed class MetricsLookupToolTests
         Assert.Contains("Prefix", textContent.Text);
         Assert.Contains("---", textContent.Text);
 
-        Assert.NotNull(result.StructuredContent);
-        var batch = JsonSerializer.Deserialize<MetricsLookupBatchDto>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(batch);
-        Assert.Equal(2, batch.RequestedCount);
-        Assert.Equal(2, batch.Results.Count);
-        // MCP-Vertrag: structuredContent ist immer ein JSON-Objekt — ein Top-Level-Array
-        // liess reale Clients den kompletten Tool-Call ablehnen.
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
     }
 
     [Fact]

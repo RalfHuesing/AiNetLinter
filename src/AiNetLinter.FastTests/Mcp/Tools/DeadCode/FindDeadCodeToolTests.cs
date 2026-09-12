@@ -32,7 +32,7 @@ public sealed class FindDeadCodeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_LoadedSolution_ReturnsFormattedTextAndStructuredContent()
+    public async Task ExecuteAsync_LoadedSolution_ReturnsFormattedContent()
     {
         var state = _fixture.CreateServer();
 
@@ -49,11 +49,8 @@ public sealed class FindDeadCodeToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Dead-Code-Analyse", textContent.Text);
         Assert.Contains("Zusammenfassung", textContent.Text);
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value;
-        Assert.Equal("candidate", payload.GetProperty("resultType").GetString());
-        Assert.False(payload.GetProperty("deletionClaim").GetBoolean());
-        Assert.True(payload.TryGetProperty("candidates", out _));
+        Assert.Contains("Kandidaten", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("automatisch löschen", textContent.Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

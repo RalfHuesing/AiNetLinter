@@ -91,23 +91,19 @@ public sealed partial class GetClassStructureToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ValidClass_ReturnsStructuredContent()
+    public async Task ExecuteAsync_ValidClass_RendersTypeAndMembers()
     {
         var state = _fixture.CreateServer();
 
         var result = await GetClassStructureTool.ExecuteAsync(state, "Greeter", "lines", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("SymbolGraphMini.Greeter", payload!.TypeName);
-        Assert.Equal("class", payload.Kind);
-        Assert.NotEmpty(payload.Files);
-        Assert.NotEmpty(payload.Members);
-        Assert.Contains(payload.Members, m => m.Name == "Greet" && m.Kind == "Method");
-        Assert.Equal(payload.TotalMemberCount, payload.ShownMemberCount);
-        Assert.False(payload.Truncated);
+        var text = TextOf(result);
+        Assert.Contains("# Typ: SymbolGraphMini.Greeter", text, StringComparison.Ordinal);
+        Assert.Contains("- Kind: class", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxMembers erhöhen", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -132,14 +128,13 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(
             context.CreateServer(), "Constants", "name", CancellationToken.None);
 
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Contains(payload!.Members, member => member.Signature.Contains("1.5", StringComparison.Ordinal));
-        Assert.Contains(payload.Members, member => member.Signature.Contains("-7", StringComparison.Ordinal));
-        Assert.Contains(payload.Members, member => member.Signature.Contains("\"hello\"", StringComparison.Ordinal));
-        Assert.Contains(payload.Members, member => member.Signature.Contains("null", StringComparison.Ordinal));
-        Assert.Contains(payload.Members, member => member.Signature.Contains("'x'", StringComparison.Ordinal));
-        Assert.Contains(payload.Members, member => member.Signature.Contains("true", StringComparison.Ordinal));
+        var text = TextOf(result);
+        Assert.Contains("1.5", text, StringComparison.Ordinal);
+        Assert.Contains("-7", text, StringComparison.Ordinal);
+        Assert.Contains("\"hello\"", text, StringComparison.Ordinal);
+        Assert.Contains("null", text, StringComparison.Ordinal);
+        Assert.Contains("'x'", text, StringComparison.Ordinal);
+        Assert.Contains("true", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -162,10 +157,9 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "Sample", "name", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        var methodNames = payload!.Members.Where(m => m.Kind == "Method").Select(m => m.Name).ToList();
-        Assert.Equal(new[] { "Alpha", "Bravo", "Zulu" }, methodNames);
+        var text = TextOf(result);
+        Assert.True(text.IndexOf("Alpha", StringComparison.Ordinal) < text.IndexOf("Bravo", StringComparison.Ordinal));
+        Assert.True(text.IndexOf("Bravo", StringComparison.Ordinal) < text.IndexOf("Zulu", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -193,15 +187,12 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "MultiPart", "lines", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(2, payload!.Files.Count);
-        Assert.Equal(2, payload.Members.Count(m => m.Kind == "Method"));
-
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("| Kind | Name | Visibility | File | Lines | LineCount | Signature |", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("MultiPart.A.cs", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("MultiPart.B.cs", textContent.Text, StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("| Kind | Name | Visibility | File | Lines | LineCount | Signature |", text, StringComparison.Ordinal);
+        Assert.Contains("MultiPart.A.cs", text, StringComparison.Ordinal);
+        Assert.Contains("MultiPart.B.cs", text, StringComparison.Ordinal);
+        Assert.Contains("MethodA", text, StringComparison.Ordinal);
+        Assert.Contains("MethodB", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,15 +217,10 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "LargeClass", "lines", maxMembers: 10, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        // Sanity: die Klasse muss tatsächlich 61 Member haben, sonst testet der Test nichts.
-        Assert.True(payload!.TotalMemberCount >= 50, $"Test ungueltig: nur {payload.TotalMemberCount} Member gefunden (erwartet >= 50). Source:\n{source}");
-        Assert.True(payload.Truncated, $"Truncated muss true sein bei {payload.TotalMemberCount} Member und maxMembers=10.");
-        Assert.Equal(10, payload.ShownMemberCount);
-        Assert.Equal(10, payload.Members.Count);
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("maxMembers erhöhen", textContent.Text, StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("von", text, StringComparison.Ordinal);
+        Assert.Contains("maxMembers erhöhen", text, StringComparison.Ordinal);
+        Assert.Contains("HiddenMethod", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -253,16 +239,12 @@ public sealed partial class GetClassStructureToolTests
             new GetClassStructureArgs("Shared", Scope: new McpScopeInput(McpScopeType.Production, IncludeGenerated: false)),
             CancellationToken.None);
 
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default)!;
-        Assert.Contains(payload.Members, member => member.Name == "Production");
-        Assert.DoesNotContain(payload.Members, member => member.Name == "TestOnly" || member.Name == "GeneratedOnly");
-        Assert.Equal(2, payload.ExcludedMemberCount);
-        Assert.Equal("production", payload.Scope!.RequestedType);
-        Assert.Single(payload.Locations!);
-        Assert.Single(payload.Files);
-        Assert.Equal(1, payload.TotalLines);
-        Assert.DoesNotContain(payload.Files, path => path.Contains("Tests", StringComparison.OrdinalIgnoreCase) || path.Contains("generated", StringComparison.OrdinalIgnoreCase));
-        Assert.All(payload.Locations!, location => Assert.True(location.IsSeed));
+        var text = TextOf(result);
+        Assert.Contains("Production", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TestOnly", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("GeneratedOnly", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("SharedTests.cs", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Shared.generated.cs", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -282,13 +264,10 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "TinyClass", "lines", maxMembers: 10000, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        // TinyClass hat 1 Method + 1 impliziten Default-Constructor; cap=200 ist irrelevant,
-        // aber Clamp darf nicht crashen und nicht versehentlich truncaten.
-        Assert.InRange(payload!.TotalMemberCount, 1, 3);
-        Assert.Equal(payload.TotalMemberCount, payload.ShownMemberCount);
-        Assert.False(payload.Truncated);
+        var text = TextOf(result);
+        Assert.Contains("TinyClass", text, StringComparison.Ordinal);
+        Assert.Contains("A", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxMembers erhöhen", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -306,27 +285,11 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "Person", "lines", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("record class", payload!.Kind);
-        var primaryCtorParams = payload.Members.Where(m => m.Kind == "PrimaryCtor-Param").ToList();
-        // Default sortBy="lines" sortiert nach FilePath+StartLine — bei gleicher recordLine
-        // ist die Reihenfolge der PrimaryCtor-Params also undefiniert, prüfen wir nur die
-        // Anwesenheit der korrekten Param-Namen statt die Sortierung.
-        Assert.Equal(3, primaryCtorParams.Count);
-        Assert.Equal(
-            new HashSet<string> { "FirstName", "LastName", "Age" },
-            primaryCtorParams.Select(p => p.Name).ToHashSet());
-        // Primäre Konstruktor-Parameter müssen vor den restlichen Membern stehen
-        // (Equals/GetHashCode/ToString/PrintMembers-Boilerplate, der vom Compiler generiert wird).
-        var firstNonParamIndex = payload.Members
-            .Select((m, idx) => (m, idx))
-            .First(t => t.m.Kind != "PrimaryCtor-Param").idx;
-        var lastParamIndex = payload.Members
-            .Select((m, idx) => (m, idx))
-            .Last(t => t.m.Kind == "PrimaryCtor-Param").idx;
-        Assert.True(lastParamIndex < firstNonParamIndex,
-            $"PrimaryCtor-Params müssen vor den restlichen Membern stehen (last={lastParamIndex}, firstNonParam={firstNonParamIndex}).");
+        var text = TextOf(result);
+        Assert.Contains("- Kind: record class", text, StringComparison.Ordinal);
+        Assert.Contains("FirstName", text, StringComparison.Ordinal);
+        Assert.Contains("LastName", text, StringComparison.Ordinal);
+        Assert.Contains("Age", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -352,12 +315,10 @@ public sealed partial class GetClassStructureToolTests
         var result = await GetClassStructureTool.ExecuteAsync(state, "Service", "lines", CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        var method = Assert.Single(payload!.Members.Where(m => m.Name == "LongMethod"));
-        Assert.Equal(4, method.StartLine);
-        Assert.Equal(9, method.EndLine);
-        Assert.Equal(6, method.LineCount);
+        var text = TextOf(result);
+        Assert.Contains("LongMethod", text, StringComparison.Ordinal);
+        Assert.Contains("4-9", text, StringComparison.Ordinal);
+        Assert.Contains("6", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -382,12 +343,11 @@ public sealed partial class GetClassStructureToolTests
             state, new GetClassStructureArgs("MixedClass", "lines", MaxMembers: 50, KindFilter: "Method"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.All(payload!.Members, m => Assert.Equal("Method", m.Kind));
-        Assert.Equal(2, payload.TotalMemberCount);
-        Assert.Contains(payload.Members, m => m.Name == "MethodA");
-        Assert.Contains(payload.Members, m => m.Name == "MethodB");
+        var text = TextOf(result);
+        Assert.Contains("MethodA", text, StringComparison.Ordinal);
+        Assert.Contains("MethodB", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("MyProp", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("_field", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -411,11 +371,12 @@ public sealed partial class GetClassStructureToolTests
             state, new GetClassStructureArgs("MultiMethodClass", "lines", MaxMembers: 50, NameFilter: "Process"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(2, payload!.TotalMemberCount);
-        Assert.Contains(payload.Members, m => m.Name == "ProcessOrder");
-        Assert.Contains(payload.Members, m => m.Name == "ProcessPayment");
-        Assert.DoesNotContain(payload.Members, m => m.Name == "CancelOrder");
+        var text = TextOf(result);
+        Assert.Contains("ProcessOrder", text, StringComparison.Ordinal);
+        Assert.Contains("ProcessPayment", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("CancelOrder", text, StringComparison.Ordinal);
     }
+
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

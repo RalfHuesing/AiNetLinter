@@ -77,12 +77,6 @@ internal static class FindAssemblyExtensionsResponseBuilder
         FindAssemblyExtensionsPayload payload,
         FindAssemblyExtensionsBuildRequest request)
     {
-        if (request.Lease is not null
-            && (request.Arguments.MaxResponseBytes > 0 || request.Arguments.DetailLevel is not null))
-        {
-            return payload;
-        }
-
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             request.Arguments.MaxResponseBytes,
             request.Arguments.DetailLevel,
@@ -106,6 +100,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
         var builder = new StringBuilder();
         AppendHeader(builder, payload);
         AppendExtensions(builder, payload.Extensions);
+        AppendContinuation(builder, payload.ContinuationToken);
         AssemblyAnalysisResponseLimits.AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
         return builder.ToString().TrimEnd();
     }
@@ -135,9 +130,20 @@ internal static class FindAssemblyExtensionsResponseBuilder
             var qualifiedName = string.IsNullOrEmpty(extension.Namespace)
                 ? extension.Name
                 : $"{extension.Namespace}.{extension.Name}";
-            builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}");
+            var handoffId = string.IsNullOrWhiteSpace(extension.Id)
+                ? string.Empty
+                : $"; handoffId: `{extension.Id}`";
+            builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}{handoffId}");
             builder.AppendLine($"  Signatur: `{extension.Signature}`");
             if (extension.ApplicabilityReason is not null) builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");
+        }
+    }
+
+    private static void AppendContinuation(StringBuilder builder, string? continuationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(continuationToken))
+        {
+            builder.AppendLine($"Fortsetzung: continuationToken: `{continuationToken}` unverändert mit derselben Abfrage verwenden.");
         }
     }
 }

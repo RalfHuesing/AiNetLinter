@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -177,22 +175,12 @@ internal static partial class GetSymbolBodyTool
 
     private static CallToolResult AddAssemblyNavigation(
         CallToolResult result,
-        AssemblyNavigationSummary navigation)
-    {
-        if (result.StructuredContent is not { } structured
-            || JsonNode.Parse(structured.GetRawText()) is not JsonObject payload)
-        {
-            return result;
-        }
-
-        payload["navigation"] = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default);
-        return new CallToolResult
-        {
-            IsError = result.IsError,
-            Content = result.Content,
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
-        };
-    }
+        AssemblyNavigationSummary navigation) =>
+        McpToolResults.ReplaceText(
+            result,
+            result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text +
+            $"\n\nAssembly-Suche: {navigation.SearchedAssemblyCount}/{navigation.TotalAssemblyCount}; " +
+            $"Vollständigkeit: {navigation.Completeness}");
 
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
@@ -316,6 +304,7 @@ internal static partial class GetSymbolBodyTool
         {
             markdown.Line($"angefordert: `{request.Identifier}`");
         }
+        if (!string.IsNullOrEmpty(idSuffix)) markdown.Line($"handoffId: `{idSuffix}`");
         markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
         if (bodyResolution.TotalBodyLines > 0)
         {
@@ -398,8 +387,7 @@ internal static partial class GetSymbolBodyTool
     {
         var result = CreateResult(units, requestedCount, truncated);
         var text = result.Content.OfType<TextContentBlock>().Single().Text;
-        return Encoding.UTF8.GetByteCount(text)
-            + JsonSerializer.SerializeToUtf8Bytes(result.StructuredContent!.Value, McpJsonOptions.Default).Length;
+        return Encoding.UTF8.GetByteCount(text);
     }
 
     private static CallToolResult BudgetTooSmall(int budget) =>

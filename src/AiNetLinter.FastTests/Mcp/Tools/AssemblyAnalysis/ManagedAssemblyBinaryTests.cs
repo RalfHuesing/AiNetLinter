@@ -34,13 +34,11 @@ public sealed class ManagedAssemblyBinaryTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, "Program", null, true, 100),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        Assert.EndsWith(".exe", payload.AssemblyPath, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("ManagedExeProbe", payload.Identity?.Name);
-        var program = Assert.Single(payload.Types);
-        Assert.Contains(program.Members, member => member.Name == "Describe");
-        Assert.Equal("complete", payload.Completeness);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Assembly: `ManagedExeProbe`", text, StringComparison.Ordinal);
+        Assert.Contains(".exe", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Describe()", text, StringComparison.Ordinal);
+        Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,17 +57,9 @@ public sealed class ManagedAssemblyBinaryTests
         Assert.False(result.IsError);
         Assert.Contains("keine .NET-Metadaten", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("verwaltete .NET-.dll oder .exe mit IL", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
-        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(LinterErrorCodes.InvalidAssembly, payload.Code);
-        Assert.Equal(nativeAssemblyPath, payload.Context);
-        Assert.Contains(".dll oder .exe mit IL", payload.Message, StringComparison.Ordinal);
-        Assert.Equal(
-            McpToolResults.InvalidAssemblyHint,
-            payload.Hint);
-        Assert.True(payload.Recoverable);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains(LinterErrorCodes.InvalidAssembly, text, StringComparison.Ordinal);
+        Assert.Contains(".dll oder .exe mit IL", text, StringComparison.Ordinal);
     }
 
 }

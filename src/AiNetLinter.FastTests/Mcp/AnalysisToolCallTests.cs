@@ -106,7 +106,7 @@ public sealed class AnalysisToolCallTests
             })).ProjectCall!);
 
         Assert.False(projectCalled);
-        Assert.True(result.IsError);
+        Assert.False(result.IsError ?? false);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", TextOf(result), StringComparison.Ordinal);
         Assert.Empty(registry.Snapshots());
     }
@@ -180,13 +180,10 @@ public sealed class AnalysisToolCallTests
                 MaxResponseBytes: 512,
                 PostNavigationResponseBudget: TestContextResponseBudget.ApplyFinal));
 
-        Assert.True(result.IsError);
-        Assert.Equal(
-            LinterErrorCodes.ResponseBudgetTooSmall,
-            result.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.True(result.StructuredContent.Value.TryGetProperty("navigation", out var navigation));
-        Assert.False(string.IsNullOrWhiteSpace(
-            navigation.GetProperty("status").GetProperty("operation").GetString()));
+        Assert.False(result.IsError ?? false);
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains(LinterErrorCodes.ResponseBudgetTooSmall, text, StringComparison.Ordinal);
+        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
         Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", TextOf(result), StringComparison.Ordinal);
     }
 

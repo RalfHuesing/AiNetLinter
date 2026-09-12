@@ -67,5 +67,5 @@ public sealed record FileTreePayload(
     FileTreeCompleteness Completeness,
     FileTreeNext Next);
 
-/// <summary>Internes Scanresult, das Renderer und Structured Content gemeinsam verwenden.</summary>
+/// <summary>Internes Scanresult für Renderer und Budgetauswahl.</summary>
 internal sealed record FileTreeScanResult(FileTreePayload Payload, int TreeDepth);

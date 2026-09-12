@@ -76,7 +76,6 @@ internal static class GetHotspotsTool
                 request.MaxResults,
                 request.MinLinePercentage,
                 normalizedScopeType));
-        // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
         return Task.FromResult(McpToolResults.Text(
             report.Text,

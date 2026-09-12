@@ -102,7 +102,7 @@ public sealed class TransitiveCallGraphFormatterTests
     }
 
     [Fact]
-    public void FormatAssemblyCallTreeResponse_UsesProjectedNavigationMetadataInTextAndPayload()
+    public void FormatAssemblyCallTreeResponse_RendersProjectedNavigationMetadata()
     {
         var diagnostics = new[]
         {
@@ -126,18 +126,8 @@ public sealed class TransitiveCallGraphFormatterTests
                 TreeTruncationMessage: null));
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        var payload = JsonSerializer.Deserialize<AssemblyCallTreeResult>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(payload);
         Assert.Contains("[Assembly-Diagnostic] diagnostic-5", text, StringComparison.Ordinal);
         Assert.DoesNotContain("diagnostic-6", text, StringComparison.Ordinal);
         Assert.Contains("[6 Diagnosen gesamt, 5 Samples gezeigt — gekürzt: maxDiagnostics]", text, StringComparison.Ordinal);
-        Assert.Equal(6, payload!.Navigation.DiagnosticTotalCount);
-        Assert.Equal(5, payload.Navigation.DiagnosticShownCount);
-        Assert.True(payload.Navigation.DiagnosticsTruncated);
-        Assert.Equal(["maxDiagnostics"], payload.Navigation.DiagnosticsTruncatedBy);
-        Assert.Equal(diagnostics[..5], payload.Navigation.Diagnostics);
     }
 }

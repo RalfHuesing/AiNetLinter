@@ -31,7 +31,7 @@ internal static partial class FindMagicValuesScanner
 {
     /// <summary>
     /// Default-Obergrenze fuer die Anzahl gezeigter Magic-Value-Funde in Text-Report
-    /// und <c>StructuredContent</c> — analog <see cref="Mcp.Tools.Analysis.GetViolationsScanner.DefaultMaxResults"/>
+    /// und agentischem Content — analog <see cref="Mcp.Tools.Analysis.GetViolationsScanner.DefaultMaxResults"/>
     /// und <see cref="Mcp.Tools.Analysis.SearchPatternScanner.DefaultMaxResults"/>. Schuetzt
     /// das Agent-Token-Budget.
     /// </summary>
@@ -212,7 +212,7 @@ internal static partial class FindMagicValuesScanner
         return (raw, malfunctionContext);
     }
 
-    /// <summary>Aggregiert Roh-Funde, baut Text-Report + StructuredContent-Payload und
+    /// <summary>Aggregiert Roh-Funde und baut den agentischen Report
     /// liefert den finalen <see cref="FindMagicValuesResult"/>. Aus <see cref="ScanAsync"/>
     /// extrahiert, um dessen Code-Zeilen unter dem 60-Limit zu halten.</summary>
     private static FindMagicValuesResult BuildResult(

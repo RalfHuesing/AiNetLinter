@@ -13,7 +13,7 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
-/// Budgetprojektion fuer Text und StructuredContent von <c>get_namespace_tree</c>.
+/// Budgetprojektion fuer Text von <c>get_namespace_tree</c>.
 /// </summary>
 internal static class GetNamespaceTreeResponseBudget
 {
@@ -31,7 +31,7 @@ internal static class GetNamespaceTreeResponseBudget
         if (maxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes)
         {
             return McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen, damit Namespace-Text und StructuredContent gemeinsam markiert gekürzt werden können.",
+                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen, damit der Namespace-Text an vollständigen Einheiten gekürzt werden kann.",
                 "maxResponseBytes weglassen, 0 verwenden oder mindestens 512 setzen.",
                 "$.maxResponseBytes");
         }
@@ -156,25 +156,7 @@ internal static class GetNamespaceTreeResponseBudget
         payload = null;
         text = null;
         envelope = null;
-        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || maxResponseBytes <= 0
-            || !HasNamespacePayload(structured))
-        {
-            return false;
-        }
-
-        try
-        {
-            payload = JsonSerializer.Deserialize<NamespaceTreePayload>(structured.GetRawText(), McpJsonOptions.Default);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-
-        text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-        envelope = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        return payload is not null && text is not null && envelope is not null;
+        return false;
     }
 
     private static bool HasNamespacePayload(JsonElement structured) =>
@@ -219,7 +201,6 @@ internal static class GetNamespaceTreeResponseBudget
                 {
                     IsError = original.IsError,
                     Content = new List<ContentBlock> { new TextContentBlock { Text = rendered } },
-                    StructuredContent = JsonSerializer.SerializeToElement(projected, McpJsonOptions.Default),
                 };
             }
 
@@ -237,7 +218,6 @@ internal static class GetNamespaceTreeResponseBudget
             {
                 IsError = original.IsError,
                 Content = new List<ContentBlock> { new TextContentBlock { Text = minimumText } },
-                StructuredContent = JsonSerializer.SerializeToElement(minimumEnvelope, McpJsonOptions.Default),
             };
         }
 
@@ -420,6 +400,7 @@ internal static class GetNamespaceTreeResponseBudget
     private static void AppendProjectText(StringBuilder sb, NamespaceTreePayload payload)
     {
         sb.AppendLine($"# Solution Overview: {payload.SolutionName} ({payload.TotalCount} Projekte)\n");
+        AppendDepthText(sb, payload);
         foreach (var project in payload.Projects!)
         {
             sb.AppendLine($"- {project.ProjectName} (Typ: {project.ProjectType}, {project.NamespaceCount} Namespaces, {project.TypeCount} Typen)");
@@ -429,6 +410,7 @@ internal static class GetNamespaceTreeResponseBudget
     private static void AppendTypeText(StringBuilder sb, NamespaceTreePayload payload)
     {
         sb.AppendLine($"# Typen in Namespace '{payload.NamespacePrefix}' (Projekt: {payload.Project}):\n");
+        AppendDepthText(sb, payload);
         foreach (var type in payload.Types!)
         {
             sb.AppendLine($"- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}");
@@ -439,6 +421,7 @@ internal static class GetNamespaceTreeResponseBudget
     {
         var prefix = string.IsNullOrWhiteSpace(payload.NamespacePrefix) ? string.Empty : $" unter '{payload.NamespacePrefix}'";
         sb.AppendLine($"# Namespaces in Projekt '{payload.Project}'{prefix}:\n");
+        AppendDepthText(sb, payload);
         foreach (var node in payload.Namespaces ?? Array.Empty<NamespaceTreeNode>())
         {
             AppendNamespaceText(sb, node, 0);
@@ -487,9 +470,21 @@ internal static class GetNamespaceTreeResponseBudget
     private static void AppendNamespaceText(StringBuilder sb, NamespaceTreeNode node, int indent)
     {
         sb.AppendLine($"{new string(' ', indent * 2)}- {node.Namespace} ({node.TypeCount} Typen)");
+        foreach (var type in node.Types ?? Array.Empty<TypeNodeEntry>())
+        {
+            sb.AppendLine($"{new string(' ', (indent + 1) * 2)}- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}");
+        }
         foreach (var child in node.SubNamespaces ?? Array.Empty<NamespaceTreeNode>())
         {
             AppendNamespaceText(sb, child, indent + 1);
         }
+    }
+
+    private static void AppendDepthText(StringBuilder sb, NamespaceTreePayload payload)
+    {
+        if (payload.RequestedDepth is not { } requestedDepth || payload.EffectiveDepth is not { } effectiveDepth) return;
+
+        var clamped = payload.DepthWasClamped ? " (gekappt)" : string.Empty;
+        sb.AppendLine($"Tiefe: angefragt {requestedDepth}, effektiv {effectiveDepth}{clamped}");
     }
 }

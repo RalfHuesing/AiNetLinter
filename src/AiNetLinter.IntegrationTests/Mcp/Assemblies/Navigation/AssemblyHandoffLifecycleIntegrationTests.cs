@@ -157,7 +157,7 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
                 foreignLease,
                 new AssemblyFindReferencesRequest(handoffId, 10, 1, false),
                 CancellationToken.None);
-            Assert.Equal("TARGET_MISMATCH", StructuredCode(wrongTarget));
+            Assert.Contains("TARGET_MISMATCH", Text(wrongTarget), StringComparison.Ordinal);
         }
 
         var replacementPath = AssemblyTestHelper.EmitAssembly(
@@ -174,15 +174,12 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
             changedLease,
             new AssemblyFindReferencesRequest(handoffId, 10, 1, false),
             CancellationToken.None);
-        Assert.Equal("STALE_SNAPSHOT", StructuredCode(stale));
+        Assert.Contains("STALE_SNAPSHOT", Text(stale), StringComparison.Ordinal);
     }
 
     private static ISymbol LeaseSymbol(AssemblyAnalysisLease lease, string memberName) =>
         Assert.Single(
             lease.Context.Compilation.GetTypeByMetadataName("Probe.Target")!.GetMembers(memberName));
-
-    private static string StructuredCode(CallToolResult result) =>
-        result.StructuredContent!.Value.GetProperty("code").GetString()!;
 
     private static string Text(CallToolResult result) =>
         result.Content.OfType<TextContentBlock>().SingleOrDefault()?.Text
@@ -202,7 +199,6 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
             CancellationToken.None);
 
         Assert.False(ownerOnly.IsError == true, Text(ownerOnly));
-        AssertNavigation(ownerOnly, "symbol_owner_only");
         var ownerLease = Assert.Single(rootLease.ReferenceLeasesSnapshot());
         Assert.Equal(Path.GetFullPath(ownerPath), ownerLease.CanonicalPath, ignoreCase: true);
         Assert.Empty(ownerLease.ReferenceLeasesSnapshot());
@@ -216,7 +212,6 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
             CancellationToken.None);
 
         Assert.False(closure.IsError == true, Text(closure));
-        AssertNavigation(closure, "bounded_reference_closure");
         Assert.Contains(
             ReferenceLeaseDescendants(rootLease),
             lease => string.Equals(lease.CanonicalPath, Path.GetFullPath(leafPath), StringComparison.OrdinalIgnoreCase));
@@ -230,15 +225,6 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
             yield return child;
             foreach (var descendant in ReferenceLeaseDescendants(child)) yield return descendant;
         }
-    }
-
-    private static void AssertNavigation(CallToolResult result, string effectiveSearchMode)
-    {
-        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal(effectiveSearchMode, navigation.GetProperty("effectiveSearchMode").GetString());
-        Assert.Equal(
-            effectiveSearchMode == "bounded_reference_closure",
-            navigation.GetProperty("requestedIncludeReferences").GetBoolean());
     }
 
     private sealed class ManualTimeProvider : TimeProvider

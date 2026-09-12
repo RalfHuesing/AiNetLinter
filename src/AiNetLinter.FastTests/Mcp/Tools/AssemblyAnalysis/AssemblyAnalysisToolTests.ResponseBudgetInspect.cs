@@ -17,7 +17,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 public sealed partial class AssemblyAnalysisToolTests
 {
     [Fact]
-    public async Task InspectAssembly_GlobalResponseBudgetUsesOneTypedSelectionForTextAndJson()
+    public async Task InspectAssembly_GlobalResponseBudgetUsesVisibleTextSelection()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-response-budget-");
         var types = Enumerable.Range(0, 180)
@@ -32,31 +32,13 @@ public sealed partial class AssemblyAnalysisToolTests
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1000, MaxMembers: 1000),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
-        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
-
-        Assert.True(payload.TotalTypes > payload.ShownCount || payload.Types.Any(type => type.MembersTruncated));
-        Assert.True(payload.Truncated);
-        Assert.Contains("responseBudget", payload.TruncatedBy);
-        Assert.Equal(payload.Types.Count, payload.ShownCount);
-        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.Contains("Öffentliche API-Typen:", text, StringComparison.Ordinal);
+        Assert.Contains("von 180 (gekürzt: responseBudget)", text, StringComparison.Ordinal);
+        Assert.Contains("Fortsetzung: continuationToken:", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
-        Assert.Contains(payload.Types, type => type.Members.Count > 0);
-        Assert.All(
-            payload.Types.SelectMany(type => type.Members),
-            member =>
-            {
-                Assert.NotNull(member.Name);
-                Assert.NotNull(member.Signature);
-                Assert.NotNull(member.Parameters);
-                Assert.NotNull(member.GenericParameters);
-                Assert.NotNull(member.Constraints);
-                Assert.Contains(member.Signature, text, StringComparison.Ordinal);
-            });
-        Assert.All(
-            payload.Types,
-            type => Assert.Contains($"`{type.Namespace}.{type.Name}`", text, StringComparison.Ordinal));
+        Assert.Contains("`Probe.Budget.Type000`; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("method: `void Probe.Budget.Type000.Reset000(string input)`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -84,22 +66,17 @@ public sealed partial class AssemblyAnalysisToolTests
                 IncludeReferences: false),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         var summary = "Top 10 Namespaces und 22 weitere";
 
-        Assert.Equal(32, payload.TotalNamespaces);
-        Assert.Equal(11, payload.Namespaces.Count);
-        Assert.Equal(summary, payload.Namespaces[^1]);
         Assert.Contains(summary, text, StringComparison.Ordinal);
-        Assert.True(payload.Types.Count > 10);
-        Assert.Contains(payload.Types, type => type.Members.Count > 0);
+        Assert.Contains("Öffentliche Namespaces: 32", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Budget.Namespace00.Type00`", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
-        Assert.True(Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
     }
 
     [Fact]
-    public async Task FindAssemblyExtensions_GlobalResponseBudgetKeepsCountsAndSharedSelection()
+    public async Task FindAssemblyExtensions_GlobalResponseBudgetUsesVisibleTextSelection()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-extension-budget-");
         var extensions = Enumerable.Range(0, 180)
@@ -114,31 +91,17 @@ public sealed partial class AssemblyAnalysisToolTests
             new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 1000),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
-        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
-
-        Assert.True(payload.TotalExtensions > payload.ShownCount);
-        Assert.True(payload.Truncated);
-        Assert.Equal(payload.Extensions.Count, payload.ShownCount);
-        Assert.Contains("responseBudget", payload.TruncatedBy);
-        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.Contains("Assembly-Extensions:", text, StringComparison.Ordinal);
+        Assert.Contains("von 180 (gekürzt: responseBudget)", text, StringComparison.Ordinal);
+        Assert.Contains("Fortsetzung: continuationToken:", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
-        Assert.All(
-            payload.Extensions,
-            extension =>
-            {
-                Assert.NotNull(extension.Name);
-                Assert.NotNull(extension.Signature);
-                Assert.NotNull(extension.Parameters);
-                Assert.NotNull(extension.GenericParameters);
-                Assert.NotNull(extension.Constraints);
-                Assert.Contains(extension.Signature, text, StringComparison.Ordinal);
-        });
+        Assert.Contains("`Probe.Budget.Extend000`", text, StringComparison.Ordinal);
+        Assert.Contains("Signatur: `string Probe.Budget.Extensions.Extend000(object value, string input)`", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task FindAssemblyExtensions_LeavesHandoffIdOutOfTextButKeepsItsSingleStructuredIdentity()
+    public async Task FindAssemblyExtensions_PublishesHandoffIdOnceInContent()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-extension-handoff-id-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -151,28 +114,11 @@ public sealed partial class AssemblyAnalysisToolTests
             new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 10),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
-        var extension = Assert.Single(payload.Extensions);
-        var handoffId = Assert.IsType<string>(extension.Id);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
+        const string expectedSignature = "string Probe.Extensions.Extend(object value)";
 
-        Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
-        Assert.Equal(handoffId, result.StructuredContent!.Value
-            .GetProperty("extensions")[0].GetProperty("id").GetString());
-        Assert.Equal(1, CountOccurrences(result.StructuredContent!.Value.GetRawText(), handoffId));
-    }
-
-    private static int CountOccurrences(string text, string value)
-    {
-        var count = 0;
-        var offset = 0;
-        while ((offset = text.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            offset += value.Length;
-        }
-
-        return count;
+        Assert.Contains("`Probe.Extend` für `object` — not_decidable; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains($"Signatur: `{expectedSignature}`", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -200,21 +146,13 @@ public sealed partial class AssemblyAnalysisToolTests
                 MaxMembers: 1000),
             CancellationToken.None);
 
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-        var type = Assert.Single(payload.Types);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
-        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
 
-        Assert.Equal(1, payload.TotalTypes);
-        Assert.Equal(1, payload.ShownCount);
-        Assert.True(payload.Truncated);
-        Assert.Contains("responseBudget", payload.TruncatedBy);
-        Assert.Equal(1, type.TotalMembers);
-        Assert.Empty(type.Members);
-        Assert.True(type.MembersTruncated);
-        Assert.Contains("responseBudget", type.TruncatedBy!);
+        Assert.Contains("Öffentliche API-Typen: 1 von 1", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Budget.Oversized`", text, StringComparison.Ordinal);
+        Assert.Contains("method: `void Probe.Budget.Oversized.Consume(", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("responseBudget", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
-        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
         Assert.DoesNotContain("API-Typen: 1 von 1 (gekürzt", text, StringComparison.Ordinal);
     }
 
@@ -238,22 +176,19 @@ public sealed partial class AssemblyAnalysisToolTests
             1000,
             MaxMembers: 1000,
             MaxResponseBytes: 8192);
-        var first = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(
-            await InspectAssemblyToolDispatch.ExecuteAsync(null, arguments, CancellationToken.None));
+        var first = await InspectAssemblyToolDispatch.ExecuteAsync(null, arguments, CancellationToken.None);
+        var firstText = AssemblyAnalysisTestSupport.TextOf(first);
+        var firstToken = AssemblyAnalysisTestSupport.ContinuationTokenOf(first);
 
-        Assert.True(first.ReturnedCount > 0);
-        Assert.True(first.IsTruncated);
-        Assert.StartsWith($"v1.{first.ReturnedCount}.", first.ContinuationToken, StringComparison.Ordinal);
+        Assert.Contains("von 120 (gekürzt: responseBudget)", firstText, StringComparison.Ordinal);
+        Assert.StartsWith("v1.", firstToken, StringComparison.Ordinal);
 
-        var second = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(
-            await InspectAssemblyToolDispatch.ExecuteAsync(
+        var second = await InspectAssemblyToolDispatch.ExecuteAsync(
                 null,
-                arguments with { Cursor = first.ContinuationToken },
-                CancellationToken.None));
+                arguments with { Cursor = firstToken },
+                CancellationToken.None);
+        var secondText = AssemblyAnalysisTestSupport.TextOf(second);
 
-        Assert.NotEmpty(second.Types);
-        Assert.DoesNotContain(
-            second.Types.Select(type => type.Id),
-            id => first.Types.Any(type => type.Id == id));
+        Assert.DoesNotContain("`Probe.Budget.Page000`", secondText, StringComparison.Ordinal);
     }
 }

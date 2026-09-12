@@ -15,14 +15,18 @@ internal static class InspectAssemblyResponseBuilder
 {
     internal static CallToolResult Build(InspectAssemblyBuildRequest request)
     {
-        var payload = CreatePayload(request);
+        var payload = BuildPayload(request);
         payload = ApplyResponseBudget(payload, request);
         return McpToolResults.Text(
             InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly),
             payload);
     }
 
-    private static InspectAssemblyPayload CreatePayload(InspectAssemblyBuildRequest request)
+    /// <summary>
+    /// Baut die fachliche Inspektionsprojektion, bevor ein MCP-Transportresult erzeugt wird.
+    /// Composites koennen damit dieselbe Evidenz typisiert weiterreichen.
+    /// </summary>
+    internal static InspectAssemblyPayload BuildPayload(InspectAssemblyBuildRequest request)
     {
         var arguments = request.Arguments;
         var context = request.Context;
@@ -112,25 +116,18 @@ internal static class InspectAssemblyResponseBuilder
         InspectAssemblyBuildRequest request)
     {
         var arguments = request.Arguments;
-        var lease = request.Lease;
-        if (lease is not null
-            && (arguments.MaxResponseBytes > 0 || arguments.DetailLevel is not null))
-        {
-            return payload;
-        }
-
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             arguments.MaxResponseBytes,
             arguments.DetailLevel,
-            configuredDefault: lease?.Context.ResponseBudgetBytes ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes);
+            configuredDefault: request.Lease?.Context.ResponseBudgetBytes ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes);
         return AssemblyAnalysisResponseLimits.ProjectResponseBudget(
             payload,
             arguments.PublicOnly,
-            lease is null
+            request.Lease is null
                 ? null
                 : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
                     McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
-                    lease,
+                    request.Lease,
                     budget),
             options: new(
                 budget,

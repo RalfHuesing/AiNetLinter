@@ -138,7 +138,7 @@ internal sealed record ViolationItemDto(
 );
 
 /// <summary>
-/// Vollstaendige strukturierte Payload fuer <c>get_feature_context</c> StructuredContent.
+/// Vollständiges fachliches Ergebnis für <c>get_feature_context</c>.
 /// </summary>
 internal sealed record FeatureContextPayload(
     SymbolDeclarationDto Declaration,

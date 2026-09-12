@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -17,7 +16,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.TestContext;
 public sealed partial class GetTestContextToolTests
 {
     [Fact]
-    public void StructuredStaticCandidateStatus_IsProjectedBySharedNavigation()
+    public void StaticCandidateStatus_IsRenderedInContent()
     {
         using var tempDir = TestTempDirectory.Create("test-context-navigation-");
         var solutionPath = tempDir.CreateFile("workspace.slnx", string.Empty);
@@ -28,12 +27,11 @@ public sealed partial class GetTestContextToolTests
             Completeness: "truncated", ReturnedTestFiles: 0, ReturnedTestMethods: 0,
             TruncatedBy: ["maxResults"], NextStep: "Abschnitt testContext: maxResults erhöhen.");
 
-        var result = McpToolResults.WithNavigation(McpToolResults.Text("statische Testkandidaten", payload), target);
-        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        var result = McpToolResults.WithNavigation(McpToolResults.Text(TestContextFormatter.FormatReport(payload)), target);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 
-        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
-        Assert.Contains("testContext", navigation.GetProperty("next").GetProperty("action").GetString(), StringComparison.Ordinal);
+        Assert.Contains("Status:** `truncated`", text, StringComparison.Ordinal);
+        Assert.Contains("Abschnitt testContext: maxResults erhöhen.", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -56,12 +54,9 @@ public sealed partial class GetTestContextToolTests
             CreateServer(solutionOwner.Solution), new TestContextOptions("Order"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var structured = JsonSerializer.Deserialize<TestContextPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-        Assert.False(structured.IsUntested);
-        var file = Assert.Single(structured.TestFiles);
-        Assert.Equal("Integration", file.Category);
-        Assert.Equal("tests/App.Domain.IntegrationTests", file.ProjectDirectory);
-        Assert.Contains(structured.RecommendedTestCommands, c => c.Contains("dotnet test tests/App.Domain.IntegrationTests --filter FullyQualifiedName~OrderIntegrationTests"));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("OrderIntegrationTests", text, StringComparison.Ordinal);
+        Assert.Contains("(Integration,", text, StringComparison.Ordinal);
+        Assert.Contains("tests/App.Domain.IntegrationTests", text, StringComparison.Ordinal);
     }
 }

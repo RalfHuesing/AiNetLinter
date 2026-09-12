@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -14,7 +13,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// Component-Tests fuer find_duplicates mode=structural:
-/// Mode-Dispatch, Argument-Validierung, Text- und Structured-Output,
+/// Mode-Dispatch, Argument-Validierung und fachlichen Text-Output,
 /// Rueckwaertskompatibilitaet der vorhandenen Modi.
 /// </summary>
 [Trait("Category", "Component")]
@@ -75,7 +74,7 @@ public sealed class DuplicateDetectionToolStructuralTests
     // ── Structural-Output ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ExecuteAsync_StructuralMode_StructuredContentIsJsonObjectNotArray()
+    public async Task ExecuteAsync_StructuralMode_ReportsStructuralCandidatesInContent()
     {
         using var context = CreateContext(
             ("A.cs", BuildMapper("A", "MapA", "a")),
@@ -85,12 +84,9 @@ public sealed class DuplicateDetectionToolStructuralTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, Mode: "structural"), CancellationToken.None);
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent.Value.GetProperty("clusters").ValueKind);
-        var summary = result.StructuredContent.Value.GetProperty("summary");
-        Assert.Equal(JsonValueKind.Object, summary.ValueKind);
-        Assert.Equal("structural", summary.GetProperty("mode").GetString());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("strukturell", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Kandidaten", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -104,9 +100,8 @@ public sealed class DuplicateDetectionToolStructuralTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, Mode: "structural"), CancellationToken.None);
 
-        var summary = result.StructuredContent!.Value.GetProperty("summary");
-        Assert.Equal("structural", summary.GetProperty("mode").GetString());
-        Assert.True(summary.GetProperty("methodsScanned").GetInt32() >= 0);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Methoden gescannt", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -120,14 +115,8 @@ public sealed class DuplicateDetectionToolStructuralTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(MinTokens: 1, null, null, null, null, Mode: "structural"), CancellationToken.None);
 
-        if (result.StructuredContent is null) return;
-        var clusters = result.StructuredContent.Value.GetProperty("clusters");
-        if (clusters.GetArrayLength() == 0) return;
-        var members = clusters[0].GetProperty("members");
-        Assert.True(members.GetArrayLength() > 0);
-        var firstMember = members[0];
-        Assert.True(firstMember.TryGetProperty("structureProfile", out var profile));
-        Assert.Equal(JsonValueKind.String, profile.ValueKind);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Profil:", text, StringComparison.Ordinal);
     }
 
     // ── Rueckwaertskompatibilitaet ───────────────────────────────────────────────────────────────
@@ -181,8 +170,7 @@ public sealed class DuplicateDetectionToolStructuralTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(MinTokens: 10000, null, null, null, null, Mode: "structural"), CancellationToken.None);
 
-        var summary = result.StructuredContent!.Value.GetProperty("summary");
-        Assert.Equal(0, summary.GetProperty("methodsScanned").GetInt32());
-        Assert.Equal(0, summary.GetProperty("totalClusters").GetInt32());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("0 Methoden gescannt", text, StringComparison.Ordinal);
     }
 }

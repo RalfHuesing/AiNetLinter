@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Text.Json;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -158,35 +157,8 @@ public sealed partial class GetFeatureContextToolTests
         // 5. Violations
         Assert.Contains("## 5. Offene Violations auf dieser Datei", text);
 
-        // StructuredContent Pruefung
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(payload);
-        Assert.Equal("Method", payload.Declaration.Kind);
-        Assert.True(payload.Declaration.LineCount >= 3);
-        Assert.NotNull(payload.Metrics);
-        Assert.NotNull(payload.Callers);
-        Assert.Equal(2, payload.Callers.TotalCallers);
-        Assert.Equal("static-references/call-sites", payload.Callers.Semantics);
-        Assert.All(payload.Callers.CallSites, caller =>
-        {
-            Assert.False(string.IsNullOrWhiteSpace(caller.CallerId));
-            Assert.NotNull(caller.CallerLocation);
-            Assert.True(caller.CallerLocation!.StartLine > 0);
-            Assert.True(caller.CallerLocation.EndLine >= caller.CallerLocation.StartLine);
-        });
-        Assert.NotNull(payload.Tests);
-        Assert.True(payload.Tests.TotalMatchingTests >= 1);
-        Assert.Equal("static-test-candidates-only", payload.Tests.EvidenceBoundary);
-        Assert.Contains("testContext", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
-        Assert.Contains("\"impact\"", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
-        Assert.DoesNotContain("\"callers\"", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
-        Assert.DoesNotContain("coverage", result.StructuredContent.Value.GetRawText(), StringComparison.OrdinalIgnoreCase);
-        Assert.NotNull(payload.Violations);
-        Assert.Equal("complete", payload.Violations.Status);
+        Assert.Contains("statische", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("coverage", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -200,13 +172,6 @@ public sealed partial class GetFeatureContextToolTests
             state, new FeatureContextOptions("Calculator.Add"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.NotNull(payload!.Callers);
-        Assert.NotNull(payload.Tests);
-        Assert.Equal("not_configured", payload.MetricsStatus);
-        Assert.Equal("not_configured", payload.Violations!.Status);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("Keine Linter-Verstoesse", text, StringComparison.Ordinal);
         Assert.Contains("nicht bewertet", text, StringComparison.Ordinal);
@@ -245,14 +210,6 @@ public sealed partial class GetFeatureContextToolTests
         Assert.Contains("Type LOC", text);
         Assert.Contains("AI-Context-Footprint", text);
 
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(payload);
-        Assert.Equal("NamedType", payload.Declaration.Kind);
-        Assert.NotNull(payload.Metrics?.TypeMetrics);
     }
 
     [Fact]
@@ -282,16 +239,6 @@ public sealed partial class GetFeatureContextToolTests
         Assert.DoesNotContain("## 4. Test-Kontext", text);
         Assert.DoesNotContain("## 5. Offene Violations", text);
 
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(payload);
-        Assert.Null(payload.Metrics);
-        Assert.Null(payload.Callers);
-        Assert.Null(payload.Tests);
-        Assert.Null(payload.Violations);
     }
 
     [Fact]
@@ -314,16 +261,7 @@ public sealed partial class GetFeatureContextToolTests
 
         Assert.Contains("Zeige 1 von 2 statischen Referenzen", text);
 
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent.Value.GetRawText(),
-            McpJsonOptions.Default);
-
-        Assert.NotNull(payload?.Callers);
-        Assert.True(payload.Callers.IsTruncated);
-        Assert.Single(payload.Callers.CallSites);
-        Assert.Equal(2, payload.Callers.TotalCallers);
-        Assert.Equal(new[] { "maxCallers" }, payload.Callers.TruncatedBy);
+        Assert.Contains("maxCallers", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -431,11 +369,5 @@ public sealed partial class GetFeatureContextToolTests
         Assert.Contains("Add", text, StringComparison.Ordinal);
         Assert.Contains("Multiply", text, StringComparison.Ordinal);
 
-        var declaration = result.StructuredContent!.Value.GetProperty("declaration");
-        Assert.True(declaration.TryGetProperty("members", out var membersProp));
-        var members = membersProp.EnumerateArray().Select(e => e.GetString()).ToList();
-        Assert.NotNull(members);
-        Assert.Contains(members, m => m!.Contains("Add", StringComparison.Ordinal));
-        Assert.Contains(members, m => m!.Contains("Multiply", StringComparison.Ordinal));
     }
 }

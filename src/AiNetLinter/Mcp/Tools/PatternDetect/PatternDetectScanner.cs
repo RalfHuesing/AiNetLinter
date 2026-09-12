@@ -245,7 +245,8 @@ internal static class PatternDetectScanner
 
         if (reports.All(report => report.Entry.Status == "empty"))
         {
-            return $"Pattern-Detect: 0 Treffer in {matchingFileCount} Dateien im angeforderten Scope.";
+            var selectedPatterns = string.Join(", ", reports.Select(report => report.Entry.Id));
+            return $"Pattern-Detect: 0 Treffer in {matchingFileCount} Dateien im angeforderten Scope. Gepruefte Patterns: {selectedPatterns}.";
         }
 
         var sb = new StringBuilder();

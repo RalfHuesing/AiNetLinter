@@ -25,13 +25,6 @@ internal sealed class ReadOnlyMcpHostClient
         string toolName, IReadOnlyDictionary<string, object?>? arguments = null) =>
         await (await host.Value.ConfigureAwait(false)).CallToolAsync(toolName, arguments).ConfigureAwait(false);
 
-    internal async Task<ModelContextProtocol.Protocol.CallToolResult> CallToolWithoutTargetAsync(
-        string toolName, IReadOnlyDictionary<string, object?>? arguments = null) =>
-        await (await host.Value.ConfigureAwait(false)).CallToolWithoutTargetAsync(toolName, arguments).ConfigureAwait(false);
-
-    internal async Task<string> GetTargetPathAsync() =>
-        (await host.Value.ConfigureAwait(false)).TargetPath;
-
     public async Task<string> CallToolGetTextAsync(
         string toolName, IReadOnlyDictionary<string, object?>? arguments = null) =>
         await (await host.Value.ConfigureAwait(false)).CallToolGetTextAsync(toolName, arguments).ConfigureAwait(false);

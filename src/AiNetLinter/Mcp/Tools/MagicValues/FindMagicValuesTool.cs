@@ -106,7 +106,7 @@ internal static class FindMagicValuesTool
             return McpToolResults.Text(result.Text);
         }
 
-        // StructuredContent als Objekt-Wrapper (NICHT das nackte Array) — siehe McpToolResults.Text<T>-Doc.
+        // Der Renderer erhält die fachlich geordneten Ergebnisse direkt.
         return McpToolResults.Text(
             result.Text,
             new

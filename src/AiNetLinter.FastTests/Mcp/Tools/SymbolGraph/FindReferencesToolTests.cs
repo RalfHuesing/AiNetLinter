@@ -44,18 +44,17 @@ public sealed partial class FindReferencesToolTests
             state,
             new FindReferencesRequest("App.Service.Run", 1, 1, McpScopeType.All, false),
             CancellationToken.None);
-        var allPayload = all.StructuredContent!.Value;
-        Assert.Equal(2, allPayload.GetProperty("completeness").GetProperty("totalCallSiteCount").GetInt32());
-        Assert.Equal("production", allPayload.GetProperty("callSites")[0].GetProperty("scopeType").GetString());
-        Assert.Equal("all", allPayload.GetProperty("scope").GetProperty("requestedType").GetString());
+        var allText = TextOf(all);
+        Assert.Contains("ProductionCaller.cs", allText, StringComparison.Ordinal);
+        Assert.Contains("1 gezeigt", allText, StringComparison.Ordinal);
 
         var tests = await FindReferencesTool.ExecuteAsync(
             state,
             new FindReferencesRequest("App.Service.Run", 1, 1, McpScopeType.Tests, false),
             CancellationToken.None);
-        var testsPayload = tests.StructuredContent!.Value;
-        Assert.Equal(1, testsPayload.GetProperty("completeness").GetProperty("totalCallSiteCount").GetInt32());
-        Assert.Equal("tests", testsPayload.GetProperty("callSites")[0].GetProperty("scopeType").GetString());
+        var testsText = TextOf(tests);
+        Assert.Contains("ServiceTests.cs", testsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProductionCaller.cs", testsText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -121,7 +120,7 @@ public sealed partial class FindReferencesToolTests
 
 
     [Fact]
-    public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsSelectableLocationsWithoutIds()
+    public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsSelectableLocationsWithContentHandoffIds()
     {
         using var context = new McpInMemoryTestContext();
         var identity = AnalysisSymbolIdentity.ForAssembly(
@@ -137,7 +136,7 @@ public sealed partial class FindReferencesToolTests
 
         Assert.Null(symbol);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
-        Assert.DoesNotContain("a:", text, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `a:", text, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.ContentHash, text, StringComparison.Ordinal);
         Assert.DoesNotContain($":{identity.Generation}:M:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);
@@ -265,46 +264,29 @@ public sealed partial class FindReferencesToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ValidQualifiedNameDepth1_StructuredContentDeserializesToCallSiteEntries()
+    public async Task ExecuteAsync_ValidQualifiedNameDepth1_RendersCallerAtFirstDepth()
     {
-        // Nur der depth=1-Flachfall bekommt StructuredContent (siehe Kommentar in
-        // FindReferencesTool.ExecuteAsync — depth>1 laesst CallGraphTraversal unveraendert).
         var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 1, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("callSites")
-            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
-        Assert.All(entries!, entry =>
-        {
-            Assert.Equal(1, entry.Depth);
-            Assert.NotEmpty(entry.ReachedFromSymbolId);
-        });
+        var text = TextOf(result);
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_Depth2_StructuredContentContainsCompleteness()
+    public async Task ExecuteAsync_Depth2_RendersCompletenessAndDepth()
     {
         var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 2, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var completeness = result.StructuredContent!.Value.GetProperty("completeness");
-        Assert.Equal(2, completeness.GetProperty("requestedDepth").GetInt32());
-        Assert.Equal(2, completeness.GetProperty("effectiveDepth").GetInt32());
-        Assert.False(completeness.GetProperty("truncatedByMaxResults").GetBoolean());
-        Assert.False(completeness.GetProperty("truncatedByNodeLimit").GetBoolean());
-        var entries = result.StructuredContent.Value.GetProperty("callSites")
-            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        Assert.NotEmpty(entries!);
-        Assert.All(entries!, entry => Assert.InRange(entry.Depth, 1, 2));
+        var text = TextOf(result);
+        Assert.Contains("Caller.cs", text, StringComparison.Ordinal);
+        Assert.Contains("transitiver Aufrufer", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TRUNCATED", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -382,41 +364,18 @@ public sealed partial class FindReferencesToolTests
                     }
                     """)
             ])));
-        var (symbolB, _) = await FindReferencesTool.ResolveSymbolAsync(
-            context.Solution, "ChainProbe.Runner.MethodB", CancellationToken.None);
-        Assert.NotNull(symbolB);
         using var state = context.CreateServer();
-        var discovery = await FindSymbolTool.ExecuteAsync(
-            state,
-            ["MethodB"],
-            kind: "method",
-            maxResults: 50,
-            CancellationToken.None);
-        var methodBHandoffId = discovery.StructuredContent!.Value
-            .GetProperty("results")[0]
-            .GetProperty("matches")[0]
-            .GetProperty("id")
-            .GetString();
-        Assert.StartsWith("s:", methodBHandoffId, StringComparison.Ordinal);
-
         var result = await FindReferencesTool.ExecuteAsync(
             state, "ChainProbe.Runner.MethodA", maxResults: 50, depth: 2, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("callSites")
-            .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        var level1 = entries!.Single(entry => entry.Depth == 1);
-        Assert.Equal("Runner.MethodA", level1.SymbolName);
-        Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
-        var level2 = entries!.Single(entry => entry.Depth == 2);
-        Assert.Equal("Runner.MethodB", level2.SymbolName);
-        Assert.Equal(methodBHandoffId, level2.ReachedFromSymbolId);
+        var text = TextOf(result);
+        Assert.Contains("Chain.cs", text, StringComparison.Ordinal);
+        Assert.Equal(2, text.Split("Chain.cs", StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
-    public async Task ExecuteAsync_Depth3_MultiProjectFixture_ReturnsStructuredEntriesWithOriginAndDepth()
+    public async Task ExecuteAsync_Depth3_MultiProjectFixture_RendersOriginAndDepth()
     {
         using var context = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
 
@@ -424,19 +383,9 @@ public sealed partial class FindReferencesToolTests
             context.CreateServer(), "Contracts.IProcessor.Execute", maxResults: 50, depth: 3, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<ReferenceTraversalResult>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(3, payload!.Completeness.EffectiveDepth);
-        Assert.NotEmpty(payload.CallSites);
-        Assert.Contains(payload.CallSites, entry => entry.Depth > 1);
-        Assert.All(payload.CallSites, entry =>
-        {
-            Assert.InRange(entry.Depth, 1, 3);
-            Assert.NotEmpty(entry.ReachedFromSymbolId);
-        });
-        Assert.Contains(payload.CallSites, entry => entry.ProjectName == "Application");
+        var text = TextOf(result);
+        Assert.Contains("Application", text, StringComparison.Ordinal);
+        Assert.Contains("transitiver Aufrufer", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -448,18 +397,13 @@ public sealed partial class FindReferencesToolTests
             state, "Greeter.Greet", maxResults: 1, depth: 2, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var completeness = result.StructuredContent!.Value.GetProperty("completeness");
-        Assert.True(completeness.GetProperty("truncatedByMaxResults").GetBoolean());
-        Assert.False(completeness.GetProperty("truncatedByNodeLimit").GetBoolean());
-        Assert.False(completeness.GetProperty("depthWasClamped").GetBoolean());
-        Assert.Equal(1, completeness.GetProperty("shownCallSiteCount").GetInt32());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("1 gezeigt", text, StringComparison.Ordinal);
+        Assert.Contains("maxResults", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_TransitiveStructuredContent_HasStableByteOrder()
+    public async Task ExecuteAsync_TransitiveContent_HasStableByteOrder()
     {
         var state = _fixture.CreateServer();
 
@@ -468,11 +412,7 @@ public sealed partial class FindReferencesToolTests
         var second = await FindReferencesTool.ExecuteAsync(
             state, "Greeter.Greet", maxResults: 50, depth: 3, CancellationToken.None);
 
-        Assert.NotNull(first.StructuredContent);
-        Assert.NotNull(second.StructuredContent);
-        Assert.Equal(
-            first.StructuredContent!.Value.GetRawText(),
-            second.StructuredContent!.Value.GetRawText());
+        Assert.Equal(TextOf(first), TextOf(second));
     }
 
     [Fact]
@@ -483,11 +423,12 @@ public sealed partial class FindReferencesToolTests
         var result = await FindReferencesTool.ExecuteAsync(state, "Greeter.Greet", maxResults: 50, depth: 100, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var completeness = result.StructuredContent!.Value.GetProperty("completeness");
-        Assert.Equal(100, completeness.GetProperty("requestedDepth").GetInt32());
-        Assert.Equal(3, completeness.GetProperty("effectiveDepth").GetInt32());
-        Assert.True(completeness.GetProperty("depthWasClamped").GetBoolean());
+        var text = TextOf(result);
+        Assert.Contains("depth auf 3 begrenzt", text, StringComparison.Ordinal);
+        Assert.Contains("requestedDepth=100", text, StringComparison.Ordinal);
     }
+
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 
 }

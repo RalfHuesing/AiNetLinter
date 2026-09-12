@@ -109,7 +109,7 @@ internal sealed record MagicValueCategorySummary(
 internal sealed record MagicValueNextAction(string Action, string Reason);
 
 /// <summary>Aggregat-Stats: <see cref="Total"/> zaehlt die Eintrags-Anzahl (ungekappt),
-/// <see cref="ShownOccurrences"/> die im StructuredContent sichtbaren (nach Trunkierung).
+/// <see cref="ShownOccurrences"/> die im Content sichtbaren (nach Trunkierung).
 /// Die ByCategory-Felder zaehlen jeweils auf der ungekappten Eintragsliste.</summary>
 internal sealed record MagicValuesSummary(
     int Total,
@@ -137,7 +137,7 @@ internal sealed record MagicValuesSummary(
 
 /// <summary>
 /// String-Repraesentation fuer <see cref="MagicValueValueType"/> (Tool-Argumente und
-/// <c>StructuredContent</c>).
+/// Content).
 /// </summary>
 internal static class MagicValueValueTypeExtensions
 {

@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
-// Ergebnis-Records fuer GetServerHealthTools StructuredContent. Pattern 1:1 von
+// Ergebnis-Records für GetServerHealthTools. Pattern 1:1 von
 // SafeguardModels.cs. Reine Datentraeger ohne eigenes Verhalten.
 
 /// <summary>
@@ -76,7 +76,7 @@ internal sealed record AssemblyHealthPublicEntry(
     string? NextAction = null);
 
 /// <summary>
-/// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
+/// Fachliche Payload für <c>get_server_health</c>: ein Eintrag je residentem
 /// Projekt-Key und optional die Laufzeitdaten des Daemons.
 /// </summary>
 internal sealed record ServerHealthAggregatePayload(

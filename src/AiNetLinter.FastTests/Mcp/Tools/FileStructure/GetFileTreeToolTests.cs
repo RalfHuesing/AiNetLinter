@@ -15,7 +15,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 public sealed class GetFileTreeToolTests
 {
     [Fact]
-    public async Task ExecuteAsync_ReturnsWrappedStructuredPayloadAndCompactText()
+    public async Task ExecuteAsync_ReportsMatchingFilesInContent()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-");
         var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
@@ -31,12 +31,6 @@ public sealed class GetFileTreeToolTests
         Assert.Contains("get_file_tree: root=. view=files", text, StringComparison.Ordinal);
         Assert.Contains("2 physische Dateien gescannt", text, StringComparison.Ordinal);
         Assert.Contains("README.md", text, StringComparison.Ordinal);
-        Assert.NotNull(result.StructuredContent);
-        var payload = result.StructuredContent!.Value.GetProperty("fileTree");
-        Assert.Equal("files", payload.GetProperty("view").GetString());
-        Assert.Equal(2, payload.GetProperty("summary").GetProperty("matchedFileCount").GetInt32());
-        Assert.Equal(2, payload.GetProperty("completeness").GetProperty("shownPhysicalFileCount").GetInt32());
-        Assert.False(payload.TryGetProperty("population", out _));
     }
 
     [Fact]

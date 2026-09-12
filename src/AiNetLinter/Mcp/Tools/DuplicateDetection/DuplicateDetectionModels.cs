@@ -30,7 +30,7 @@ internal sealed record DuplicateDetectionInput(
     string? ScopeType = null);
 
 /// <summary>Ein Cluster-Mitglied fuer die <c>find_duplicates</c>-Ausgabe (Text und
-/// StructuredContent gemeinsam) — 1:1-Projektion von
+/// agentischen Content gemeinsam) — 1:1-Projektion von
 /// <see cref="Core.DuplicateDetection.DuplicateClusterMember"/> auf solution-relative Pfade.</summary>
 internal sealed record DuplicateClusterEntry(
     string FilePath,
@@ -65,8 +65,7 @@ internal sealed record DuplicateDetectionSummary(
     int TruncatedBy = 0,
     string Next = "Kandidaten manuell pruefen; keine automatische Loeschentscheidung ableiten.");
 
-/// <summary>StructuredContent-Wurzel fuer <c>find_duplicates</c> — in ein benanntes Objekt
-/// gewrappt statt eines nackten Arrays (siehe <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar).
+/// <summary>Fachliche Wurzel für <c>find_duplicates</c>.
 /// </summary>
 internal sealed record DuplicateDetectionPayload(
     IReadOnlyList<DuplicateClusterPayloadEntry> Clusters,

@@ -96,21 +96,14 @@ public sealed class GetViolationsToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScopeFilterMatchesProjectName_StructuredContentDeserializesToRuleViolations()
+    public async Task ExecuteAsync_ScopeFilterMatchesProjectName_RendersRuleViolationsInContent()
     {
-        // Structured-Output-Mode: StructuredContent ergaenzt den Text additiv, ohne ihn zu
-        // aendern (siehe die unveraenderten Text-Assertions in den anderen Tests dieser Klasse).
         var state = _fixture.CreateServer(config: TestHelper.CreateDefaultConfig(), resolvedConfigPath: @"C:\ainetlinter-rules.json");
 
         var result = await GetViolationsTool.ExecuteAsync(state, "SymbolGraphMini", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var violations = result.StructuredContent!.Value.GetProperty("violations")
-            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
-        Assert.NotNull(violations);
-        Assert.NotEmpty(violations!);
-        Assert.Contains(violations!, v => v.RuleName is not null && v.FilePath.Contains("ViolationTrigger", StringComparison.Ordinal));
+        Assert.Contains("ViolationTrigger", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -121,8 +114,6 @@ public sealed class GetViolationsToolTests
         var result = await GetViolationsTool.ExecuteAsync(state, "DoesNotExistAnywhere", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal("empty", result.StructuredContent!.Value.GetProperty("completeness").GetString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Keine Dateien im Scope", textContent.Text, StringComparison.Ordinal);
     }
@@ -320,7 +311,7 @@ public sealed class GetViolationsToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_IncludeSnippetTrue_AppendsCodeSnippetToTextAndStructuredContent()
+    public async Task ExecuteAsync_IncludeSnippetTrue_AppendsCodeSnippetToContent()
     {
         var state = _fixture.CreateServer(config: TestHelper.CreateDefaultConfig(), resolvedConfigPath: @"C:\ainetlinter-rules.json");
 
@@ -331,11 +322,6 @@ public sealed class GetViolationsToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("```csharp", textContent.Text, StringComparison.Ordinal);
 
-        var violations = result.StructuredContent!.Value.GetProperty("violations")
-            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
-        Assert.NotNull(violations);
-        Assert.NotEmpty(violations!);
-        Assert.All(violations!, v => Assert.NotNull(v.Snippet));
     }
 
     [Fact]
@@ -347,11 +333,8 @@ public sealed class GetViolationsToolTests
             state, new GetViolationsToolExecutionOptions(ScopeFilter: "SymbolGraphMini", ContextLines: 2, IncludeSnippet: true), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var violations = result.StructuredContent!.Value.GetProperty("violations")
-            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
-        Assert.NotNull(violations);
-        var first = violations!.First(v => !string.IsNullOrEmpty(v.Snippet));
-        Assert.Contains("\n", first.Snippet);
+        Assert.Contains("```csharp", TextOf(result), StringComparison.Ordinal);
+        Assert.Contains("\n", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -366,10 +349,6 @@ public sealed class GetViolationsToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.DoesNotContain("```csharp", textContent.Text, StringComparison.Ordinal);
 
-        var violations = result.StructuredContent!.Value.GetProperty("violations")
-            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
-        Assert.NotNull(violations);
-        Assert.All(violations!, v => Assert.Null(v.Snippet));
     }
 
     [Fact]
@@ -381,14 +360,7 @@ public sealed class GetViolationsToolTests
             state, new GetViolationsToolExecutionOptions(RuleId: "NonExistingRuleXyz"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal("complete", result.StructuredContent!.Value.GetProperty("completeness").GetString());
-        Assert.Equal(0, result.StructuredContent!.Value.GetProperty("totalViolations").GetInt32());
-        Assert.False(result.StructuredContent!.Value.GetProperty("isTruncated").GetBoolean());
-        var violations = result.StructuredContent!.Value.GetProperty("violations")
-            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
-        Assert.NotNull(violations);
-        Assert.Empty(violations!);
+        Assert.Contains("0 Verstoesse", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -407,4 +379,7 @@ public sealed class GetViolationsToolTests
         Assert.Single(filtered);
         Assert.Equal("Rule2", filtered[0].RuleName);
     }
+
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

@@ -362,26 +362,8 @@ internal static class FindImplementationsTool
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (result.StructuredContent is not { } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } content) return result;
-        var payload = JsonSerializer.Deserialize<FindImplementationsResultDto>(structured.GetRawText(), McpJsonOptions.Default);
-        if (payload is null) return result;
-        var originalText = FormatResultText(payload);
-        var projected = ApplyResponseBudget(payload, maxResponseBytes);
-        if (projected.IsError == true || projected.StructuredContent is not { } projectedStructured) return projected;
-        var root = JsonNode.Parse(projectedStructured.GetRawText())!.AsObject();
-        var oldRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
-        if (oldRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
-        var projectedText = projected.Content.OfType<TextContentBlock>().First().Text;
-        var suffix = content.Text.StartsWith(originalText, StringComparison.Ordinal)
-            ? content.Text[originalText.Length..] : string.Empty;
-        var finalResult = new CallToolResult
-        {
-            Content = [new TextContentBlock { Text = projectedText + suffix }],
-            StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
-        };
-        return Mcp.Wire.McpResponseSize.From(finalResult).TotalBytes <= maxResponseBytes
-            ? finalResult
+        return Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes
+            ? result
             : BudgetTooSmall(maxResponseBytes);
     }
 

@@ -2,7 +2,6 @@
 
 using System;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -59,7 +58,7 @@ public sealed class FindMagicValuesToolContractTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ClampAndDefaultArguments_ReturnStructuredPayload()
+    public async Task ExecuteAsync_ClampAndDefaultArguments_ReturnContentReport()
     {
         using var context = new McpInMemoryTestContext();
         using var state = context.CreateServer();
@@ -74,12 +73,12 @@ public sealed class FindMagicValuesToolContractTests
         {
             var result = await FindMagicValuesTool.ExecuteAsync(state, args, CancellationToken.None);
             Assert.NotEqual(true, result.IsError);
-            Assert.Equal(JsonValueKind.Object, PayloadOf(result).ValueKind);
+            Assert.NotEmpty(TextOf(result));
         }
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScopeFilterNoMatch_ReturnsStructuredNotDecidableWithoutError()
+    public async Task ExecuteAsync_ScopeFilterNoMatch_ReturnsContentNotDecidableWithoutError()
     {
         using var context = new McpInMemoryTestContext();
         using var state = context.CreateServer();
@@ -88,11 +87,9 @@ public sealed class FindMagicValuesToolContractTests
             state, DefaultArgs() with { ScopeFilter = "DoesNotExistAnywhere_zzz" }, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = PayloadOf(result);
-        Assert.Equal("not_decidable", payload.GetProperty("summary").GetProperty("status").GetString());
-        Assert.Equal(0, payload.GetProperty("summary").GetProperty("filesInScope").GetInt32());
-        Assert.Equal(7, payload.GetProperty("categories").GetArrayLength());
-        Assert.Contains("Keine Dateien im Scope", TextOf(result), StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("Keine Dateien im Scope", text, StringComparison.Ordinal);
+        Assert.Contains("not_decidable", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -113,12 +110,6 @@ public sealed class FindMagicValuesToolContractTests
 
     private static FindMagicValuesToolArgs DefaultArgs() => new(
         null, "all", "all", 1, FindMagicValuesScanner.DefaultMaxResults, null, false, false, false);
-
-    private static JsonElement PayloadOf(CallToolResult result)
-    {
-        Assert.NotNull(result.StructuredContent);
-        return result.StructuredContent!.Value;
-    }
 
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

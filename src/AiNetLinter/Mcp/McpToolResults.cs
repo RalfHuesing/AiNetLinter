@@ -3,8 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text;
 using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Registration;
@@ -29,6 +27,8 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static partial class McpToolResults
 {
+    private static readonly AgentContentRenderer ContentRenderer = new();
+
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
 
@@ -133,22 +133,15 @@ internal static partial class McpToolResults
         {
             text += $"\n  fieldPath: {parameters.FieldPath}";
         }
+        if (parameters.MinimumResponseBytes is { } minimumResponseBytes)
+        {
+            text += $"\n  minimumResponseBytes: {minimumResponseBytes}";
+            text += $"\n  retry: denselben Aufruf mit maxResponseBytes={minimumResponseBytes} wiederholen.";
+        }
         return new CallToolResult
         {
             IsError = isError,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(
-                new McpErrorPayload(
-                    code,
-                    safeMessage,
-                    safeContext,
-                    safeHint,
-                Recoverable: !isError,
-                parameters.TargetPath,
-                parameters.FieldPath,
-                parameters.RequestedBytes,
-                parameters.MinimumResponseBytes),
-                McpJsonOptions.Default),
+            Content = CreateTextContent(text),
         };
     }
 
@@ -276,45 +269,35 @@ internal static partial class McpToolResults
     {
         return new CallToolResult
         {
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+            Content = CreateTextContent(text),
         };
     }
 
-    /// <summary>
-    /// Wie <see cref="Text(string)"/>, ergaenzt zusaetzlich <see cref="CallToolResult.StructuredContent"/>
-    /// (MCP-Protokoll-Feature) — additiv, ohne den Text-Vertrag zu aendern (Structured-Output-Mode).
-    /// <paramref name="payload"/> wird ueber <see cref="McpJsonOptions.Default"/> serialisiert, damit
-    /// alle Tools dieselben CamelCase-/Kompakt-Optionen teilen (Pattern mit
-    /// <see cref="Tools.SafeguardTool"/>).
-    /// Clients, die nur Text konsumieren, ignorieren das zusaetzliche Feld einfach.
-    /// WICHTIG: <paramref name="payload"/> muss zu einem JSON-Objekt serialisieren, niemals zu
-    /// einem Top-Level-Array/einer nackten Liste — das MCP-Protokoll verlangt
-    /// <c>structuredContent</c> als Objekt, reale Clients lehnen den kompletten Tool-Call
-    /// schema-seitig ab, wenn ein Array ankommt. Eine Liste immer in ein benanntes Objekt wrappen,
-    /// z. B. <c>new { Violations = list }</c> statt <c>list</c> direkt zu uebergeben.
-    /// </summary>
+    /// <summary>Kompatibler Aufruf fuer bestehende typisierte Tool-Payloads; nur der Text ist öffentlich.</summary>
     internal static CallToolResult Text<T>(string text, T payload)
     {
         return new CallToolResult
         {
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+            Content = CreateTextContent(text),
         };
     }
 
     internal static CallToolResult ReplaceText(CallToolResult result, string text) => new()
     {
         IsError = result.IsError,
-        Content = result.Content.Select(block => block is TextContentBlock
-            ? new TextContentBlock { Text = text }
-            : block).ToList(),
-        StructuredContent = result.StructuredContent,
+        Content = CreateTextContent(text),
     };
 
+    private static List<ContentBlock> CreateTextContent(string text)
+    {
+        var rendered = ContentRenderer.Render(new AgentContentRenderRequest(
+            IsError: false,
+            Evidence: [new AgentContentEvidence(text, IsRequired: true)]));
+        return [new TextContentBlock { Text = rendered.Text }];
+    }
+
     /// <summary>
-    /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern. Die vorhandene
-    /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; der
-    /// normalisierte Envelope wird atomar unter <c>navigation</c> geschrieben.
+    /// Ergaenzt eine zielgebundene Antwort um einen kompakten Navigationshinweis im Text.
     /// </summary>
     internal static CallToolResult WithNavigation(
         CallToolResult result,
@@ -328,7 +311,7 @@ internal static partial class McpToolResults
         if (postNavigationResponseBudget is null || maxResponseBytes <= 0) return navigated;
 
         var budgeted = postNavigationResponseBudget(navigated, maxResponseBytes);
-        return HasErrorCode(budgeted) ? ProjectNavigation(budgeted, target) : budgeted;
+        return budgeted.IsError == true ? ProjectNavigation(budgeted, target) : budgeted;
     }
 
     internal static CallToolResult WithNavigation(
@@ -345,68 +328,14 @@ internal static partial class McpToolResults
         string? targetPath = null)
     {
         var navigation = McpNavigationProjection.Create(result, target, targetPath);
-        var payload = CreateNavigationPayload(result.StructuredContent);
-        if (navigation.Status.Operation == "error") payload["recoverable"] = false;
-        MergeNavigation(payload, CreateNavigationNode(navigation));
-        var navigationText = McpNavigationText.Format(navigation, result.StructuredContent);
+        var navigationText = McpNavigationText.Format(navigation);
         return new CallToolResult
         {
             IsError = navigation.Status.Operation == "error",
             Content = AppendNavigationText(result.Content, navigationText),
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
     }
 
-    private static bool HasErrorCode(CallToolResult result) =>
-        result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
-        && structured.TryGetProperty("code", out var code)
-        && code.ValueKind == JsonValueKind.String
-        && !string.IsNullOrWhiteSpace(code.GetString());
-
-    private static JsonObject CreateNavigationPayload(JsonElement? structured) =>
-        structured is { ValueKind: JsonValueKind.Object } value
-            ? JsonNode.Parse(value.GetRawText()) as JsonObject ?? new JsonObject()
-            : new JsonObject();
-
-    private static JsonObject CreateNavigationNode(McpNavigationPayload navigation)
-    {
-        var navigationNode = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default) as JsonObject
-            ?? new JsonObject();
-        // McpJsonOptions omits nulls globally. The contract keeps code and next explicit so
-        // consumers never need to infer a missing status field.
-        if (navigationNode["status"] is JsonObject statusNode && !statusNode.ContainsKey("code"))
-        {
-            statusNode["code"] = null;
-        }
-
-        if (!navigationNode.ContainsKey("next"))
-        {
-            navigationNode["next"] = null;
-        }
-        return navigationNode;
-    }
-
-    private static void MergeNavigation(JsonObject payload, JsonObject navigationNode)
-    {
-        if (payload["navigation"] is JsonObject toolNavigation)
-        {
-            foreach (var property in toolNavigation)
-            {
-                if (!navigationNode.ContainsKey(property.Key))
-                {
-                    navigationNode[property.Key] = property.Value?.DeepClone();
-                }
-            }
-
-            if (toolNavigation["completeness"] is JsonValue completeness
-                && navigationNode["status"] is JsonObject status
-                && !string.Equals(status["completeness"]?.GetValue<string>(), "truncated", StringComparison.Ordinal))
-            {
-                status["completeness"] = completeness.DeepClone();
-            }
-        }
-        payload["navigation"] = navigationNode;
-    }
 
     /// <summary>
     /// Kurzform fuer eine echte Malfunction: ein unerwarteter Roslyn-/Laufzeit-Fehler wurde in
@@ -452,41 +381,15 @@ internal static partial class McpToolResults
         return new CallToolResult
         {
             IsError = false,
-            Content = new List<ContentBlock>
-            {
-                new TextContentBlock
-                {
-                    Text = "[INFO]: Server laedt die Solution noch. " +
-                           "Bitte in wenigen Sekunden erneut versuchen.",
-                },
-            },
+            Content = CreateTextContent(
+                "[INFO]: Server laedt die Solution noch. Bitte in wenigen Sekunden erneut versuchen."),
         };
     }
 }
 
-internal readonly record struct McpErrorParameters(
-    string? Context = null,
-    string? Hint = null,
-    string? TargetPath = null,
-    string? FieldPath = null,
-    int? RequestedBytes = null,
-    int? MinimumResponseBytes = null);
+internal readonly record struct McpErrorParameters(string? Context = null, string? Hint = null, string? TargetPath = null, string? FieldPath = null, int? RequestedBytes = null, int? MinimumResponseBytes = null);
 
-/// <summary>
-/// Typisierter Fehlervertrag fuer MCP-Antworten. Die Payload wird fuer harte und recoverable
-/// Fehler identisch serialisiert; nur <see cref="CallToolResult.IsError"/> folgt weiterhin der
-/// bestehenden IsError-Policy.
-/// </summary>
-internal sealed record McpErrorPayload(
-    string Code,
-    string Message,
-    string? Context,
-    string? Hint,
-    bool Recoverable,
-    string? TargetPath = null,
-    string? FieldPath = null,
-    int? RequestedBytes = null,
-    int? MinimumResponseBytes = null);
+internal sealed record McpErrorPayload(string Code, string Message, string? Context, string? Hint, bool Recoverable, string? TargetPath = null, string? FieldPath = null, int? RequestedBytes = null, int? MinimumResponseBytes = null);
 
 internal static class McpHandoffErrorCodes
 {

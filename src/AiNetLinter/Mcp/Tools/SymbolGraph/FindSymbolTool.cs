@@ -245,7 +245,7 @@ internal static class FindSymbolTool
     /// <see cref="SymbolLocationEntry"/> je Quell-Fundstelle von <paramref name="symbol"/>.
     /// Einzige Quelle der Wahrheit fuer beide Formen (Text via <see cref="FormatEntry"/>,
     /// JSON via <see cref="FindSymbolScanner.FindMatchesWithEntriesAsync"/>s
-    /// <c>StructuredContent</c>), damit Text und JSON nie auseinanderdriften.
+    /// den gerenderten Text), damit Auswahl und Darstellung nie auseinanderdriften.
     /// </summary>
     internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(
         ISymbol symbol,
@@ -375,13 +375,21 @@ internal static class FindSymbolTool
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}";
+        var additionalLocations = entry.Locations?
+            .Skip(1)
+            .Select(location => $"{location.FilePath}:{location.Line}")
+            .ToList();
+        var locations = additionalLocations is { Count: > 0 }
+            ? $"; weitere Deklarationen: {string.Join(", ", additionalLocations)}"
+            : string.Empty;
+        var handoff = string.IsNullOrWhiteSpace(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{locations}{handoff}";
     }
 
 }
 
 /// <summary>
-/// StructuredContent-Hülle für <c>find_symbol</c> — enthält die Ergebnisliste aller angefragten Namens-Muster.
+/// Interne Hülle für <c>find_symbol</c> — enthält die Ergebnisliste aller angefragten Namens-Muster.
 /// </summary>
 internal sealed record FindSymbolBatchDto(
     IReadOnlyList<FindSymbolPatternResultDto> Results,
@@ -415,7 +423,7 @@ internal sealed record SymbolSourceLocation(
     string? Project = null);
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>find_symbol</c>. Ein Symbol mit mehreren Deklarationen
+/// Ergebnis-Eintrag für <c>find_symbol</c>. Ein Symbol mit mehreren Deklarationen
 /// (z. B. <c>partial class</c>) bleibt ein Eintrag; <see cref="Locations"/> enthaelt alle
 /// sichtbaren, klassifizierten Fundstellen.
 /// </summary>

@@ -17,7 +17,8 @@ public sealed class GetServerHealthValidationTests
 
         Assert.NotNull(result);
         Assert.False(result!.IsError);
-        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal("$.maxDiagnostics", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.maxDiagnostics", text, StringComparison.Ordinal);
     }
 }

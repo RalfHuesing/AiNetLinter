@@ -2,8 +2,6 @@
 
 using System;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -76,14 +74,6 @@ internal static partial class AssemblyAnalysisResponse
             origin.BodyAvailability,
             origin.ContentMode);
 
-        JsonElement? structured = result.StructuredContent;
-        if (structured is { ValueKind: JsonValueKind.Object })
-        {
-            var node = JsonNode.Parse(structured.Value.GetRawText()) as JsonObject ?? new JsonObject();
-            node["analysis"] = JsonSerializer.SerializeToNode(metadata, McpJsonOptions.Default);
-            structured = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
-        }
-
         var content = result.Content
             .Select(block => block is TextContentBlock text
                 ? new TextContentBlock
@@ -97,7 +87,6 @@ internal static partial class AssemblyAnalysisResponse
         {
             IsError = result.IsError,
             Content = content,
-            StructuredContent = structured,
         };
     }
 
@@ -118,7 +107,6 @@ internal static partial class AssemblyAnalysisResponse
                 Text = "[ASSEMBLY] capability=unsupported; status=unsupported; " +
                        "origin=assembly-target\n\n" + result.Content.OfType<TextContentBlock>().Single().Text,
             }],
-            StructuredContent = result.StructuredContent,
         };
     }
 

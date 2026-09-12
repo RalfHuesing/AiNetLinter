@@ -19,6 +19,9 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 [Trait("Category", "Unit")]
 public sealed class SymbolIdentifierResolverTests
 {
+    private static string TextOf(ModelContextProtocol.Protocol.CallToolResult result) =>
+        Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+
     [Fact]
     public async Task TryResolveByStableIdAsync_CurrentAssemblyIdentityResolvesWrappedId()
     {
@@ -166,9 +169,7 @@ public sealed class SymbolIdentifierResolverTests
 
         Assert.Null(resolved);
         Assert.NotNull(error);
-        Assert.Equal(
-            "AMBIGUOUS_SYMBOL",
-            error!.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("AMBIGUOUS_SYMBOL", TextOf(error!), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -188,9 +189,7 @@ public sealed class SymbolIdentifierResolverTests
 
         Assert.Null(resolved);
         Assert.NotNull(error);
-        Assert.Equal(
-            "SYMBOL_NOT_FOUND",
-            error!.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("SYMBOL_NOT_FOUND", TextOf(error!), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -237,12 +236,8 @@ public sealed class SymbolIdentifierResolverTests
             current);
 
         Assert.NotNull(error);
-        Assert.Equal(
-            "INVALID_ARGUMENT",
-            error!.StructuredContent!.Value.GetProperty("code").GetString());
-        Assert.Equal(
-            "$.symbolIdentifier",
-            error.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("INVALID_ARGUMENT", TextOf(error!), StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.symbolIdentifier", TextOf(error!), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -265,9 +260,7 @@ public sealed class SymbolIdentifierResolverTests
             current);
 
         Assert.NotNull(error);
-        Assert.Equal(
-            "INVALID_ARGUMENT",
-            error!.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("INVALID_ARGUMENT", TextOf(error!), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -298,9 +291,7 @@ public sealed class SymbolIdentifierResolverTests
 
         Assert.Null(resolved);
         Assert.NotNull(error);
-        Assert.Equal(
-            "INVALID_ARGUMENT",
-            error!.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("INVALID_ARGUMENT", TextOf(error!), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -125,7 +125,6 @@ internal static class GetNamespaceTreeTool
         {
             IsError = result.IsError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = result.StructuredContent,
         };
     }
 
@@ -139,7 +138,11 @@ internal static class GetNamespaceTreeTool
             EffectiveDepth = effectiveDepth,
             DepthWasClamped = input.Depth != effectiveDepth,
         };
-        return ApplyResponseBudget(overviewText, overviewPayload, input.MaxResponseBytes, input.DeferResponseBudgetToNavigation);
+        return ApplyResponseBudget(
+            AppendDepthEvidence(overviewText, input.Depth, effectiveDepth),
+            overviewPayload,
+            input.MaxResponseBytes,
+            input.DeferResponseBudgetToNavigation);
     }
 
     private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(
@@ -275,7 +278,7 @@ internal static class GetNamespaceTreeTool
             EffectiveDepth = clampedDepth,
             DepthWasClamped = input.Depth != clampedDepth,
         };
-        var finalText = treeText;
+        var finalText = AppendDepthEvidence(treeText, input.Depth, clampedDepth);
         return ApplyResponseBudget(finalText, treePayload, input.MaxResponseBytes, input.DeferResponseBudgetToNavigation);
     }
 
@@ -290,4 +293,10 @@ internal static class GetNamespaceTreeTool
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes) =>
         GetNamespaceTreeResponseBudget.ApplyFinal(result, maxResponseBytes);
+
+    private static string AppendDepthEvidence(string text, int requestedDepth, int effectiveDepth)
+    {
+        var clamped = requestedDepth == effectiveDepth ? string.Empty : " (gekappt)";
+        return $"{text.TrimEnd()}\n\nTiefe: angefragt {requestedDepth}, effektiv {effectiveDepth}{clamped}";
+    }
 }

@@ -1,13 +1,10 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
-using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.FastTests.Fixtures;
@@ -49,21 +46,16 @@ public sealed class GetHotspotsToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SmallMaxLineCount_StructuredContentDeserializesToHotspotEntries()
+    public async Task ExecuteAsync_SmallMaxLineCount_ReportsCriticalCategoryInContent()
     {
-        // StructuredContent ergaenzt den Text additiv — Category spiegelt dieselbe
-        // Schwellwert-Klassifizierung wie die Text-Sektion "Kritische Dateien".
         var state = _fixture.CreateServer(1);
 
         var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("hotspots")
-            .Deserialize<List<HotspotEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        var greeter = entries!.Single(e => e.RelativePath.Contains("Greeter.cs", StringComparison.Ordinal));
-        Assert.Equal("critical", greeter.Category);
+        var text = TextOf(result);
+        Assert.Contains("Kritische Dateien", text, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -89,12 +81,7 @@ public sealed class GetHotspotsToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("im gruenen Bereich", textContent.Text, StringComparison.Ordinal);
-        // StructuredContent enthält nur critical/warning-Dateien und bleibt für grüne Solutions leer.
-        Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("hotspots")
-            .Deserialize<List<HotspotEntry>>(McpJsonOptions.Default);
-        Assert.NotNull(entries);
-        Assert.Empty(entries!);
+        Assert.Contains("Keine Datei erreicht", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -138,11 +125,10 @@ public sealed class GetHotspotsToolTests
                 ScopeType: null,
                 CancellationToken: CancellationToken.None));
 
-        var payload = DeserializePayload(result);
-        Assert.Single(payload.Hotspots);
-        Assert.Contains("Service.cs", payload.Hotspots.Single().RelativePath, StringComparison.Ordinal);
-        Assert.Equal("production", payload.ScopeType);
-        Assert.Contains("Gescannt: 1 .cs-Dateien", TextOf(result), StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("Service.cs", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("ServiceTests.cs", text, StringComparison.Ordinal);
+        Assert.Contains("Gescannt: 1 .cs-Dateien", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -162,11 +148,10 @@ public sealed class GetHotspotsToolTests
                 ScopeType: "tests",
                 CancellationToken: CancellationToken.None));
 
-        var payload = DeserializePayload(result);
-        Assert.Single(payload.Hotspots);
-        Assert.Contains("ServiceTests.cs", payload.Hotspots.Single().RelativePath, StringComparison.Ordinal);
-        Assert.Equal("tests", payload.ScopeType);
-        Assert.Contains("Gescannt: 1 .cs-Dateien", TextOf(result), StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("ServiceTests.cs", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Service.cs", text, StringComparison.Ordinal);
+        Assert.Contains("Gescannt: 1 .cs-Dateien", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -198,19 +183,9 @@ public sealed class GetHotspotsToolTests
             minLinePercentage: 0,
             CancellationToken.None);
 
-        var payload = DeserializePayload(result);
-        Assert.Equal(6, payload.TotalHotspots);
-        Assert.Equal(1, payload.ShownHotspots);
-        Assert.True(payload.Truncated);
-        Assert.Single(payload.Hotspots);
-        Assert.Equal(1, payload.MaxResults);
-        Assert.Equal(0, payload.MinLinePercentage);
-        Assert.Contains("Hotspots gesamt, 1 gezeigt", TextOf(result), StringComparison.Ordinal);
-        Assert.Equal(
-            payload.Hotspots
-                .OrderByDescending(entry => entry.Lines)
-                .ThenBy(entry => entry.RelativePath, StringComparer.OrdinalIgnoreCase),
-            payload.Hotspots);
+        var text = TextOf(result);
+        Assert.Contains("Hotspots gesamt, 1 gezeigt", text, StringComparison.Ordinal);
+        Assert.Contains("maxResults", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -225,11 +200,9 @@ public sealed class GetHotspotsToolTests
             minLinePercentage: -10,
             CancellationToken.None);
 
-        var payload = DeserializePayload(result);
-        Assert.Equal(GetHotspotsScanner.DefaultMaxResults, payload.MaxResults);
-        Assert.Equal(GetHotspotsScanner.MinLinePercentage, payload.MinLinePercentage);
-        Assert.Equal(payload.TotalHotspots, payload.ShownHotspots);
-        Assert.False(payload.Truncated);
+        var text = TextOf(result);
+        Assert.Contains("MaxLineCount: 1", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxResults erhöhen", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -256,14 +229,6 @@ public sealed class GetHotspotsToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
-    }
-
-    private static HotspotsPayload DeserializePayload(CallToolResult result)
-    {
-        Assert.NotNull(result.StructuredContent);
-        return JsonSerializer.Deserialize<HotspotsPayload>(
-            result.StructuredContent!.Value.GetRawText(),
-            McpJsonOptions.Default)!;
     }
 
     private static string TextOf(CallToolResult result) =>

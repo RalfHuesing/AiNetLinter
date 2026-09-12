@@ -9,6 +9,16 @@ namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 internal static class InspectAssemblyTool
 {
+    internal static InspectAssemblyPayload BuildPayload(
+        AssemblyAnalysisLease lease,
+        InspectAssemblyArguments arguments) =>
+        InspectAssemblyResponseBuilder.BuildPayload(new InspectAssemblyBuildRequest(
+            lease.CanonicalPath,
+            lease.Context,
+            arguments,
+            AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
+            lease));
+
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         InspectAssemblyArguments arguments) =>

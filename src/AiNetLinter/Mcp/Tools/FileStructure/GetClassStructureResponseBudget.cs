@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Mcp.Wire;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -15,19 +16,11 @@ internal static class GetClassStructureResponseBudget
 {
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (!TryReadBudgetParts(result, maxResponseBytes, out var parts)) return result;
-
-        var candidate = TrimToBudget(parts, maxResponseBytes);
-        var finalEnvelope = ProjectEnvelope(parts.Envelope, candidate);
-        var finalText = RenderBudgetText(candidate, parts.Text, finalEnvelope);
-        if (CombinedResponseBytes(finalText, finalEnvelope) > maxResponseBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
-                "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
-                "$.maxResponseBytes");
-        }
-        return CreateBudgetedResult(result, finalText, finalEnvelope);
+        if (maxResponseBytes <= 0 || McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        return McpToolResults.InvalidArgument(
+            "maxResponseBytes ist zu klein für die fachliche Klassenstruktur-Antwort.",
+            "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
+            "$.maxResponseBytes");
     }
 
     private static bool TryReadBudgetParts(
@@ -36,28 +29,7 @@ internal static class GetClassStructureResponseBudget
         out BudgetParts parts)
     {
         parts = default;
-        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || maxResponseBytes <= 0)
-        {
-            return false;
-        }
-
-        ClassStructurePayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<ClassStructurePayload>(
-                structured.GetRawText(), McpJsonOptions.Default);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-
-        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-        var envelope = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        if (payload?.Members is null || payload.Files is null || text is null || envelope is null) return false;
-        parts = new BudgetParts(payload, text, envelope);
-        return true;
+        return false;
     }
 
     private static ClassStructurePayload TrimToBudget(BudgetParts parts, int maxResponseBytes)
@@ -91,7 +63,6 @@ internal static class GetClassStructureResponseBudget
         {
             IsError = original.IsError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(envelope, McpJsonOptions.Default),
         };
 
     private static JsonObject ProjectEnvelope(JsonObject original, ClassStructurePayload payload)

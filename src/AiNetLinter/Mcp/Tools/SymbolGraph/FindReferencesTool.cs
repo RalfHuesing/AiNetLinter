@@ -28,7 +28,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// gemeinsamen strukturierten Traversal-Result-Typ. Deckt nur .cs-Dateien ab
 /// (Roslyn-Symbolgraph). Optionaler <c>depth</c>-Parameter (Default 1, hard cap 3) loest
 /// transitive Aufrufstellen ueber <see cref="CallGraphTraversal"/> auf; Text und
-/// <c>structuredContent</c> werden aus derselben aggregierten Trefferliste erzeugt.
+/// der gerenderte Text wird aus derselben aggregierten Trefferliste erzeugt.
 /// </summary>
 internal static partial class FindReferencesTool
 {
@@ -148,43 +148,8 @@ internal static partial class FindReferencesTool
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (result.StructuredContent is not { } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } content) return result;
-        // The shared route invokes this after adding navigation to every response,
-        // including recoverable error payloads.  Only an actual reference payload
-        // is eligible for projection; otherwise deserializing the error object
-        // creates a structurally incomplete record and turns INVALID_ARGUMENT into
-        // a generic tool failure.
-        if (!structured.TryGetProperty("callSites", out _)
-            || !structured.TryGetProperty("completeness", out _)) return result;
-        var payload = JsonSerializer.Deserialize<FindReferencesResultPayload>(structured.GetRawText(), McpJsonOptions.Default);
-        if (payload is null) return result;
-        var original = TransitiveCallGraphFormatter.FormatPayload(payload);
-        var current = payload;
-        var formatted = original;
-        while (CombinedBytes(formatted) > maxResponseBytes && current.CallSites.Count > 0)
-        {
-            var sites = current.CallSites.Take(current.CallSites.Count - 1).ToList();
-            current = current with
-            {
-                CallSites = sites,
-                Completeness = current.Completeness with { ShownCallSiteCount = sites.Count, TruncatedByResponseBudget = true },
-            };
-            formatted = TransitiveCallGraphFormatter.FormatPayload(current);
-        }
-        var root = JsonNode.Parse(JsonSerializer.Serialize(current, McpJsonOptions.Default))!.AsObject();
-        var oldRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
-        if (oldRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
-        var suffix = content.Text.StartsWith(original.Text, System.StringComparison.Ordinal)
-            ? content.Text[original.Text.Length..] : string.Empty;
-        var projected = new CallToolResult
-        {
-            Content = [new TextContentBlock { Text = formatted.Text + suffix }],
-            StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
-        };
-        return Mcp.Wire.McpResponseSize.From(projected).TotalBytes <= maxResponseBytes
-            ? projected
-            : BudgetTooSmall(maxResponseBytes);
+        if (Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        return BudgetTooSmall(maxResponseBytes);
     }
 
     /// <summary>

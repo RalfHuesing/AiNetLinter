@@ -31,7 +31,7 @@ public sealed class FindSymbolValidationToolTests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("namePatterns", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("pattern", textContent.Text, StringComparison.Ordinal);
-        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -48,6 +48,7 @@ public sealed class FindSymbolValidationToolTests
                 Pattern: " "));
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Equal("$.pattern", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("fieldPath: $.pattern", textContent.Text, StringComparison.Ordinal);
     }
 }

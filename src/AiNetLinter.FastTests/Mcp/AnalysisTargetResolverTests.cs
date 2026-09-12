@@ -44,7 +44,7 @@ public sealed class AnalysisTargetResolverTests
         Assert.Null(result.Target);
         Assert.Contains("INVALID_ARGUMENT", TextOf(result.Error!), StringComparison.Ordinal);
         Assert.Contains("Endung", TextOf(result.Error!), StringComparison.Ordinal);
-        Assert.Equal("$.targetPath", result.Error!.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("fieldPath: $.targetPath", TextOf(result.Error!), StringComparison.Ordinal);
     }
 
     [Theory]

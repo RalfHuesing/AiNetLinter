@@ -22,7 +22,7 @@ internal sealed record TestContextOptions(
 }
 
 /// <summary>
-/// Vollstaendige strukturierte Payload fuer <c>get_test_context</c> StructuredContent.
+/// Vollständiges fachliches Ergebnis für <c>get_test_context</c>.
 /// </summary>
 public sealed record TestContextPayload(
     string TargetSymbol,

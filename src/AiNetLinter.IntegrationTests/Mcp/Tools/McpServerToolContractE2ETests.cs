@@ -64,7 +64,7 @@ public sealed class McpServerToolContractE2ETests
             "metrics_lookup",
             new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "UnknownClass123" } });
 
-        Assert.True(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }

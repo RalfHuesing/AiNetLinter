@@ -89,7 +89,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
         "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
         "maxResults (0 = Default 50, Cap 1000), maxFiles (0 = unbegrenzt), contextLines (0 = keine Kontextzeilen, Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
-        "maxResponseBytes und continuationToken begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
+        "maxResponseBytes und continuationToken begrenzen die Antwort. Der Content liefert " +
         "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +
         "completeness, truncatedBy und continuationToken; analysis enthaelt Origin und " +
         "die statische Source-Policy. Ohne verfügbaren SourceRoot ist die Capability explizit unsupported. " +
@@ -170,9 +170,7 @@ internal static class AssemblyAnalysisToolRegistrations
                     ExpandAssemblyReferences: includeReferences,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
-                    Cursor: parameters.ContinuationToken,
-                    PostNavigationResponseBudget: (result, budget) =>
-                        AssemblyAnalysisPostNavigationResponseBudget.ApplyInspect(result, budget, parameters.PublicOnly)),
+                    Cursor: parameters.ContinuationToken),
                 parameters.CancellationToken));
     }
 
@@ -262,8 +260,7 @@ internal static class AssemblyAnalysisToolRegistrations
                             ExpandAssemblyReferences: includeReferences,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
-                            Cursor: effectiveCursor,
-                            PostNavigationResponseBudget: AssemblyAnalysisPostNavigationResponseBudget.ApplyExtensions),
+                            Cursor: effectiveCursor),
                         ct));
             },
             TargetPathToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
@@ -369,8 +366,7 @@ internal static class AssemblyAnalysisToolRegistrations
                     ExpandAssemblyReferences: parameters.IncludeReferences,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
-                    Cursor: parameters.ContinuationToken,
-                    PostNavigationResponseBudget: AssemblyAnalysisPostNavigationResponseBudget.ApplyContext),
+                    Cursor: parameters.ContinuationToken),
                 parameters.CancellationToken));
     }
 

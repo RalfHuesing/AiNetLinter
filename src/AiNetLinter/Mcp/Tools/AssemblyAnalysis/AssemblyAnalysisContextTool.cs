@@ -91,20 +91,21 @@ internal static class AssemblyAnalysisContextTool
         return $"asm:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))}";
     }
 
-    private static async Task AddAssemblyAnalysisAsync(
+    private static Task AddAssemblyAnalysisAsync(
         JsonObject root,
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
         int budget)
     {
-        var inspection = await InspectAssemblyTool.ExecuteAsync(
+        var inspection = InspectAssemblyTool.BuildPayload(
             lease,
             new InspectAssemblyArguments(
                 lease.CanonicalPath, null, null, null, true,
                 AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, AssemblyAnalysisService.DefaultMaxResults, AssemblyAnalysisService.MaxResults),
                 false, null, AssemblyAnalysisService.DefaultMaxMembers, arguments.IncludeReferences,
-                budget, arguments.DetailLevel, arguments.Cursor)).ConfigureAwait(false);
-        root["assemblyAnalysis"] = Serialize(inspection.StructuredContent);
+                budget, arguments.DetailLevel, arguments.Cursor));
+        root["assemblyAnalysis"] = Serialize(inspection);
+        return Task.CompletedTask;
     }
 
     private static async Task<CallToolResult?> AddSymbolSectionsAsync(
@@ -122,7 +123,6 @@ internal static class AssemblyAnalysisContextTool
         {
             var result = await MetricsLookupTool.ExecuteAsync(
                 symbolLease.Server, [arguments.SymbolIdentifier], cancellationToken).ConfigureAwait(false);
-            root["metrics"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "metrics", result);
         }
         if (arguments.IncludeBody)
@@ -132,7 +132,6 @@ internal static class AssemblyAnalysisContextTool
                 [arguments.SymbolIdentifier],
                 Math.Clamp(arguments.MaxBodyLines, 1, MaxBodyLinesCap),
                 cancellationToken).ConfigureAwait(false);
-            root["body"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "body", result);
         }
         if (arguments.IncludeClassStructure)
@@ -141,7 +140,6 @@ internal static class AssemblyAnalysisContextTool
                 symbolLease.Server,
                 new GetClassStructureArgs(arguments.SymbolIdentifier, "lines", Math.Clamp(arguments.MaxResults, 1, GetClassStructureTool.MaxMembersCap)),
                 cancellationToken).ConfigureAwait(false);
-            root["classStructure"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "classStructure", result);
         }
         if (arguments.IncludeCallers)
@@ -150,7 +148,6 @@ internal static class AssemblyAnalysisContextTool
                 lease,
                 new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), arguments.IncludeReferences),
                 cancellationToken).ConfigureAwait(false);
-            root["callers"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "callers", result);
         }
         if (arguments.IncludeImpact)
@@ -159,7 +156,6 @@ internal static class AssemblyAnalysisContextTool
                 lease,
                 new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), IncludeReferences: arguments.IncludeReferences),
                 cancellationToken).ConfigureAwait(false);
-            root["impact"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "impact", result);
         }
         return null;

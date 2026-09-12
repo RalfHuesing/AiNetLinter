@@ -12,7 +12,7 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
 
-/// <summary>Begrenzt Text und StructuredContent gemeinsam auf ganze Graph-Einheiten.</summary>
+/// <summary>Begrenzt den gerenderten Text auf ganze Graph-Einheiten.</summary>
 internal static partial class CallGraphResponseBudget
 {
     private sealed record CallGraphPayloadRequest(
@@ -241,8 +241,7 @@ internal static partial class CallGraphResponseBudget
     }
 
     private static int CombinedBytes(string text, CallTreePayload payload) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+        Encoding.UTF8.GetByteCount(text);
 
     private static int CombinedBytes(string text, JsonNode structured) =>
         Encoding.UTF8.GetByteCount(text)

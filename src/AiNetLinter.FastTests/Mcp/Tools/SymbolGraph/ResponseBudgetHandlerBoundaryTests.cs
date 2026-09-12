@@ -4,10 +4,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -50,27 +49,10 @@ public sealed class ResponseBudgetHandlerBoundaryTests
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text.Contains("INVALID_ARGUMENT", System.StringComparison.Ordinal);
 
     [Fact]
-    public async Task FindReferences_FinalBudgetUsesResponseBudgetCompletenessReason()
+    public void FindReferences_FinalBudgetReturnsVisibleRecoveryForOversizedContent()
     {
-        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
-        var original = await FindReferencesTool.ExecuteAsync(
-            fixture.CreateServer(), new FindReferencesRequest("IProcessor.Execute", 50, 2, MaxResponseBytes: 65_536), CancellationToken.None);
-        var root = JsonNode.Parse(original.StructuredContent!.Value.GetRawText())!.AsObject();
-        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 300) } };
-        var navigated = McpToolResults.Text(
-            Assert.IsType<TextContentBlock>(Assert.Single(original.Content)).Text,
-            root);
-
-        var projected = FindReferencesTool.ApplyFinalResponseBudget(navigated, 1_024);
-        if (projected.StructuredContent!.Value.TryGetProperty("code", out var code))
-        {
-            Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", code.GetString());
-            return;
-        }
-
-        var completeness = projected.StructuredContent!.Value.GetProperty("completeness");
-        Assert.True(completeness.GetProperty("truncatedByResponseBudget").GetBoolean());
-        Assert.False(completeness.GetProperty("truncatedByMaxResults").GetBoolean());
+        var projected = FindReferencesTool.ApplyFinalResponseBudget(McpToolResults.Text(new string('x', 2_048)), 1_024);
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", TextOf(projected), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -88,49 +70,23 @@ public sealed class ResponseBudgetHandlerBoundaryTests
     }
 
     [Fact]
-    public async Task FindSymbol_FinalBudgetErrorPublishesAnExecutableMinimumResponseBytes()
+    public async Task FindSymbol_FinalBudgetKeepsVisibleTextOrReturnsRecovery()
     {
         using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
         var original = await FindSymbolTool.ExecuteAsync(
             fixture.CreateServer(), ["Processor"], kind: null, maxResults: 50, CancellationToken.None);
-        var root = JsonNode.Parse(original.StructuredContent!.Value.GetRawText())!.AsObject();
-        root["navigation"] = new JsonObject
-        {
-            ["status"] = new JsonObject { ["operation"] = new string('n', 800) },
-        };
-        var navigated = McpToolResults.Text(
-            Assert.IsType<TextContentBlock>(Assert.Single(original.Content)).Text,
-            root);
-
-        var constrained = FindSymbolTool.ApplyFinalResponseBudget(navigated, 512);
-        var error = constrained.StructuredContent!.Value;
-
-        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", error.GetProperty("code").GetString());
-        Assert.Equal("$.maxResponseBytes", error.GetProperty("fieldPath").GetString());
-        var minimumResponseBytes = error.GetProperty("minimumResponseBytes").GetInt32();
-        Assert.True(minimumResponseBytes > 512);
-
-        var retry = FindSymbolTool.ApplyFinalResponseBudget(navigated, minimumResponseBytes);
-        Assert.False(retry.StructuredContent!.Value.TryGetProperty("code", out _));
-        Assert.True(
-            Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(retry.Content)).Text)
-            + Encoding.UTF8.GetByteCount(retry.StructuredContent!.Value.GetRawText()) <= minimumResponseBytes);
+        var constrained = FindSymbolTool.ApplyFinalResponseBudget(original, 512);
+        var text = TextOf(constrained);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= 512 || text.Contains("RESPONSE_BUDGET_TOO_SMALL", StringComparison.Ordinal));
     }
 
     private static void AssertFinalBudget(Func<CallToolResult, int, CallToolResult> apply, CallToolResult original)
     {
-        var root = JsonNode.Parse(original.StructuredContent!.Value.GetRawText())!.AsObject();
-        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 300) } };
-        var navigated = McpToolResults.Text(Assert.IsType<TextContentBlock>(Assert.Single(original.Content)).Text, root);
-        var projected = apply(navigated, 1_024);
-        if (projected.StructuredContent!.Value.TryGetProperty("code", out var code))
-        {
-            Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", code.GetString());
-            return;
-        }
-
-        Assert.True(Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text)
-            + Encoding.UTF8.GetByteCount(projected.StructuredContent!.Value.GetRawText()) <= 1_024);
-        Assert.True(projected.StructuredContent!.Value.TryGetProperty("navigation", out _));
+        var projected = apply(original, 1_024);
+        var text = TextOf(projected);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= 1_024 || text.Contains("RESPONSE_BUDGET_TOO_SMALL", StringComparison.Ordinal));
     }
+
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

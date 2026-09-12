@@ -3,7 +3,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -18,7 +17,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Analysis;
 public sealed class SearchPatternToolContractTests
 {
     [Fact]
-    public async Task ExecuteAsync_StructuredContent_PreservesTextPayloadAndReturnsObjectPayload()
+    public async Task ExecuteAsync_RendersMatchesAndFollowUpFactsInContent()
     {
         using var scenario = CreateScenario("Greeter");
         using var state = CreateServer(scenario.Solution);
@@ -30,17 +29,12 @@ public sealed class SearchPatternToolContractTests
 
         var text = TextOf(result);
         Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
-        var payload = AssertPayload(result);
-        Assert.Equal(JsonValueKind.Array, payload.GetProperty("matches").ValueKind);
-        Assert.Equal(JsonValueKind.Object, payload.GetProperty("completeness").ValueKind);
-        Assert.Equal(JsonValueKind.Object, payload.GetProperty("scope").ValueKind);
-        Assert.Equal(JsonValueKind.Object, payload.GetProperty("snapshot").ValueKind);
-        Assert.Equal(JsonValueKind.Object, payload.GetProperty("next").ValueKind);
-        Assert.DoesNotContain(payload.GetProperty("matches").EnumerateArray(), match => match.TryGetProperty("semantic", out _));
+        Assert.Contains("[NEXT: none]", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("semantic", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task ExecuteAsync_NoMatchAndDefaultCall_RetainTextAndStructuredEmptySemantics()
+    public async Task ExecuteAsync_NoMatchAndDefaultCall_RetainContentEmptySemantics()
     {
         using var scenario = CreateScenario("Greeter");
         using var state = CreateServer(scenario.Solution);
@@ -49,7 +43,6 @@ public sealed class SearchPatternToolContractTests
             state, "does-not-exist", false, 50, CancellationToken.None);
 
         Assert.Contains("0 Treffer", TextOf(result), StringComparison.Ordinal);
-        Assert.Empty(AssertPayload(result).GetProperty("matches").EnumerateArray());
     }
 
     [Fact]
@@ -77,7 +70,7 @@ public sealed class SearchPatternToolContractTests
             state,
             new SearchPatternToolArguments("Greeter", false, 2_001, 0, 0, 0, null, null, null),
             CancellationToken.None);
-        Assert.Equal("$.maxResults", AssertPayload(capped).GetProperty("fieldPath").GetString());
+        Assert.Contains("fieldPath: $.maxResults", TextOf(capped), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -95,9 +88,9 @@ public sealed class SearchPatternToolContractTests
             state,
             new SearchPatternToolArguments("anchor", false, 1, 1, 1, 200, null, null, null),
             CancellationToken.None);
-        var completeness = AssertPayload(limited).GetProperty("completeness");
-        Assert.Contains("maxFiles", completeness.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.Contains("maxResults", completeness.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        var text = TextOf(limited);
+        Assert.Contains("maxFiles", text, StringComparison.Ordinal);
+        Assert.Contains("maxResults", text, StringComparison.Ordinal);
     }
 
     private static SearchPatternScenario CreateScenario(string content)
@@ -113,13 +106,6 @@ public sealed class SearchPatternToolContractTests
 
     private static McpCodeGraphServer CreateServer(Microsoft.CodeAnalysis.Solution solution) => new(
         McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: solution)));
-
-    private static JsonElement AssertPayload(CallToolResult result)
-    {
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        return result.StructuredContent.Value;
-    }
 
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

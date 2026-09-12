@@ -82,11 +82,7 @@ internal static class GetViolationsTool
         // bereits seine eigene Meta-Zeile aus GetViolationsScanner.FormatReport ("scopeFilter
         // verfeinern oder maxResults erhoehen"), die implizit "weitere Violations vorhanden"
         // signalisiert (analog zu FindReferencesTool/GetCallTreeTool).
-        // StructuredContent additiv zum Text — nur fuer den Normalfall gesetzt, weil eine
-        // Malfunction keine sinnvolle Teil-Violations-Liste hat (result.Violations ist dann null).
-        // In ein Objekt gewrappt (nicht das nackte Array), weil MCP-Clients structuredContent
-        // schema-seitig als JSON-Objekt validieren — ein Top-Level-Array liess den gesamten
-        // Tool-Call clientseitig fehlschlagen (siehe McpToolResultsTests fuer die Regression).
+        // Die fachlich vollständige Auswahl wird einmalig als agentischer Text gerendert.
         if (result.IsMalfunction)
         {
             return McpToolResults.Error(

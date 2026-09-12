@@ -105,7 +105,6 @@ internal static partial class GetImpactTool
         {
             IsError = recoverable.IsError,
             Content = recoverable.Content,
-            StructuredContent = System.Text.Json.JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
     }
 

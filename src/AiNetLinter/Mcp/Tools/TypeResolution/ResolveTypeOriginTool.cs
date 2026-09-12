@@ -345,6 +345,10 @@ internal static class ResolveTypeOriginTool
         var sourceLabel = origin.AssemblyOrigin is "source" or "assembly"
             ? (isAssemblyTarget ? "Dekompilierte Assembly" : "Projekt-Quellcode")
             : "Referenzierte Assembly";
+        var sourceLocations = origin.SourceLocations.Count == 0
+            ? "—"
+            : string.Join(", ", origin.SourceLocations.Select(location =>
+                $"`{location.Path}:{location.Line}:{location.Column}`"));
         return $"""
             # Typ-Herkunft: `{result.TypeName}`
             - **Vollqualifizierter Name**: `{origin.FullName}`
@@ -353,6 +357,7 @@ internal static class ResolveTypeOriginTool
             - **Projekt**: `{origin.ProjectName ?? "—"}`
             - **Assembly-Herkunft**: `{origin.AssemblyOrigin}`
             - **Output-Assembly**: `{origin.OutputAssembly ?? "—"}`
+            - **Quellpositionen**: {sourceLocations}
             - **Herkunft**: {sourceLabel}
             """;
     }

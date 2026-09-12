@@ -64,13 +64,6 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("Projekt-Quellcode", text);
         Assert.Contains("C:/App/App.csproj", text);
 
-        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
-        var origin = payload.RootElement.GetProperty("resolveTypeOrigin").GetProperty("origin");
-        Assert.Equal("C:/App/App.csproj", origin.GetProperty("targetPath").GetString());
-        Assert.False(origin.TryGetProperty("projectName", out _));
-        Assert.Equal(1, origin.GetProperty("sourceLocations").GetArrayLength());
-        Assert.Equal("source", origin.GetProperty("assemblyOrigin").GetString());
-        Assert.False(origin.TryGetProperty("outputAssembly", out _));
     }
 
     [Fact]
@@ -119,12 +112,9 @@ public sealed class ResolveTypeOriginTests
         var result = ResolveTypeOriginTool.ExecuteCompilation(
             compilation, "App.Split", @"C:\App\App.slnx", null, CancellationToken.None);
 
-        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
-        var locations = payload.RootElement
-            .GetProperty("resolveTypeOrigin").GetProperty("origin").GetProperty("sourceLocations");
-        Assert.Equal(2, locations.GetArrayLength());
-        Assert.Equal(@"C:\App\One.cs", locations[0].GetProperty("path").GetString());
-        Assert.Equal(@"C:\App\Two.cs", locations[1].GetProperty("path").GetString());
+        var text = GetText(result);
+        Assert.Contains(@"C:\App\One.cs", text, StringComparison.Ordinal);
+        Assert.Contains(@"C:\App\Two.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -186,12 +176,7 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("TargetProbe", text);
         Assert.Contains("Dekompilierte Assembly", text);
 
-        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
-        var origin = payload.RootElement.GetProperty("resolveTypeOrigin").GetProperty("origin");
-        Assert.Equal(assemblyPath, origin.GetProperty("targetPath").GetString());
-        Assert.False(origin.TryGetProperty("projectName", out _));
-        Assert.Equal("assembly", origin.GetProperty("assemblyOrigin").GetString());
-        Assert.Equal(assemblyPath, origin.GetProperty("outputAssembly").GetString());
+        Assert.Contains(assemblyPath, text, StringComparison.Ordinal);
     }
 
     [Fact]

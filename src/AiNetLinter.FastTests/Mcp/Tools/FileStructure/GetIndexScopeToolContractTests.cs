@@ -18,7 +18,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 public sealed class GetIndexScopeToolContractTests
 {
     [Fact]
-    public async Task ExecuteAsync_MixedFixture_ProjectsTextStructuredContentAndRouting()
+    public async Task ExecuteAsync_MixedFixture_RendersBreakdownAndRouting()
     {
         using var scenario = CreateScenario("namespace Project; public sealed class Valid { }");
         foreach (var extension in new[] { ".css", ".js", ".razor", ".xaml", ".html", ".json", ".md" })
@@ -36,17 +36,6 @@ public sealed class GetIndexScopeToolContractTests
         Assert.Contains("routing=search_pattern(pattern, scopeType=all, includePatterns=**/*.razor)", text, StringComparison.Ordinal);
         Assert.Contains("Population:", text, StringComparison.Ordinal);
 
-        var payload = PayloadOf(result);
-        var entries = payload.GetProperty("breakdown").EnumerateArray().ToArray();
-        var csEntry = Assert.Single(entries, entry => entry.GetProperty("extension").GetString() == ".cs");
-        Assert.True(csEntry.GetProperty("symbolGraphCovered").GetBoolean());
-        var cssEntry = Assert.Single(entries, entry => entry.GetProperty("extension").GetString() == ".css");
-        Assert.False(cssEntry.GetProperty("symbolGraphCovered").GetBoolean());
-        Assert.Equal("search_pattern", cssEntry.GetProperty("routingTool").GetString());
-        Assert.Equal("all", cssEntry.GetProperty("scopeType").GetString());
-        Assert.Equal(JsonValueKind.Array, cssEntry.GetProperty("includePatterns").ValueKind);
-        Assert.Equal("find_symbol", payload.GetProperty("routing").GetProperty("cSharp").GetProperty("tool").GetString());
-        Assert.Equal("search_pattern", payload.GetProperty("routing").GetProperty("nonCSharp").GetProperty("tool").GetString());
     }
 
     [Fact]
@@ -76,7 +65,7 @@ public sealed class GetIndexScopeToolContractTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.DoesNotContain("Compile-Fehler", TextOf(result), StringComparison.Ordinal);
-        Assert.NotEmpty(PayloadOf(result).GetProperty("breakdown").EnumerateArray());
+        Assert.Contains(".cs: 1 Datei", TextOf(result), StringComparison.Ordinal);
     }
 
     private static IndexScopeScenario CreateScenario(string source)
@@ -94,12 +83,6 @@ public sealed class GetIndexScopeToolContractTests
 
     private static McpCodeGraphServer CreateServer(Microsoft.CodeAnalysis.Solution solution) => new(
         McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: solution)));
-
-    private static JsonElement PayloadOf(CallToolResult result)
-    {
-        Assert.NotNull(result.StructuredContent);
-        return result.StructuredContent!.Value;
-    }
 
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

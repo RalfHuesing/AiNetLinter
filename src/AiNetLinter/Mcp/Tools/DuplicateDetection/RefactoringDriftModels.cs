@@ -43,7 +43,7 @@ internal sealed record RefactoringDriftSummary(
     int TruncatedBy = 0,
     string Next = "Kandidaten manuell pruefen; keine automatische Umstellung oder Loeschentscheidung ableiten.");
 
-/// <summary>StructuredContent-Wurzel fuer den <c>refactoring-drift</c>-Zweig von
+/// <summary>Fachliche Wurzel fuer den <c>refactoring-drift</c>-Zweig von
 /// <c>find_duplicates</c> — Feldname bewusst <see cref="Candidates"/>, nicht <c>Violations</c>
 /// (False-Positive-Budget ist hoeher als bei der Clone-Erkennung, strukturelle Aehnlichkeit ist
 /// keine automatische Regelverletzung). In ein benanntes Objekt gewrappt statt eines nackten

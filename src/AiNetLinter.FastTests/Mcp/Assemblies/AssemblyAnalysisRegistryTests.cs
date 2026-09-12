@@ -85,9 +85,7 @@ public sealed class AssemblyAnalysisRegistryTests
         Assert.Null(result.Lease);
         Assert.NotNull(result.Error);
         Assert.False(result.Error!.IsError);
-        Assert.Equal(
-            LinterErrorCodes.TargetUnreadable,
-            result.Error.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains(LinterErrorCodes.TargetUnreadable, TextOf(result.Error), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -484,4 +482,6 @@ public sealed class AssemblyAnalysisRegistryTests
 
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
+    private static string TextOf(ModelContextProtocol.Protocol.CallToolResult result) =>
+        Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
 }

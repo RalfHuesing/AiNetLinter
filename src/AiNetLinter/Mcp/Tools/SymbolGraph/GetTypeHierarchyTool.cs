@@ -97,33 +97,8 @@ internal static class GetTypeHierarchyTool
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (result.StructuredContent is not { } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock) return result;
-        // Navigation is added to recoverable errors too.  They are already compact
-        // and do not have the hierarchy shape required by this projector.
-        if (!structured.TryGetProperty("baseTypes", out _)
-            || !structured.TryGetProperty("subtypes", out _)) return result;
-        var payload = JsonSerializer.Deserialize<TypeHierarchyPayload>(structured.GetRawText(), McpJsonOptions.Default);
-        if (payload is null) return result;
-        var originalBody = GetTypeHierarchyFormatter.FormatText(payload);
-        var projected = ApplyResponseBudget(payload, maxResponseBytes);
-        if (projected.IsError == true || projected.StructuredContent is not { } projectedStructured) return projected;
-
-        var root = JsonNode.Parse(projectedStructured.GetRawText())!.AsObject();
-        var originalRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
-        if (originalRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
-        var projectedBody = projected.Content.OfType<TextContentBlock>().First().Text;
-        var suffix = textBlock.Text.StartsWith(originalBody, System.StringComparison.Ordinal)
-            ? textBlock.Text[originalBody.Length..]
-            : string.Empty;
-        var finalResult = new CallToolResult
-        {
-            Content = [new TextContentBlock { Text = projectedBody + suffix }],
-            StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
-        };
-        return Mcp.Wire.McpResponseSize.From(finalResult).TotalBytes <= maxResponseBytes
-            ? finalResult
-            : BudgetTooSmall(maxResponseBytes);
+        if (Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        return BudgetTooSmall(maxResponseBytes);
     }
 
     private static CallToolResult ApplyResponseBudget(TypeHierarchyPayload payload, int maxResponseBytes)

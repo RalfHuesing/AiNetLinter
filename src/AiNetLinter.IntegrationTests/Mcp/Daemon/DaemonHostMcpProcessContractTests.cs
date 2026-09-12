@@ -90,9 +90,8 @@ public sealed class DaemonHostMcpProcessContractTests
                 },
                 cancellationToken: cancellation.Token);
             Assert.NotEqual(true, context.IsError);
-            Assert.True(context.StructuredContent.HasValue);
-            Assert.Equal("decompiled", context.StructuredContent!.Value.GetProperty("analysis").GetProperty("origin").GetString());
-            Assert.True(context.StructuredContent.Value.TryGetProperty("analysis", out _));
+            var contextText = Assert.IsType<TextContentBlock>(Assert.Single(context.Content)).Text;
+            Assert.Contains("[ASSEMBLY]", contextText, StringComparison.Ordinal);
         }
 
         var result = await daemon.WaitForExitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false);

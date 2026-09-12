@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Text.Json;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,16 +29,12 @@ public sealed class GetFeatureContextToolScopeTests
             new FeatureContextOptions("Calculator.Add", IncludeMetrics: false, IncludeViolations: false,
                 Scope: new McpScopeInput(McpScopeType.Tests, false)), CancellationToken.None);
 
-        var productionPayload = production.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        var testsPayload = tests.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Equal("production", productionPayload.Declaration.ScopeType);
-        Assert.True(productionPayload.Declaration.IsSeed);
-        Assert.Equal(2, productionPayload.Callers!.TotalCallers);
-        Assert.All(productionPayload.Callers.CallSites, call => Assert.Equal("editable", call.SourceKind));
-        Assert.Empty(productionPayload.Tests!.TestFiles);
-        Assert.Equal(0, testsPayload.Callers!.TotalCallers);
-        Assert.NotEmpty(testsPayload.Tests!.TestFiles);
-        Assert.Equal("tests", testsPayload.Tests.Scope!.RequestedType);
+        var productionText = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(production.Content)).Text;
+        var testsText = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(tests.Content)).Text;
+        Assert.Contains("Consumer.Run", productionText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CalculatorTests.cs", productionText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Consumer.Run", testsText, StringComparison.Ordinal);
+        Assert.Contains("CalculatorTests.cs", testsText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -57,9 +52,9 @@ public sealed class GetFeatureContextToolScopeTests
         var result = await GetFeatureContextTool.ExecuteAsync(state,
             new FeatureContextOptions("Shared", IncludeCallers: false, IncludeTests: false, IncludeMetrics: false, IncludeViolations: false,
                 Scope: new McpScopeInput(McpScopeType.Production, false)), CancellationToken.None);
-        var payload = result.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Contains(payload.Declaration.Members!, member => member.Contains("Production", StringComparison.Ordinal));
-        Assert.DoesNotContain(payload.Declaration.Members!, member => member.Contains("TestOnly", StringComparison.Ordinal));
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Production", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TestOnly", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,10 +74,10 @@ public sealed class GetFeatureContextToolScopeTests
         var included = await GetFeatureContextTool.ExecuteAsync(state,
             new FeatureContextOptions("Target.Run", IncludeTests: false, IncludeMetrics: false, IncludeViolations: false,
                 Scope: new McpScopeInput(McpScopeType.All, true)), CancellationToken.None);
-        var excludedPayload = excluded.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        var includedPayload = included.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Empty(excludedPayload.Callers!.CallSites);
-        Assert.Single(includedPayload.Callers!.CallSites);
-        Assert.Equal("generated", includedPayload.Callers.CallSites[0].SourceKind);
+        var excludedText = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(excluded.Content)).Text;
+        var includedText = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(included.Content)).Text;
+        Assert.DoesNotContain("GeneratedCaller", excludedText, StringComparison.Ordinal);
+        Assert.Contains("GeneratedCaller", includedText, StringComparison.Ordinal);
+        Assert.Contains("generated", includedText, StringComparison.OrdinalIgnoreCase);
     }
 }

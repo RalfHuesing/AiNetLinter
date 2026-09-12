@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -122,7 +121,7 @@ public sealed class MetricsTreeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CodeSizeMode_ReturnsStructuredSuccessPayload()
+    public async Task ExecuteAsync_CodeSizeMode_ReportsTreeEvidenceInContent()
     {
         var state = NewState();
 
@@ -130,24 +129,14 @@ public sealed class MetricsTreeToolTests
             state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("code_size", payload!.Mode);
-        Assert.Equal("src/SymbolGraphMini", payload.Root);
-        Assert.Equal(1, payload.Depth);
-        Assert.Equal(10, payload.TopN);
-        Assert.Equal("SymbolGraphMini", payload.Tree.Name);
-        Assert.Equal("src/SymbolGraphMini", payload.Tree.RelativePath);
-        Assert.Equal(6, payload.Tree.FileCount);
-        Assert.Equal(6, payload.Tree.Children.Count);
-        var hierarchy = Assert.Single(payload.Tree.Children, child => child.Name == "Hierarchy.cs");
-        Assert.Equal(1, hierarchy.FileCount);
-        Assert.Equal("src/SymbolGraphMini/Hierarchy.cs", hierarchy.RelativePath);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("SymbolGraphMini", text, StringComparison.Ordinal);
+        Assert.Contains("Hierarchy.cs", text, StringComparison.Ordinal);
+        Assert.Contains("6 Dateien", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_TopN_UsesSameVisibleChildrenInTextAndStructuredPayload()
+    public async Task ExecuteAsync_TopN_ReportsVisibleChildrenAndTruncationInContent()
     {
         var state = NewState();
 
@@ -156,18 +145,8 @@ public sealed class MetricsTreeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal(2, payload!.Tree.Children.Count);
-        Assert.True(payload.Completeness.Truncated);
-        Assert.Equal(payload.Completeness.TotalCount, payload.TotalCount);
-        Assert.Equal(payload.Completeness.ReturnedCount, payload.ReturnedCount);
         Assert.Contains("weitere", text, StringComparison.Ordinal);
-        foreach (var child in payload.Tree.Children)
-        {
-            Assert.Contains(child.Name, text, StringComparison.Ordinal);
-        }
+        Assert.Contains("Hierarchy.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -179,10 +158,11 @@ public sealed class MetricsTreeToolTests
             state, new MetricsTreeToolArgs("src/SymbolGraphMini", null, 1, 10, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("code_size", payload!.Mode);
+        var explicitDefault = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, null), CancellationToken.None);
+        Assert.Equal(
+            Assert.IsType<TextContentBlock>(Assert.Single(explicitDefault.Content)).Text,
+            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
     }
 
     [Fact]

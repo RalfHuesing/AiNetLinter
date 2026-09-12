@@ -219,19 +219,10 @@ internal static class TransitiveCallGraphFormatter
         CallToolResult result,
         AssemblyNavigationSummary navigation)
     {
-        if (result.StructuredContent is not { ValueKind: System.Text.Json.JsonValueKind.Object } structured)
-        {
-            return result;
-        }
-
-        var payload = JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject();
-        payload["navigation"] = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default);
-        return new CallToolResult
-        {
-            IsError = result.IsError,
-            Content = result.Content,
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
-        };
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        return McpToolResults.ReplaceText(
+            result,
+            text + $"\n\nAssembly-Suche: {navigation.SearchedAssemblyCount}/{navigation.TotalAssemblyCount}; Vollständigkeit: {navigation.Completeness}");
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)
@@ -259,7 +250,8 @@ internal static class TransitiveCallGraphFormatter
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        return $"{text}{origin}";
+        var handoff = string.IsNullOrEmpty(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        return $"{text}{origin}{handoff}";
     }
 
     private static void AppendLimitMessages(

@@ -52,7 +52,7 @@ internal static class GetHotspotsScanner
 
     /// <summary>
     /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> — Text (Markdown-
-    /// Tabellen) plus <see cref="HotspotEntry"/>-Liste fuer <c>StructuredContent</c>. Ist
+    /// Tabellen) plus <see cref="HotspotEntry"/>-Liste für den Renderer. Ist
     /// <paramref name="scopeFilter"/> gesetzt, aber matched
     /// keine Datei, wird eine explizite "Keine Dateien im Scope"-Meldung geliefert statt der sonst
     /// irrefuehrenden "alles gruen"-Aussage (Entries dann leer).
@@ -131,8 +131,8 @@ internal static class GetHotspotsScanner
     /// <summary>
     /// Baut <see cref="HotspotEntry"/>s nur fuer <paramref name="critical"/>/<paramref name="warning"/>
     /// — dieselben Listen, die auch <see cref="FormatReport"/> fuer die Text-Sektionen verwendet,
-    /// damit Text und StructuredContent nie in der Kategorisierung auseinanderdriften. Dateien im
-    /// gruenen Bereich ("ok") werden bewusst NICHT aufgenommen, damit StructuredContent auf
+    /// damit Text und Renderer nie in der Kategorisierung auseinanderdriften. Dateien im
+    /// grünen Bereich ("ok") werden bewusst nicht aufgenommen, damit die Antwort auf
     /// die Dateien nahe oder ueber dem angeforderten Limit begrenzt bleibt.
     /// </summary>
     private static IReadOnlyList<HotspotEntry> BuildEntries(
@@ -252,7 +252,7 @@ internal sealed record HotspotScanResult(
     string ScopeType);
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>get_hotspots</c> — ein Objekt je Datei mit Pfad, Zeilen
+/// Render-Eintrag für <c>get_hotspots</c> — ein Objekt je Datei mit Pfad, Zeilen
 /// und Auslastung, nur fuer <see cref="Category"/> <c>"critical"</c> (>=95%) oder <c>"warning"</c>
 /// (>= dem angeforderten Minimum) — Dateien im gruenen Bereich tauchen bewusst nicht auf (siehe
 /// <see cref="GetHotspotsScanner.BuildEntries"/>).

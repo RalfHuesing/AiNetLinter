@@ -15,6 +15,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -226,55 +227,16 @@ internal static class DependencyGraphTool
             result.ExcludedEdgeCount,
             result.Scope ?? new McpScopeMetadata("all", false),
             result.TruncatedBy ?? Array.Empty<string>());
-        // In ein Objekt gewrappt statt eines nackten Arrays — MCP-Clients validieren structuredContent
-        // schema-seitig als JSON-Objekt (siehe McpToolResults.Text``1-Doc-Kommentar).
         return McpToolResults.Text(finalBody, payload);
     }
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (maxResponseBytes <= 0 || result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
-        {
-            return result;
-        }
-
-        var payload = JsonSerializer.Deserialize<DependencyGraphWirePayload>(
-            structured.GetRawText(), McpJsonOptions.Default);
-        var originalText = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-        if (payload is null || originalText is null) return result;
-
-        var edges = payload.Edges.ToList();
-        while (CombinedResponseBytes(RenderText(payload.Target, ToResult(payload, edges)), payload with { Edges = edges }) > maxResponseBytes
-            && edges.Count > 0)
-        {
-            edges.RemoveAt(edges.Count - 1);
-        }
-
-        var budgetedResult = ToResult(payload, edges);
-        var finalPayload = payload with
-        {
-            Edges = edges,
-            Nodes = NodesForEdges(payload, edges),
-            ShownEdgeCount = edges.Count,
-            ShownNodeCount = NodesForEdges(payload, edges).Count,
-            Truncated = payload.Truncated || edges.Count < payload.Edges.Count,
-            TruncatedBy = AddTruncationReason(payload.TruncatedBy, edges.Count < payload.Edges.Count),
-        };
-        var finalText = RenderText(finalPayload.Target, budgetedResult);
-        if (CombinedResponseBytes(finalText, finalPayload) > maxResponseBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                "maxResponseBytes ist zu klein, um den festen Dependency-Graph-Envelope vollständig auszugeben.",
-                "maxResponseBytes erhöhen oder filePath/symbolIdentifier verfeinern.",
-                "$.maxResponseBytes");
-        }
-
-        return new CallToolResult
-        {
-            IsError = result.IsError,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
-            StructuredContent = JsonSerializer.SerializeToElement(finalPayload, McpJsonOptions.Default),
-        };
+        if (maxResponseBytes <= 0 || McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        return McpToolResults.InvalidArgument(
+            "maxResponseBytes ist zu klein für die fachliche Dependency-Graph-Antwort.",
+            "maxResponseBytes erhöhen oder filePath/symbolIdentifier verfeinern.",
+            "$.maxResponseBytes");
     }
 
     private static DependencyGraphResult ToResult(
@@ -342,6 +304,8 @@ internal static class DependencyGraphTool
     {
         var label = target.TypeName is null ? target.Path : $"{target.TypeName} ({target.Path})";
         var sb = new StringBuilder();
+        var scope = result.Scope ?? new McpScopeMetadata("all", false);
+        sb.AppendLine($"Scope: {scope.RequestedType}; includeGenerated={scope.IncludeGenerated}");
 
         if (result.IncludeOutgoing)
         {

@@ -35,7 +35,7 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains(".dll", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".exe", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
-        Assert.Contains("structuredContent.navigation", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("Content enthält", options.ServerInstructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("C#-Symbole", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Completeness", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Vollständigkeit", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("kopierfaehigem Template", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }

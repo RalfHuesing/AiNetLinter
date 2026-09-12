@@ -21,36 +21,14 @@ internal static class FindSymbolResponseBudget
 
     internal static CallToolResult Apply(CallToolResult result, int maxResponseBytes)
     {
-        if (maxResponseBytes <= 0
-            || result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock)
-        {
-            return result;
-        }
-
-        var payload = JsonSerializer.Deserialize<FindSymbolBudgetPayload>(
-            structured.GetRawText(), McpJsonOptions.Default);
-        if (payload is null || payload.Results is null) return result;
-
         if (McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
-
-        var projected = payload;
-        while (TryRemoveLastMatch(projected, out var reduced))
-        {
-            projected = reduced;
-            var candidate = CreateResult(projected, textBlock.Text);
-            if (McpResponseSize.From(candidate).TotalBytes <= maxResponseBytes) return candidate;
-        }
-
-        var minimumResponseBytes = McpResponseSize.From(CreateResult(projected, textBlock.Text)).TotalBytes;
         return McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
-            $"maxResponseBytes={maxResponseBytes} ist zu klein für die fachliche Mindestprojektion; Mindestwert: {minimumResponseBytes} Bytes.",
+            $"maxResponseBytes={maxResponseBytes} ist zu klein für die fachliche Mindestprojektion.",
             new McpErrorParameters(
-                Hint: $"maxResponseBytes auf mindestens {minimumResponseBytes} setzen; die Antwort wird nur an vollständigen Symbol-Entries gekürzt.",
+                Hint: "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Symbol-Entries gekürzt.",
                 FieldPath: "$.maxResponseBytes",
-                RequestedBytes: maxResponseBytes,
-                MinimumResponseBytes: minimumResponseBytes));
+                RequestedBytes: maxResponseBytes));
     }
 
     private static bool TryRemoveLastMatch(FindSymbolBudgetPayload payload, out FindSymbolBudgetPayload reduced)

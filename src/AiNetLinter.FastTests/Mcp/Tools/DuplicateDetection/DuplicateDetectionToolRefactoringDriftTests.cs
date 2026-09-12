@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -15,9 +14,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DuplicateDetection;
 /// <summary>
 /// Tests fuer <see cref="DuplicateDetectionTool"/>s <c>mode="refactoring-drift"</c>-Dispatch (Teil
 /// C) — Mode-Parsing, <c>helperSymbol</c>-Pflicht, Fehler-Durchreichung von
-/// <see cref="RefactoringDriftScanner"/>, und <c>StructuredContent</c>-ist-Objekt-Regressionstest
-/// fuer den neuen <see cref="RefactoringDriftPayload"/>-Typ (analog der Teil-A-Regressionstests in
-/// <c>DuplicateDetectionToolTests</c>).
+/// <see cref="RefactoringDriftScanner"/> und fachliche Kandidatenausgabe.
 /// </summary>
 [Trait("Category", "Component")]
 public sealed class DuplicateDetectionToolRefactoringDriftTests
@@ -162,7 +159,7 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RefactoringDrift_StructuredContent_IsJsonObjectWithCandidatesField()
+    public async Task ExecuteAsync_RefactoringDrift_ReportsHelperAndCandidateInContent()
     {
         using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
         var state = context.CreateServer();
@@ -172,13 +169,9 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
             new DuplicateDetectionInput(null, null, null, null, null, "refactoring-drift", "OptionsHelper.BuildDefault"),
             CancellationToken.None);
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent.Value.GetProperty("candidates").ValueKind);
-        var summary = result.StructuredContent.Value.GetProperty("summary");
-        Assert.Equal(JsonValueKind.Object, summary.ValueKind);
-        Assert.Contains("BuildDefault", summary.GetProperty("helperSymbol").GetString());
-        Assert.False(summary.GetProperty("truncated").GetBoolean());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("BuildDefault", text, StringComparison.Ordinal);
+        Assert.Contains("DriftedA", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -209,7 +202,7 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
             state, new DuplicateDetectionInput(null, null, null, null, null, mode, null), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(JsonValueKind.Array, result.StructuredContent!.Value.GetProperty("clusters").ValueKind);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Duplikat-Kandidatencluster", text, StringComparison.Ordinal);
     }
 }

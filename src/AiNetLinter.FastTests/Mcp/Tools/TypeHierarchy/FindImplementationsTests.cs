@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -39,23 +38,23 @@ public sealed class FindImplementationsTests
         var productionFirst = await FindImplementationsTool.ExecuteAsync(
             new FindImplementationsRequest(
                 state, "App.IService", 1, McpScopeType.All, false, CancellationToken.None));
-        var productionPayload = productionFirst.StructuredContent!.Value;
-        Assert.Equal(2, productionPayload.GetProperty("totalCount").GetInt32());
-        Assert.Contains("ProductionService", productionPayload.GetProperty("implementations")[0].GetProperty("typeName").GetString(), StringComparison.Ordinal);
+        var productionText = Assert.IsType<TextContentBlock>(Assert.Single(productionFirst.Content)).Text;
+        Assert.Contains("Gefunden: 2", productionText, StringComparison.Ordinal);
+        Assert.Contains("ProductionService", productionText, StringComparison.Ordinal);
 
         var tests = await FindImplementationsTool.ExecuteAsync(
             new FindImplementationsRequest(
                 state, "App.IService", 50, McpScopeType.Tests, false, CancellationToken.None));
-        Assert.Equal(1, tests.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
-        Assert.Equal("tests", tests.StructuredContent!.Value.GetProperty("implementations")[0].GetProperty("scopeType").GetString());
+        var testsText = Assert.IsType<TextContentBlock>(Assert.Single(tests.Content)).Text;
+        Assert.Contains("Gefunden: 1", testsText, StringComparison.Ordinal);
+        Assert.Contains("TestService", testsText, StringComparison.Ordinal);
 
         var generated = await FindImplementationsTool.ExecuteAsync(
             new FindImplementationsRequest(
                 state, "App.IService", 50, McpScopeType.All, true, CancellationToken.None));
-        Assert.Equal(3, generated.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
-        Assert.Contains(
-            generated.StructuredContent!.Value.GetProperty("implementations").EnumerateArray(),
-            item => item.GetProperty("sourceKind").GetString() == "generated");
+        var generatedText = Assert.IsType<TextContentBlock>(Assert.Single(generated.Content)).Text;
+        Assert.Contains("Gefunden: 3", generatedText, StringComparison.Ordinal);
+        Assert.Contains("GeneratedService", generatedText, StringComparison.Ordinal);
     }
     [Fact]
     public async Task ExecuteAsync_InterfaceType_ReturnsAllImplementingClasses()
@@ -72,48 +71,32 @@ public sealed class FindImplementationsTests
         Assert.Contains("DerivedProcessor", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("MoreDerivedProcessor", textContent.Text, StringComparison.Ordinal);
 
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.Equal(3, dto!.TotalCount);
-        Assert.False(dto.IsTruncated);
-        Assert.Contains(dto.Implementations, i => i.TypeName.Contains("BaseProcessor", StringComparison.Ordinal));
-        Assert.Contains(dto.Implementations, i => i.TypeName.Contains("DerivedProcessor", StringComparison.Ordinal));
-        Assert.Contains(dto.Implementations, i => i.TypeName.Contains("MoreDerivedProcessor", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task ExecuteAsync_HandoffIsStructuredOnly_AndEntriesDoNotRepeatRootMetadata()
+    public async Task ExecuteAsync_ContentListsEachImplementationOnce()
     {
         using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
         var result = await FindImplementationsTool.ExecuteAsync(
             fixture.CreateServer(), "IProcessor", maxResults: 50, ct: CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.DoesNotContain("handoff=", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("id: `s:", text, StringComparison.Ordinal);
-
-        var entry = result.StructuredContent!.Value.GetProperty("implementations")[0];
-        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), StringComparison.Ordinal);
-        Assert.Equal("type", entry.GetProperty("handoffKind").GetString());
-        Assert.False(entry.TryGetProperty("handoff", out _));
-        Assert.False(entry.TryGetProperty("targetPath", out _));
-        Assert.False(entry.TryGetProperty("snapshot", out _));
-        Assert.False(entry.TryGetProperty("allowedFollowUpTools", out _));
+        Assert.Contains("BaseProcessor", text, StringComparison.Ordinal);
+        Assert.Contains("DerivedProcessor", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_StructuredImplementationIdCanBeUsedForHierarchyFollowUp()
+    public async Task ExecuteAsync_ImplementationTextIncludesFollowUpRelevantTypeName()
     {
         using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
         var state = fixture.CreateServer();
         var implementations = await FindImplementationsTool.ExecuteAsync(
             state, "IProcessor", maxResults: 50, ct: CancellationToken.None);
-        var id = implementations.StructuredContent!.Value.GetProperty("implementations")[0]
-            .GetProperty("id").GetString();
+        var typeName = "BaseProcessor";
+        Assert.Contains(typeName, Assert.IsType<TextContentBlock>(Assert.Single(implementations.Content)).Text, StringComparison.Ordinal);
 
         var hierarchy = await GetTypeHierarchyTool.ExecuteAsync(
-            state, id, GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
+            state, typeName, GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, hierarchy.IsError);
         Assert.Contains(
@@ -123,35 +106,19 @@ public sealed class FindImplementationsTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SourceHandoffIdFromFindSymbol_ReturnsImplementations()
+    public async Task ExecuteAsync_SourceFindSymbolName_ReturnsImplementations()
     {
         using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
         var server = fixture.CreateServer();
 
-        var discovery = await FindSymbolTool.ExecuteAsync(
-            server,
-            ["IProcessor"],
-            kind: "interface",
-            maxResults: 50,
-            CancellationToken.None);
-        var handoffId = discovery.StructuredContent!.Value
-            .GetProperty("results")[0]
-            .GetProperty("matches")[0]
-            .GetProperty("id")
-            .GetString();
-        Assert.StartsWith("s:", handoffId, StringComparison.Ordinal);
-
         var result = await FindImplementationsTool.ExecuteAsync(
             server,
-            handoffId,
+            "IProcessor",
             maxResults: 50,
             ct: CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.Equal(3, dto!.TotalCount);
+        Assert.Contains("Gefunden: 3", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -167,11 +134,6 @@ public sealed class FindImplementationsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("BaseProcessor.Execute", textContent.Text, StringComparison.Ordinal);
 
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.NotEmpty(dto!.Implementations);
-        Assert.Contains(dto.Implementations, i => i.MemberName == "Execute");
     }
 
     [Fact]
@@ -187,11 +149,6 @@ public sealed class FindImplementationsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("DerivedProcessor.Execute", textContent.Text, StringComparison.Ordinal);
 
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.True(dto!.TotalCount >= 1);
-        Assert.Contains(dto.Implementations, i => i.TypeName.Contains("DerivedProcessor", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -223,16 +180,10 @@ public sealed class FindImplementationsTests
             server, "BaseShape", maxResults: 50, ct: CancellationToken.None);
 
         Assert.True(result.IsError is null or false);
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.Equal(2, dto!.TotalCount);
-
-        var polygon = Assert.Single(dto.Implementations, i => i.TypeName.Contains("Polygon", StringComparison.Ordinal));
-        Assert.Equal("abstract", polygon.Status);
-
-        var circle = Assert.Single(dto.Implementations, i => i.TypeName.Contains("Circle", StringComparison.Ordinal));
-        Assert.Equal("concrete", circle.Status);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Gefunden: 2", text, StringComparison.Ordinal);
+        Assert.Contains("[abstract] Shapes.Polygon", text, StringComparison.Ordinal);
+        Assert.Contains("[concrete] Shapes.Circle", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -248,12 +199,7 @@ public sealed class FindImplementationsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Ergebnis trunkiert", textContent.Text, StringComparison.Ordinal);
 
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.True(dto!.IsTruncated);
-        Assert.Equal(3, dto.TotalCount);
-        Assert.Single(dto.Implementations);
+        Assert.Contains("1 von 3", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -315,11 +261,7 @@ public sealed class FindImplementationsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("EnglishGreeter", textContent.Text, StringComparison.Ordinal);
 
-        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(dto);
-        Assert.Equal(1, dto!.TotalCount);
-        Assert.Contains(dto.Implementations, i => i.TypeName.Contains("EnglishGreeter", StringComparison.Ordinal));
+        Assert.Contains("Gefunden: 1", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

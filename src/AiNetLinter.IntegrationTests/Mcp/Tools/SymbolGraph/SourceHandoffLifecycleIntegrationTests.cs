@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Commands;
@@ -42,12 +43,7 @@ public sealed class SourceHandoffLifecycleIntegrationTests
                 maxResults: 50,
                 CancellationToken.None);
             Assert.False(discovery.IsError == true, Text(discovery));
-            var match = Assert.Single(
-                discovery.StructuredContent!.Value
-                    .GetProperty("results")[0]
-                    .GetProperty("matches")
-                    .EnumerateArray());
-            handoffId = match.GetProperty("id").GetString()!;
+            handoffId = ExtractHandoffId(Text(discovery));
             Assert.StartsWith("s:", handoffId, StringComparison.Ordinal);
 
             firstLease.Dispose();
@@ -99,6 +95,14 @@ public sealed class SourceHandoffLifecycleIntegrationTests
         result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().SingleOrDefault()?.Text
         ?? result.ToString()
         ?? string.Empty;
+
+    private static string ExtractHandoffId(string text)
+    {
+        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>s:[^`]+)`", RegexOptions.CultureInvariant);
+        return match.Success
+            ? match.Groups["id"].Value
+            : throw new InvalidOperationException("Der Content muss eine kopierbare Source-Handoff-ID enthalten.");
+    }
 
     private sealed class ManualTimeProvider : TimeProvider
     {

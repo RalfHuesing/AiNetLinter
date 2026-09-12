@@ -3,8 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -41,16 +39,10 @@ public sealed class SafeguardToolTests
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
         Assert.True(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("SOLUTION_NOT_LOADED", payload.Code);
-        Assert.Contains("Solution ist nicht geladen", payload.Message, StringComparison.Ordinal);
-        Assert.Contains("Server-Log", payload.Hint, StringComparison.Ordinal);
-        Assert.False(payload.Recoverable);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Solution ist nicht geladen", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Server-Log", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -60,37 +52,21 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Safeguard-Score", textContent.Text, StringComparison.Ordinal);
-        Assert.NotNull(result.StructuredContent);
-
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.NotNull(json["score"]);
-        Assert.NotNull(json["threshold"]);
-        Assert.NotNull(json["passed"]);
-        Assert.NotNull(json["violations"]);
-        Assert.NotNull(json["remediation"]);
-        Assert.NotNull(json["summary"]);
-        Assert.True((bool)json["scoreIsNotScope"]!);
-        Assert.Equal("solution", (string)json["scope"]!);
-        Assert.Equal("complete", (string)json["completeness"]!);
-        Assert.NotNull(json["statusCause"]);
-        Assert.Contains((string)json["summary"]!, textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Threshold 8,00", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("scoreIsNotScope=true", textContent.Text, StringComparison.Ordinal);
-        Assert.NotNull(json["totalViolationCount"]);
-        Assert.NotNull(json["shownViolationCount"]);
-        Assert.NotNull(json["violationsTruncated"]);
     }
 
     [Fact]
-    public async Task ExecuteAsync_LoadedSolution_ListsTopViolationDetailsInTextAndStructuredOutput()
+    public async Task ExecuteAsync_LoadedSolution_ListsTopViolationDetailsInContent()
     {
         var state = _fixture.CreateServer();
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Top-Befunde:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Problem:", textContent.Text, StringComparison.Ordinal);
@@ -100,16 +76,6 @@ public sealed class SafeguardToolTests
         Assert.Contains("Severity:", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Guidance:", textContent.Text, StringComparison.Ordinal);
 
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        var violations = (JsonArray)json["violations"]!;
-        Assert.NotEmpty(violations);
-        var topViolation = Assert.IsType<JsonObject>(violations[0]);
-        Assert.NotNull(topViolation["filePath"]);
-        Assert.NotNull(topViolation["lineNumber"]);
-        Assert.NotNull(topViolation["ruleName"]);
-        Assert.NotNull(topViolation["details"]);
-        Assert.NotNull(topViolation["severity"]);
-        Assert.NotNull(topViolation["guidance"]);
     }
 
     [Fact]
@@ -119,11 +85,7 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 0, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.True((int)json["totalViolationCount"]! > 0);
-        Assert.Equal(0, (int)json["shownViolationCount"]!);
-        Assert.True((bool)json["violationsTruncated"]!);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Top-Auswahl wegen maxViolations", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("get_violations aufrufen", textContent.Text, StringComparison.Ordinal);
@@ -142,10 +104,7 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 100.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.Equal(false, (bool)json["passed"]!);
+        Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("FAIL", textContent.Text, StringComparison.Ordinal);
     }
@@ -158,10 +117,7 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var structured = result.StructuredContent!.Value;
-        Assert.False(structured.TryGetProperty("score", out _));
+        Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("NOT_CONFIGURED", text, StringComparison.Ordinal);
         Assert.DoesNotContain("PASS", text, StringComparison.Ordinal);
@@ -174,12 +130,9 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, "SymbolGraphMini", 8.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        var violations = (JsonArray)json["violations"]!;
-        // Bei einem Treffer im Scope muss mindestens eine Violation den Fixture-Projektnamen tragen.
-        Assert.NotEmpty(violations);
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Top-Befunde:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -189,11 +142,9 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, "src/SymbolGraphMini", 8.0, 20, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        var violations = (JsonArray)json["violations"]!;
-        Assert.NotEmpty(violations);
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Top-Befunde:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -203,13 +154,10 @@ public sealed class SafeguardToolTests
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 0.0, 1, CancellationToken.None);
 
-        Assert.False(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
-        Assert.NotNull(json["threshold"]);
-        Assert.Equal(0.0, (double)json["threshold"]!);
-        var violations = (JsonArray)json["violations"]!;
-        Assert.True(violations.Count <= 1, $"maxViolations=1 erzwingt <= 1 Eintrag, gefunden: {violations.Count}");
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Threshold 0,00", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Befund #2", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,17 +174,9 @@ public sealed class SafeguardToolTests
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
         Assert.True(result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.Equal("ANALYSIS_FAILED", payload.Code);
-        Assert.Contains("Safeguard-Berechnung", payload.Message, StringComparison.Ordinal);
-        Assert.Contains("Einmal erneut versuchen", payload.Hint, StringComparison.Ordinal);
-        Assert.Contains("Simulierter Lesefehler fuer Malfunction-Regression", payload.Context, StringComparison.Ordinal);
-        Assert.False(payload.Recoverable);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Safeguard-Berechnung", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Einmal erneut versuchen", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Simulierter Lesefehler", textContent.Text, StringComparison.Ordinal);
     }

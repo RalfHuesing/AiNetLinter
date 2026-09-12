@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Responses;
 
@@ -125,12 +124,10 @@ internal static partial class AssemblyAnalysisResponseLimits
         InspectAssemblyPayload payload,
         bool publicOnly,
         int responseBudgetBytes) =>
-        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly))
-            + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
+        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly)) <= responseBudgetBytes;
 
     private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload, int responseBudgetBytes) =>
-        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload))
-            + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
+        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload)) <= responseBudgetBytes;
 
     private static InspectAssemblyPayload RecalculateEnvelope(
         InspectAssemblyPayload payload,

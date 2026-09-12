@@ -26,12 +26,9 @@ public sealed class AssemblyAnalysisCatalogBudgetTests
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-        var type = Assert.Single(payload.Types);
-
-        Assert.False(string.IsNullOrWhiteSpace(type.Name));
-        Assert.False(string.IsNullOrWhiteSpace(type.Kind));
-        Assert.False(string.IsNullOrWhiteSpace(type.Id));
-        Assert.True(type.Handoff);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Probe.First", text, System.StringComparison.Ordinal);
+        Assert.Contains("(class, Public", text, System.StringComparison.Ordinal);
+        Assert.Contains("handoffId: `a:", text, System.StringComparison.Ordinal);
     }
 }

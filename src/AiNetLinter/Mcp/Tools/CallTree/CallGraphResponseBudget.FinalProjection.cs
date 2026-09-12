@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Tools.Common;
 using ModelContextProtocol.Protocol;
 
@@ -25,26 +26,11 @@ internal static partial class CallGraphResponseBudget
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
-        if (maxResponseBytes <= 0
-            || result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } content)
-        {
-            return result;
-        }
-
-        var node = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        var payload = JsonSerializer.Deserialize<CallTreePayload>(structured.GetRawText(), McpJsonOptions.Default);
-        if (node is null || payload is null || node["graph"] is not JsonObject)
-        {
-            return CombinedBytes(content.Text, structured) <= maxResponseBytes
-                ? result
-                : McpToolResults.InvalidArgument(
-                    "maxResponseBytes ist für den Assembly-Call-Graph zu klein.",
-                    "maxResponseBytes erhöhen oder includeReferences/symbolIdentifier verfeinern.",
-                    "$.maxResponseBytes");
-        }
-
-        return TrimFinalProjection(result, CreateFinalProjection(content.Text, payload, node), maxResponseBytes);
+        if (maxResponseBytes <= 0 || McpResponseSize.From(result).TotalBytes <= maxResponseBytes) return result;
+        return McpToolResults.InvalidArgument(
+            "maxResponseBytes ist für den Call-Graph zu klein.",
+            "maxResponseBytes erhöhen oder includeReferences/symbolIdentifier verfeinern.",
+            "$.maxResponseBytes");
     }
 
     private static FinalResponseProjection CreateFinalProjection(string text, CallTreePayload payload, JsonObject node)
@@ -78,8 +64,7 @@ internal static partial class CallGraphResponseBudget
                 "maxResponseBytes erhöhen oder symbolIdentifier/scopeType verfeinern.", "$.maxResponseBytes");
         }
 
-        return new CallToolResult { IsError = result.IsError, Content = [new TextContentBlock { Text = text }],
-            StructuredContent = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default) };
+        return new CallToolResult { IsError = result.IsError, Content = [new TextContentBlock { Text = text }] };
     }
 
     private static bool FinalProjectionExceedsBudget(FinalResponseProjection projection, IReadOnlyList<CallGraphEdge> edges,

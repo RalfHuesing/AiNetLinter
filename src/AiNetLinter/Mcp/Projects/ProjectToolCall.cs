@@ -149,38 +149,7 @@ internal static class ProjectToolCall
         {
             IsError = result.IsError,
             Content = content,
-            StructuredContent = AddDegradedMetadata(result.StructuredContent, header),
         };
-    }
-
-    private static JsonElement? AddDegradedMetadata(JsonElement? structuredContent, string warning)
-    {
-        if (structuredContent is not { } element)
-        {
-            return null;
-        }
-
-        var metadata = new JsonObject
-        {
-            ["degraded"] = true,
-            ["freshness"] = "stale",
-            ["degradedReason"] = "refresh-failed",
-            ["freshnessWarning"] = warning.Trim(),
-        };
-
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var property in element.EnumerateObject())
-            {
-                metadata[property.Name] = JsonNode.Parse(property.Value.GetRawText());
-            }
-        }
-        else
-        {
-            metadata["payload"] = JsonNode.Parse(element.GetRawText());
-        }
-
-        return JsonSerializer.SerializeToElement(metadata, McpJsonOptions.Default);
     }
 
     internal static string? RecoverHint(string errorCode)

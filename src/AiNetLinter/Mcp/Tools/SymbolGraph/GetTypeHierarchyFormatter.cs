@@ -318,7 +318,8 @@ internal static class GetTypeHierarchyFormatter
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}";
+        var handoff = string.IsNullOrEmpty(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{handoff}";
     }
 
     private sealed record SubtypeProjection(

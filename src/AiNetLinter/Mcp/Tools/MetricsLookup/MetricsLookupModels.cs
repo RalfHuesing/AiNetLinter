@@ -80,7 +80,7 @@ public sealed record PropertyMetricsDto(
 
 /// <summary>
 /// Vollständiges Ergebnis eines Metrics-Lookups für ein beliebiges C#-Symbol.
-/// Wird als StructuredContent (JSON-Objekt) serialisiert.
+/// Wird intern typisiert gehalten und als Content gerendert.
 /// </summary>
 public sealed record MetricsLookupResultDto(
     string SymbolName,
@@ -95,10 +95,8 @@ public sealed record MetricsLookupResultDto(
 );
 
 /// <summary>
-/// StructuredContent-Hülle für <c>metrics_lookup</c> (<c>symbolIdentifiers</c>). Das MCP-Protokoll
-/// verlangt <c>structuredContent</c> als JSON-Objekt — ein Top-Level-Array lässt reale Clients
-/// den kompletten Tool-Call schema-seitig ablehnen (siehe Doc-Kommentar
-/// <c>McpToolResults.Text``1</c>). Liefert immer <see cref="MetricsLookupBatchDto"/>, auch bei genau einem angefragten Identifier.
+/// Fachliche Hülle für <c>metrics_lookup</c> (<c>symbolIdentifiers</c>). Liefert immer
+/// <see cref="MetricsLookupBatchDto"/>, auch bei genau einem angefragten Identifier.
 /// </summary>
 public sealed record MetricsLookupBatchDto(
     IReadOnlyList<MetricsLookupResultDto> Results,

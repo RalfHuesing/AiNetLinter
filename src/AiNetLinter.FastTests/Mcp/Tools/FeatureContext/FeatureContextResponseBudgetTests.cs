@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FeatureContext;
@@ -26,20 +25,11 @@ public sealed class FeatureContextResponseBudgetTests
         var result = FeatureContextResponseBudget.Apply(payload, 8_192);
 
         Assert.NotEqual(true, result.IsError);
-        var projected = ReadPayload(result);
-        Assert.NotNull(projected.Declaration);
-        Assert.NotNull(projected.Metrics);
-        Assert.NotNull(projected.Callers);
-        Assert.NotNull(projected.Tests);
-        Assert.NotNull(projected.Violations);
-        Assert.Contains(projected.Callers!.CallSites, call => call.ProjectName == "Production");
-        Assert.Contains(projected.Tests!.TestFiles, file => file.EvidenceKind == "directInvocation");
-        Assert.Equal(payload.Callers!.TotalCallers, projected.Callers.TotalCallers);
-        Assert.Equal(payload.Tests!.TotalMatchingTests, projected.Tests.TotalMatchingTests);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.All(projected.Callers.CallSites, call => Assert.Contains(call.FilePath, text, StringComparison.Ordinal));
-        Assert.Equal("truncated", projected.Completeness);
-        Assert.Contains("responseBudget", projected.Callers.TruncatedBy ?? [], StringComparer.Ordinal);
+        Assert.Contains("HotSymbol.Run", text, StringComparison.Ordinal);
+        Assert.Contains("ProductionCaller", text, StringComparison.Ordinal);
+        Assert.Contains("HotSymbolDirectTests", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TRUNCATED", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -52,10 +42,7 @@ public sealed class FeatureContextResponseBudgetTests
         Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, StringComparison.Ordinal);
         Assert.Contains("fieldPath: $.maxResponseBytes", text, StringComparison.Ordinal);
         Assert.Contains("Mindestwert", text, StringComparison.Ordinal);
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", result.StructuredContent.Value.GetProperty("code").GetString());
-        Assert.Equal(512, result.StructuredContent.Value.GetProperty("requestedBytes").GetInt32());
-        Assert.True(result.StructuredContent.Value.GetProperty("minimumResponseBytes").GetInt32() > 512);
+        Assert.Contains("minimumResponseBytes:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,12 +53,11 @@ public sealed class FeatureContextResponseBudgetTests
         var small = FeatureContextResponseBudget.Apply(payload, 5_500);
         var large = FeatureContextResponseBudget.Apply(payload, 12_000);
 
-        var smallPayload = ReadPayload(small);
-        var largePayload = ReadPayload(large);
-        Assert.True(CountVisibleCallers(smallPayload) <= CountVisibleCallers(largePayload));
-        Assert.True(CountVisibleTests(smallPayload) <= CountVisibleTests(largePayload));
-        Assert.Contains("Production", Assert.IsType<TextContentBlock>(Assert.Single(small.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("directInvocation", Assert.IsType<TextContentBlock>(Assert.Single(small.Content)).Text, StringComparison.Ordinal);
+        var smallText = Assert.IsType<TextContentBlock>(Assert.Single(small.Content)).Text;
+        var largeText = Assert.IsType<TextContentBlock>(Assert.Single(large.Content)).Text;
+        Assert.Contains("Production", smallText, StringComparison.Ordinal);
+        Assert.Contains("directInvocation", smallText, StringComparison.Ordinal);
+        Assert.True(largeText.Length >= smallText.Length);
         Assert.True(McpResponseSize.From(small).TotalBytes <= 5_500);
         Assert.True(McpResponseSize.From(large).TotalBytes <= 12_000);
     }
@@ -97,41 +83,25 @@ public sealed class FeatureContextResponseBudgetTests
             },
         };
 
-        var projected = ReadPayload(FeatureContextResponseBudget.Apply(payload, 5_500));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(FeatureContextResponseBudget.Apply(payload, 5_500).Content)).Text;
 
-        Assert.Single(projected.Tests!.TestFiles);
-        Assert.Equal("directInvocation", projected.Tests.TestFiles[0].EvidenceKind);
+        Assert.Contains("ZDirectTests", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("AConventionTests", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ApplyFinal_PreservesNavigationAndReprojectsTextAndStructuredContentTogether()
+    public void ApplyFinal_ReturnsTheContentOnlyResponseUnchanged()
     {
         var payload = CreatePayload(20);
-        var navigation = new JsonObjectBuilder().BuildNavigation();
-        var structured = JsonSerializer.SerializeToElement(
-            new Dictionary<string, object?>
-            {
-                ["declaration"] = payload.Declaration,
-                ["metrics"] = payload.Metrics,
-                ["impact"] = payload.Callers,
-                ["testContext"] = payload.Tests,
-                ["violations"] = payload.Violations,
-                ["completeness"] = payload.Completeness,
-                ["navigation"] = navigation,
-            },
-            McpJsonOptions.Default);
         var result = new CallToolResult
         {
             Content = [new TextContentBlock { Text = FeatureContextFormatter.FormatReport(payload) + "\n## Navigation\n- status: operation=`ok`" }],
-            StructuredContent = structured,
         };
 
         var projected = FeatureContextResponseBudget.ApplyFinal(result, 8_192);
 
-        Assert.NotNull(projected.StructuredContent);
-        Assert.True(projected.StructuredContent.Value.TryGetProperty("navigation", out _));
         Assert.Contains("## Navigation", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
-        Assert.True(McpResponseSize.From(projected).TotalBytes <= 8_192);
+        Assert.Equal(McpResponseSize.From(result).TotalBytes, McpResponseSize.From(projected).TotalBytes);
     }
 
     private static FeatureContextPayload CreatePayload(int extraEntries = 8)
@@ -201,22 +171,4 @@ public sealed class FeatureContextResponseBudgetTests
             new ViolationsReportDto(violations.Count, 1, violations, false));
     }
 
-    private static FeatureContextPayload ReadPayload(CallToolResult result) =>
-        JsonSerializer.Deserialize<FeatureContextPayload>(
-            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-
-    private static int CountVisibleCallers(FeatureContextPayload payload) => payload.Callers?.CallSites.Count ?? 0;
-
-    private static int CountVisibleTests(FeatureContextPayload payload) =>
-        payload.Tests?.TestFiles.Sum(file => file.TestMethods.Count) ?? 0;
-
-    private sealed class JsonObjectBuilder
-    {
-        internal Dictionary<string, object?> BuildNavigation() => new()
-        {
-            ["contractVersion"] = 1,
-            ["status"] = new { operation = "ok", completeness = "complete" },
-            ["next"] = (object?)null,
-        };
-    }
 }

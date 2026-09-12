@@ -39,7 +39,7 @@ internal static class FindSymbolScanner
 
     /// <summary>
     /// Wie <see cref="FindMatchesAndFormat"/>, liefert zusaetzlich die <see cref="SymbolLocationEntry"/>-
-    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c>.
+    /// Liste für die <c>find_symbol</c>-Antwort.
     /// </summary>
     internal static async Task<(string Text, IReadOnlyList<SymbolLocationEntry> Entries)> FindMatchesWithEntriesAsync(
         FindSymbolScanRequest request,

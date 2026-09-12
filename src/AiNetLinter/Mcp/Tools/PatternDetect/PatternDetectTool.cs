@@ -67,12 +67,7 @@ internal static class PatternDetectTool
 
         if (result.Payload is null) return McpToolResults.Text(result.Text!);
         var text = result.Text!;
-        return new CallToolResult
-        {
-            IsError = false,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-            StructuredContent = JsonSerializer.SerializeToElement(result.Payload, McpJsonOptions.Default),
-        };
+        return McpToolResults.Text(text);
     }
 
     /// <summary>

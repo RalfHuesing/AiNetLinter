@@ -20,7 +20,6 @@ public abstract class McpHostFixtureBase : IAsyncLifetime
         client = new ReadOnlyMcpHostClient(host);
     }
 
-    internal Task<McpProcessHost> GetHostAsync() => host.Value;
     internal ReadOnlyMcpHostClient Client => client;
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;

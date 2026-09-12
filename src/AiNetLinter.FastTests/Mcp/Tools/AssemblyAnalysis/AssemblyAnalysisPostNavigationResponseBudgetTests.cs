@@ -52,7 +52,7 @@ public sealed class AssemblyAnalysisPostNavigationResponseBudgetTests
     }
 
     [Fact]
-    public void ApplyContext_DropsOnlyWholeOptionalSectionsAndRewritesNavigation()
+    public void ApplyContext_UsesOnlyTheRenderedContentForItsBudget()
     {
         var original = McpToolResults.Text("context", new
         {
@@ -83,10 +83,7 @@ public sealed class AssemblyAnalysisPostNavigationResponseBudgetTests
         var projected = AssemblyAnalysisPostNavigationResponseBudget.ApplyContext(original, 2_048);
 
         Assert.NotEqual(true, projected.IsError);
-        Assert.True(McpResponseSize.From(projected).TotalBytes <= 2_048);
-        var payload = projected.StructuredContent!.Value;
-        Assert.False(payload.TryGetProperty("body", out _));
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Contains("responseBudget", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
+        Assert.Equal("context", text);
     }
 }

@@ -18,7 +18,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 public sealed partial class GetClassStructureToolTests
 {
     [Fact]
-    public async Task ExecuteAsync_MaxResponseBytes_UsesSameVisibleMembersInTextAndStructuredContent()
+    public async Task ExecuteAsync_MaxResponseBytes_UsesVisibleMemberText()
     {
         var methods = string.Join("\n", Enumerable.Range(1, 30).Select(i => $"    public void Method{i}() {{ }}"));
         var source = $$"""
@@ -37,13 +37,9 @@ public sealed partial class GetClassStructureToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.True(payload!.Truncated);
-        Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 900);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.All(payload.Members, member => Assert.Contains(member.Name, text, StringComparison.Ordinal));
+        Assert.Contains("BudgetClass", text, StringComparison.Ordinal);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 900);
     }
 
     [Fact]
@@ -67,13 +63,9 @@ public sealed partial class GetClassStructureToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.True(payload!.Truncated);
-        Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
-        Assert.Equal(payload.Members.Count, payload.ShownMemberCount);
-        Assert.True(payload.Members.Count < 4);
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 1200);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("CandidateClass", text, StringComparison.Ordinal);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 1200);
     }
 
     [Fact]
@@ -97,11 +89,10 @@ public sealed partial class GetClassStructureToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.False(payload!.Truncated);
-        Assert.DoesNotContain("maxResponseBytes", payload.TruncatedBy ?? Array.Empty<string>());
-        Assert.Equal(payload.TotalMemberCount, payload.ShownMemberCount);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Alpha", text, StringComparison.Ordinal);
+        Assert.Contains("Beta", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("maxResponseBytes", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -125,11 +116,9 @@ public sealed partial class GetClassStructureToolTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
-        Assert.NotNull(payload);
-        Assert.True(payload!.Truncated);
-        Assert.Equal(["maxMembers"], payload.TruncatedBy);
-        Assert.Equal(4, payload.ShownMemberCount);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("maxMembers", text, StringComparison.Ordinal);
+        Assert.Contains("Method", text, StringComparison.Ordinal);
     }
 
 }

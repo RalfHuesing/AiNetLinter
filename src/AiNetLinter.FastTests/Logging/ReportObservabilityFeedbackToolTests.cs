@@ -39,7 +39,7 @@ public sealed class ReportObservabilityFeedbackToolTests
         Assert.Contains("Symbolaufloesung unvollstaendig", text.Text);
         Assert.Contains("issue", text.Text);
         Assert.Contains("[INFO]:", text.Text);
-        Assert.NotNull(result.StructuredContent);
+        Assert.Single(result.Content);
     }
 
     [Theory]

@@ -5,7 +5,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// <summary>
 /// Fachliche Kategorien fuer <c>find_magic_values</c>-Funde. Stabile, in JSON-RPC-Aufrufen
 /// verwendete String-Repraesentation ueber <see cref="ToStringValue"/> — die Strings landen
-/// 1:1 im <c>StructuredContent</c> und im Tool-Argument <c>categoryFilter</c>.
+/// im Content und im Tool-Argument <c>categoryFilter</c>.
 /// </summary>
 internal enum MagicValueCategory
 {
@@ -36,8 +36,7 @@ internal enum MagicValueCategory
 
 /// <summary>
 /// String-Repraesentation der <see cref="MagicValueCategory"/> fuer JSON-RPC und
-/// <c>StructuredContent</c>. Stabile snake_case-Werte — Aenderungen wuerden einen
-/// API-Bruch fuer MCP-Clients bedeuten.
+/// Content. Stabile snake_case-Werte für Tool-Argumente.
 /// </summary>
 internal static class MagicValueCategoryExtensions
 {

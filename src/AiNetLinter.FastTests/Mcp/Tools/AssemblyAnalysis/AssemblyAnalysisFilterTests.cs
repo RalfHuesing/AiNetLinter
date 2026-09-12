@@ -40,47 +40,28 @@ public sealed class AssemblyAnalysisFilterTests
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 10),
             CancellationToken.None);
-        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
-
-        var type = Assert.Single(payload.Types);
-        Assert.Equal(2, type.TotalMembers);
-        Assert.False(type.MembersTruncated);
-        Assert.DoesNotContain(type.Members, member => member.Name == "SaveExtra");
-        var save = Assert.Single(type.Members, member => member.Name == "Save");
-        Assert.Contains("abortOnWarning", save.Signature, StringComparison.Ordinal);
-        Assert.Equal(
-            ["abortOnWarning", "changeCount", "mode"],
-            save.Parameters.Select(parameter => parameter.Name).ToArray());
-        Assert.Equal("bool", save.Parameters[0].Type);
-        Assert.Equal("none", save.Parameters[0].RefKind);
-        Assert.Equal("ref", save.Parameters[1].RefKind);
-        Assert.True(save.Parameters[2].IsOptional);
-        Assert.Equal("\"safe\"", save.Parameters[2].DefaultValue);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        Assert.Contains("Probe.Api.PublicApi", text, StringComparison.Ordinal);
+        Assert.Contains("Save(bool abortOnWarning, ref int changeCount, [string mode])", text, StringComparison.Ordinal);
+        Assert.Contains("Validate()", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveExtra", text, StringComparison.Ordinal);
 
         var metadataResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["ReadOnly", "Escaped", "NullDefault", "this[]"], 10),
             CancellationToken.None);
-        var metadataType = Assert.Single(AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(metadataResult).Types);
-        var readOnly = Assert.Single(metadataType.Members, member => member.Name == "ReadOnly");
-        Assert.Equal("ref readonly", readOnly.Parameters[0].RefKind);
-        var escaped = Assert.Single(metadataType.Members, member => member.Name == "Escaped");
-        Assert.Equal("\"line\\n\\t\"", escaped.Parameters[0].DefaultValue);
-        Assert.Equal("'\\''", escaped.Parameters[1].DefaultValue);
-        var nullDefault = Assert.Single(metadataType.Members, member => member.Name == "NullDefault");
-        Assert.Equal("null", nullDefault.Parameters[0].DefaultValue);
-        var indexer = Assert.Single(metadataType.Members, member => member.Name == "this[]");
-        Assert.Equal("property", indexer.Kind);
-        Assert.Equal("index", indexer.Parameters[0].Name);
-        Assert.Equal("int", indexer.Parameters[0].Type);
+        var metadataText = AssemblyAnalysisTestSupport.TextOf(metadataResult);
+        Assert.Contains("ReadOnly", metadataText, StringComparison.Ordinal);
+        Assert.Contains("Escaped", metadataText, StringComparison.Ordinal);
+        Assert.Contains("NullDefault", metadataText, StringComparison.Ordinal);
+        Assert.Contains("property", metadataText, StringComparison.Ordinal);
 
         var limitedResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 1),
             CancellationToken.None);
-        var limitedType = Assert.Single(AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(limitedResult).Types);
-        Assert.Single(limitedType.Members);
-        Assert.Equal(2, limitedType.TotalMembers);
-        Assert.True(limitedType.MembersTruncated);
+        var limitedText = AssemblyAnalysisTestSupport.TextOf(limitedResult);
+        Assert.Contains("Save", limitedText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Validate()", limitedText, StringComparison.Ordinal);
     }
 }
