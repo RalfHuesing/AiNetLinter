@@ -12,7 +12,7 @@ frischer Subagent, anschließend Prüfung und Commit.
 - [X] Slice 03 – Einen Agentenrenderer und das Contentbudget etablieren
 - [X] Slice 04 – `structuredContent` restlos hart entfernen
 - [X] Slice 05 – Integrationstests und Dokumentation auf den Endzustand schneiden
-- [ ] Slice 06 – Agentische Verifikation und Release-Gate
+- [X] Slice 06 – Agentische Verifikation und Release-Gate
 - [ ] Abschlussaudit – Scope prüfen und alle Findings proaktiv beheben
 
 ## Durchführungsprotokoll
@@ -149,3 +149,43 @@ frischer Subagent, anschließend Prüfung und Commit.
   `find_dead_code` 0 Kandidaten. `find_magic_values` meldet ausschließlich
   vorbestehende Testliterale (`"opaque-init"`, Raw-Wire-Property `"text"`),
   die für ihre Verträge nicht zu ändern sind.
+
+### Slice 06 – Agentische Verifikation und Release-Gate (abgeschlossen, 2026-09-12)
+
+- Frischhost-Dogfooding ist für Raw-Wire (Erfolg, Empty, Truncation,
+  InvalidArgument), Source-Handoff (Eviction/Reload), Assembly-Handoff
+  (Eviction/Restart, Fremdtarget und stale Snapshot), Loading/InvalidArgument,
+  Budgetretry/Malfunction sowie Daemon-Assembly-Routen grün. Jede geprüfte
+  Antwort hat genau einen nichtleeren Textblock und keinen Ersatzkanal.
+- Die Raw-Wire-Regression schützt nun zusätzlich pro repräsentativer Route,
+  dass der sichtbare Content kleiner als die frühere Text-plus-Structured-
+  Payload bleibt; `ResponseMatrix.md` enthält die nachweisbaren Obergrenzen
+  und bewahrten Agenteninformationen.
+- Entfernt wurden tote File-Skeleton-Wire-DTOs, JSON-Projektoren und
+  Post-Navigation-Pfade ohne Content-Consumer. Namespace-Budgetierung zählt
+  ausschließlich sichtbare UTF-8-Bytes; `MinimumContentBytes` ersetzt die
+  irreführende Legacy-Bezeichnung.
+- Nachweise bisher: Build 0 Warnungen/Fehler; fokussierte File-Structure- und
+  Renderer-Tests 52 grün; Budget-/Malfunction-Tests 10 grün; Raw-Wire 1,
+  Source-Handoff 1, Assembly-Handoff 2, Error/Loading 2 und Daemon/Assembly 1
+  grün; vollständige FastTests ohne Stress 2.504 grün.
+- Die TRX-Analyse des einmalig fehlgeschlagenen Daemonvertrags belegt keine
+  reproduzierbare Ursache: Der vollständige Lauf über alle parallelen
+  Collections ist anschließend zweimal mit dem Vertrag grün gelaufen, ohne
+  globale Serialisierung oder Prozessbereinigung. Der relevante
+  `DaemonHostMcpProcessContractTests`-Lauf blieb dabei repräsentativ an der
+  echten Daemon-/Assembly-Grenze.
+- Der Dead-Code-Audit fand vier verwaiste Überbleibsel der entfernten
+  Dual-Output-Budgetprojektion. Drei unreferenzierte Klassenstruktur-Methoden,
+  ihre Zwischenmodelle und eine Namespace-Hilfsmethode wurden entfernt; der
+  erneute Scan meldet 0 Kandidaten. Die drei `nameof`-Heuristiken referenzieren
+  bewusst stabile JSON- bzw. Argumentfeldnamen und bleiben unverändert.
+- Finaler Release-Gate: `dotnet build` 0 Warnungen/Fehler, FastTests ohne
+  Stress 2.504 bestanden und Integrationstests ohne Stress 216 bestanden.
+- MCP im geänderten File-Structure-Scope: `safeguard --minScore 10` 10,0/10,
+  `get_violations` 0 und `find_dead_code` 0 Kandidaten. Der produktionsweite
+  MCP-Scan zeigt ausschließlich die zwei vorbestehenden, scope-fremden Befunde
+  `DecompiledProjectPaths` (fehlender Sentinel-Test) und
+  `McpNavigationProjection.Create` (sechs Parameter). Der README-Vertrag
+  enthält noch `structuredContent` und bleibt gemäß ausdrücklicher
+  README-Ausnahme unverändert.

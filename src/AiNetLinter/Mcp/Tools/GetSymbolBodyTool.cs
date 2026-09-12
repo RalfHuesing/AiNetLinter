@@ -400,8 +400,8 @@ internal static partial class GetSymbolBodyTool
 
     private static CallToolResult InvalidResponseBudget() =>
         McpToolResults.InvalidArgument(
-            $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
-            $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
+            $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
             "$.maxResponseBytes");
 
     private static string ToRelative(string outputRoot, ISymbol symbol)

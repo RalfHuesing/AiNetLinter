@@ -138,10 +138,9 @@ internal static class FileStructureToolRegistrations
                                 ct),
                             AssemblySessionCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
-                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes, DeferResponseBudgetToNavigation: true),
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes),
                                 ct),
-                            MaxResponseBytes: maxResponseBytes,
-                            PostNavigationResponseBudget: GetNamespaceTreeTool.ApplyFinalResponseBudget),
+                            MaxResponseBytes: maxResponseBytes),
                         ct))),
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
@@ -222,23 +221,17 @@ internal static class FileStructureToolRegistrations
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             // The final budget is applied after the fixed navigation envelope is projected.
-                            // Passing the wire limit into the legacy skeleton pre-trim would spend the
-                            // 2,048-byte budget before navigation exists and can yield INVALID_ARGUMENT.
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteBeforeNavigationAsync(lease.Server, filePaths, ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteBeforeNavigationAsync(lease.Server, filePaths, ct),
-                            MaxResponseBytes: maxResponseBytes,
-                            PostNavigationResponseBudget: GetFileSkeletonTool.ApplyFinalResponseBudget),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
+                            MaxResponseBytes: maxResponseBytes),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
     private const string GetFileSkeletonDescription =
-        "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
-        "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
-        "ohne die Bodies zu lesen — der Content enthält dieselben Einheiten " +
-        "mit stabilen Handoff-IDs fuer direkte Folge-Calls an get_symbol_body. " +
-        "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
+        "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn), " +
+        "ohne die Bodies zu lesen. Der Content enthält stabile Handoff-IDs fuer direkte Folge-Calls an get_symbol_body. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
         "maxResponseBytes: kombinierte UTF-8-Grenze der finalen Wire-Nutzlast (Default 24576, Minimum 512, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
 

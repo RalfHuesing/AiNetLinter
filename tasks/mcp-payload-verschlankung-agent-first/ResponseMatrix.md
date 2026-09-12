@@ -1,4 +1,4 @@
-# Responsematrix – Ausgangszustand des Dual-Output-Vertrags
+# Responsematrix – Dual-Output-Ausgangswert und Content-only-Endwert
 
 Erfasst am 2026-09-12 mit einem frischen Raw-MCP-Host gegen
 `SymbolGraphMiniFixtureWorkspace`. Die Größen sind UTF-8-Bytes der sichtbaren
@@ -19,3 +19,22 @@ und Fehlerdaten noch im Nebenkanal. Der spätere Endvergleich verwendet dieselbe
 Routen und prüft, dass ihr vollständiger Content-only-Nachfolger kleiner als
 die jeweilige `combined`-Ausgangsgröße ist, ohne die hier aufgeführten
 Agenteninformationen zu verlieren.
+
+Der Content-only-Endvergleich läuft gegen dieselbe Fixture und dieselben
+Raw-Wire-Requests in `McpContentOnlyRawWireContractTests`. Er misst die
+sichtbare UTF-8-Textgröße und schützt pro Route, dass sie strikt kleiner als
+der frühere `combined`-Wert bleibt. Der Test prüft außerdem genau einen
+nichtleeren Textblock sowie die Abwesenheit aller Ergebnisfelder außer
+`content` und optional `isError`.
+
+| Route / Zustand | früher combined | sichtbarer Content-only-Endwert | Informationsgehalt |
+| --- | ---: | ---: | --- |
+| `find_symbol` / Erfolg | 1.343 | `< 1.343` | Fundstelle und direkt kopierbare Handoff-ID |
+| `find_symbol` / Empty | 1.238 | `< 1.238` | explizite Leermenge und Suchkontext |
+| `get_file_tree` / Truncated | 2.332 | `< 2.332` | vollständige sichtbare Einheiten, Trunkierungsgrund und ausführbarer nächster Schritt |
+| `find_symbol` / InvalidArgument | 1.117 | `< 1.117` | stabiler Fehlercode, Feldpfad, Ursache und Korrektur |
+
+Die Matrix verwendet bewusst belastbare Obergrenzen statt reproduktionsanfälliger
+Absolutwerte: dynamische Handoff-IDs und Snapshotdaten beeinflussen die
+Bytezahl, nicht aber die garantierte strikte Unterschreitung oder den
+Informationsvertrag.

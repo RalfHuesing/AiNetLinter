@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -28,10 +26,10 @@ internal static class GetNamespaceTreeResponseBudget
             return McpToolResults.Text(RenderVisibleText(candidate, originalText), candidate);
         }
 
-        if (maxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes)
+        if (maxResponseBytes < McpResponseBudgetLimits.MinimumContentBytes)
         {
             return McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen, damit der Namespace-Text an vollständigen Einheiten gekürzt werden kann.",
+                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumContentBytes} Bytes betragen, damit der Namespace-Text an vollständigen Einheiten gekürzt werden kann.",
                 "maxResponseBytes weglassen, 0 verwenden oder mindestens 512 setzen.",
                 "$.maxResponseBytes");
         }
@@ -39,16 +37,6 @@ internal static class GetNamespaceTreeResponseBudget
         var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
         candidate = FitToBudget(candidate, originalText, maxResponseBytes, truncatedBy);
         return CreateBudgetedResult(candidate, originalText, maxResponseBytes, truncatedBy);
-    }
-
-    internal static CallToolResult ApplyFinal(CallToolResult result, int maxResponseBytes)
-    {
-        if (!TryReadPayload(result, maxResponseBytes, out var payload, out var text, out var envelope))
-        {
-            return result;
-        }
-
-        return FitFinalResult(result, text!, payload!, envelope!, maxResponseBytes);
     }
 
     private static NamespaceTreePayload PrepareCandidate(NamespaceTreePayload payload)
@@ -95,7 +83,7 @@ internal static class GetNamespaceTreeResponseBudget
         while (NamespaceTreeProjection.VisibleEntryCount(candidate) > minimumVisibleCount)
         {
             var budgetCandidate = MarkTruncated(candidate, truncatedBy);
-            if (CombinedResponseBytes(RenderVisibleText(budgetCandidate, originalText), budgetCandidate) <= maxResponseBytes)
+            if (ContentBytes(RenderVisibleText(budgetCandidate, originalText)) <= maxResponseBytes)
             {
                 return NamespaceTreeProjection.VisibleEntryCount(candidate) == initialVisibleCount
                     ? candidate
@@ -108,7 +96,7 @@ internal static class GetNamespaceTreeResponseBudget
         var minimumCandidate = initialVisibleCount > minimumVisibleCount
             ? MarkTruncated(candidate, truncatedBy)
             : candidate;
-        return CombinedResponseBytes(RenderVisibleText(minimumCandidate, originalText), minimumCandidate) <= maxResponseBytes
+        return ContentBytes(RenderVisibleText(minimumCandidate, originalText)) <= maxResponseBytes
             ? minimumCandidate
             : minimum;
     }
@@ -120,7 +108,7 @@ internal static class GetNamespaceTreeResponseBudget
         List<string> truncatedBy)
     {
         var text = RenderVisibleText(candidate, originalText);
-        return CombinedResponseBytes(text, candidate) > maxResponseBytes
+        return ContentBytes(text) > maxResponseBytes
             ? BudgetTooSmall(maxResponseBytes, candidate, originalText)
             : McpToolResults.Text(text, candidate);
     }
@@ -145,84 +133,6 @@ internal static class GetNamespaceTreeResponseBudget
 
     private static NamespaceTreeNext BudgetNext() =>
         new("request_detail", "maxResponseBytes erhöhen oder project/namespacePrefix/maxResults verfeinern.");
-
-    private static bool TryReadPayload(
-        CallToolResult result,
-        int maxResponseBytes,
-        out NamespaceTreePayload? payload,
-        out string? text,
-        out JsonObject? envelope)
-    {
-        payload = null;
-        text = null;
-        envelope = null;
-        return false;
-    }
-
-    private static bool HasNamespacePayload(JsonElement structured) =>
-        structured.TryGetProperty("projects", out _)
-        || structured.TryGetProperty("namespaces", out _)
-        || structured.TryGetProperty("types", out _);
-
-    private static CallToolResult FitFinalResult(
-        CallToolResult original,
-        string originalText,
-        NamespaceTreePayload payload,
-        JsonObject envelope,
-        int maxResponseBytes)
-    {
-        if (CombinedResponseBytes(originalText, envelope) <= maxResponseBytes)
-        {
-            return original;
-        }
-
-        var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
-        var candidate = payload;
-        var initialVisibleCount = NamespaceTreeProjection.VisibleEntryCount(candidate);
-        if (initialVisibleCount == 0 && !candidate.Truncated)
-        {
-            return original;
-        }
-
-        var minimum = MinimumProjection(candidate, initialVisibleCount, truncatedBy);
-        var minimumVisibleCount = NamespaceTreeProjection.VisibleEntryCount(minimum);
-        while (NamespaceTreeProjection.VisibleEntryCount(candidate) > minimumVisibleCount)
-        {
-            var hasVisibleReduction =
-                NamespaceTreeProjection.VisibleEntryCount(candidate) < initialVisibleCount;
-            var budgetCandidate = hasVisibleReduction
-                ? MarkTruncated(candidate, truncatedBy)
-                : candidate;
-            var projected = ProjectEnvelope(envelope, budgetCandidate);
-            var rendered = RenderVisibleText(budgetCandidate, originalText);
-            if (CombinedResponseBytes(rendered, projected) <= maxResponseBytes)
-            {
-                return new CallToolResult
-                {
-                    IsError = original.IsError,
-                    Content = new List<ContentBlock> { new TextContentBlock { Text = rendered } },
-                };
-            }
-
-            candidate = RemoveLastVisibleEntry(candidate);
-        }
-
-        var minimumCandidate = initialVisibleCount > minimumVisibleCount
-            ? MarkTruncated(candidate, truncatedBy)
-            : candidate;
-        var minimumEnvelope = ProjectEnvelope(envelope, minimumCandidate);
-        var minimumText = RenderVisibleText(minimumCandidate, originalText);
-        if (CombinedResponseBytes(minimumText, minimumEnvelope) <= maxResponseBytes)
-        {
-            return new CallToolResult
-            {
-                IsError = original.IsError,
-                Content = new List<ContentBlock> { new TextContentBlock { Text = minimumText } },
-            };
-        }
-
-        return BudgetTooSmall(maxResponseBytes, minimumCandidate, minimumText, minimumEnvelope);
-    }
 
     private static NamespaceTreePayload MinimumProjection(
         NamespaceTreePayload payload,
@@ -271,12 +181,9 @@ internal static class GetNamespaceTreeResponseBudget
     private static CallToolResult BudgetTooSmall(
         int requestedBytes,
         NamespaceTreePayload minimum,
-        string originalText,
-        JsonObject? envelope = null)
+        string originalText)
     {
-        var minimumBytes = envelope is null
-            ? CombinedResponseBytes(RenderVisibleText(minimum, originalText), minimum)
-            : CombinedResponseBytes(originalText, envelope);
+        var minimumBytes = ContentBytes(RenderVisibleText(minimum, originalText));
         return McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={requestedBytes} ist zu klein für die fachliche Namespace-Mindestprojektion; Mindestwert: {minimumBytes} Bytes.",
@@ -287,35 +194,8 @@ internal static class GetNamespaceTreeResponseBudget
                 MinimumResponseBytes: minimumBytes));
     }
 
-    private static JsonObject ProjectEnvelope(JsonObject original, NamespaceTreePayload payload)
-    {
-        var projected = (JsonObject)original.DeepClone();
-        var payloadNode = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject
-            ?? new JsonObject();
-        foreach (var name in NamespacePayloadFields)
-        {
-            projected.Remove(name);
-            if (payloadNode[name] is { } value) projected[name] = value.DeepClone();
-        }
-
-        return projected;
-    }
-
-    private static readonly string[] NamespacePayloadFields =
-    [
-        "solutionName", "project", "namespacePrefix", "kindFilter", "depth", "includeTypes",
-        "totalCount", "shownCount", "truncated", "projects", "namespaces", "types",
-        "requestedDepth", "effectiveDepth", "depthWasClamped", "truncatedBy", "next",
-    ];
-
-    private static int CombinedResponseBytes(string text, NamespaceTreePayload payload) =>
-        Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
-
-    private static int CombinedResponseBytes(string text, JsonObject envelope) =>
-        Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
-
-    private static bool HasVisibleEntries(NamespaceTreePayload payload) =>
-        NamespaceTreeProjection.VisibleEntryCount(payload) > 0;
+    private static int ContentBytes(string text) =>
+        Encoding.UTF8.GetByteCount(text);
 
     private static NamespaceTreePayload RemoveLastVisibleEntry(NamespaceTreePayload payload)
     {

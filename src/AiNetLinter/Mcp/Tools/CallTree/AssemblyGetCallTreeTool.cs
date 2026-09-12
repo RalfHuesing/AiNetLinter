@@ -84,9 +84,9 @@ internal static class AssemblyGetCallTreeTool
         }
 
         return input.MaxResponseBytes > 0
-            && input.MaxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes
+            && input.MaxResponseBytes < McpResponseBudgetLimits.MinimumContentBytes
             ? McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumContentBytes} Bytes betragen.",
                 "maxResponseBytes weglassen oder mindestens 512 setzen.",
                 "$.maxResponseBytes")
             : null;

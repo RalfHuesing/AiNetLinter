@@ -45,8 +45,8 @@ internal static class GetNamespaceTreeTool
         if (!McpResponseBudgetLimits.IsPublicBudget(input.MaxResponseBytes))
         {
             return McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
-                $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
+                $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+                $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
                 "$.maxResponseBytes");
         }
 
@@ -290,9 +290,6 @@ internal static class GetNamespaceTreeTool
         deferToNavigation
             ? McpToolResults.Text(originalText, payload)
             : GetNamespaceTreeResponseBudget.Apply(originalText, payload, maxResponseBytes);
-
-    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes) =>
-        GetNamespaceTreeResponseBudget.ApplyFinal(result, maxResponseBytes);
 
     private static string AppendDepthEvidence(string text, int requestedDepth, int effectiveDepth)
     {

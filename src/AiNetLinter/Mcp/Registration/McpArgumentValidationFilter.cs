@@ -316,8 +316,8 @@ internal static partial class McpArgumentValidationFilter
         }
 
         return McpToolResults.InvalidArgument(
-            $"{argumentName} muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
-            $"'{argumentName}' weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
+            $"{argumentName} muss zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            $"'{argumentName}' weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumContentBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
             $"$.{argumentName}");
     }
 

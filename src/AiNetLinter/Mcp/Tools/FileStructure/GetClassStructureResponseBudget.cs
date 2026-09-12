@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -22,85 +21,6 @@ internal static class GetClassStructureResponseBudget
             "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
             "$.maxResponseBytes");
     }
-
-    private static bool TryReadBudgetParts(
-        CallToolResult result,
-        int maxResponseBytes,
-        out BudgetParts parts)
-    {
-        parts = default;
-        return false;
-    }
-
-    private static ClassStructurePayload TrimToBudget(BudgetParts parts, int maxResponseBytes)
-    {
-        var members = parts.Payload.Members.ToList();
-        var truncatedBy = (parts.Payload.TruncatedBy ?? Array.Empty<string>()).ToList();
-        var candidate = parts.Payload;
-        while (CombinedResponseBytes(
-                   RenderBudgetText(candidate, parts.Text, ProjectEnvelope(parts.Envelope, candidate)),
-                   ProjectEnvelope(parts.Envelope, candidate)) > maxResponseBytes
-            && members.Count > 0)
-        {
-            members.RemoveAt(members.Count - 1);
-            if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
-            candidate = candidate with
-            {
-                Members = members.ToList(),
-                ShownMemberCount = members.Count,
-                Truncated = true,
-                TruncatedBy = truncatedBy,
-                Next = BudgetNext,
-            };
-        }
-        return candidate;
-    }
-
-    private static CallToolResult CreateBudgetedResult(
-        CallToolResult original,
-        string text,
-        JsonObject envelope) => new()
-        {
-            IsError = original.IsError,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
-        };
-
-    private static JsonObject ProjectEnvelope(JsonObject original, ClassStructurePayload payload)
-    {
-        var projected = (JsonObject)original.DeepClone();
-        var payloadNode = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject
-            ?? new JsonObject();
-        foreach (var name in ClassPayloadFields)
-        {
-            projected.Remove(name);
-            if (payloadNode[name] is { } value) projected[name] = value.DeepClone();
-        }
-
-        // The source route adds navigation before this final, tool-specific budget pass.  If
-        // that extra navigation overhead causes the member list to be trimmed here, the
-        // navigation projection must describe the delivered subset too; otherwise it can still
-        // claim a complete result and advise `none` even though the class structure is partial.
-        if (payload.TruncatedBy?.Contains("maxResponseBytes", StringComparer.Ordinal) == true
-            && projected["navigation"] is JsonObject navigation)
-        {
-            if (navigation["status"] is JsonObject status)
-            {
-                status["completeness"] = "truncated";
-            }
-            navigation["next"] = new JsonObject
-            {
-                ["kind"] = BudgetNext.Kind,
-                ["action"] = BudgetNext.Reason,
-            };
-        }
-        return projected;
-    }
-
-    private static readonly string[] ClassPayloadFields =
-    [
-        "typeName", "kind", "files", "totalLines", "totalMemberCount", "shownMemberCount",
-        "truncated", "members", "truncatedBy", "next",
-    ];
 
     internal static string RenderBudgetText(
         ClassStructurePayload payload,
@@ -185,15 +105,4 @@ internal static class GetClassStructureResponseBudget
         Encoding.UTF8.GetByteCount(text)
         + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
 
-    internal static int CombinedResponseBytes(string text, JsonObject envelope) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
-
-    private static readonly ClassStructureNext BudgetNext =
-        new("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern.");
-
-    private readonly record struct BudgetParts(
-        ClassStructurePayload Payload,
-        string Text,
-        JsonObject Envelope);
 }

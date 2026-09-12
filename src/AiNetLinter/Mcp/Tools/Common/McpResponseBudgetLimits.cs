@@ -16,8 +16,8 @@ internal static class McpResponseBudgetLimits
     /// Envelope mitliefern. Kleinere positive Werte werden vor dem Dispatch abgelehnt,
     /// damit kein unmarkierter Header-Schnipsel entsteht.
     /// </summary>
-    internal const int MinimumStructuredBytes = 512;
+    internal const int MinimumContentBytes = 512;
 
     internal static bool IsPublicBudget(int value) =>
-        value >= MinimumStructuredBytes && value <= MaxBytes;
+        value >= MinimumContentBytes && value <= MaxBytes;
 }

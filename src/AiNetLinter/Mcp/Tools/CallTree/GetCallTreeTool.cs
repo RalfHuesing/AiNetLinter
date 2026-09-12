@@ -161,9 +161,9 @@ internal static class GetCallTreeTool
                 $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
                 "maxResponseBytes auf höchstens 65536 setzen.",
                 "$.maxResponseBytes")
-            : value > 0 && value < McpResponseBudgetLimits.MinimumStructuredBytes
+            : value > 0 && value < McpResponseBudgetLimits.MinimumContentBytes
                 ? McpToolResults.InvalidArgument(
-                    $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                    $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumContentBytes} Bytes betragen.",
                     "maxResponseBytes weglassen oder mindestens 512 setzen.",
                     "$.maxResponseBytes")
                 : null;

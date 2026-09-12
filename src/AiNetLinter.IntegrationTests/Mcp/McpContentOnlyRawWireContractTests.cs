@@ -31,6 +31,7 @@ public sealed class McpContentOnlyRawWireContractTests
         };
 
         AssertContentOnly(responses);
+        AssertSmallerThanFormerDualPayload(responses);
     }
 
     private static string[] BuildFrames()
@@ -118,6 +119,35 @@ public sealed class McpContentOnlyRawWireContractTests
         var text = response.Result.GetProperty("content")[0].GetProperty("text").GetString()!;
         var textBytes = McpPayloadMeasurement.Measure(text).Utf8Bytes;
         return $"{response.Scenario}: content={textBytes}";
+    }
+
+    private static void AssertSmallerThanFormerDualPayload(IEnumerable<RawToolResponse> responses)
+    {
+        var formerDualPayloadBytes = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["success/find_symbol"] = 1_343,
+            ["empty/find_symbol"] = 1_238,
+            ["truncated/get_file_tree"] = 2_332,
+            ["error/find_symbol"] = 1_117,
+        };
+
+        var violations = responses
+            .Select(response =>
+            {
+                var text = response.Result.GetProperty("content")[0].GetProperty("text").GetString()!;
+                var contentBytes = McpPayloadMeasurement.Measure(text).Utf8Bytes;
+                var formerBytes = formerDualPayloadBytes[response.Scenario];
+                return contentBytes < formerBytes
+                    ? null
+                    : $"{response.Scenario}: content={contentBytes}, former dual payload={formerBytes}.";
+            })
+            .Where(message => message is not null)
+            .ToArray();
+
+        Assert.True(
+            violations.Length == 0,
+            "Content-only responses must be smaller than their former dual payload:" + Environment.NewLine
+            + string.Join(Environment.NewLine, violations));
     }
 
     private sealed record RawToolResponse(string Scenario, JsonElement Result);
