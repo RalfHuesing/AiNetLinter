@@ -26,7 +26,7 @@
 
 - Dead-Code- und Magic-Value-Scanner liefern nur für `changes` advisory-Evidenz mit expliziter Unsicherheit.
 - Deterministische Projektion, vollständige Counts, Nichtblockierung und Solution-Ausschluss fokussiert grün geprüft.
-- Commit: ausstehend.
+- Commit: `7c6884588bd9c8f956d23b18088fae18bed2cd37`.
 
 ### Vorbereitung
 
