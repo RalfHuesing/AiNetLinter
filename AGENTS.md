@@ -7,7 +7,7 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 ## 1. Regeln, MCP & Skills
 
 - **Verbindliche Regeln (`.agents/rules/`)**: Alle Architektur-, Qualitäts-, Clean-Code-, Test- und Git-Regeln liegen zentral in `.agents/rules/AiNetLinterRichtlinien.mdc`.
-- **Semantische C#-Analyse via MCP**: AiNetLinter registriert sich als MCP-Server `ainetlinter`. Für Symbole, Referenzen, Aufrufketten, Impact und Verstöße die semantischen MCP-Tools bevorzugen (siehe `.agents/rules/AiNetLinter-McpWorkflow.mdc`); Textsuche via `rg`.
+- **Semantische C#-Analyse via MCP**: Server `ainetlinter` mit `targetPath: "AiNetLinter.slnx"` (absoluter Pfad im Workspace) nutzen. Für Symbole, Referenzen, Aufrufketten, Impact und Verstöße die semantischen MCP-Tools bevorzugen (siehe `.agents/rules/AiNetLinter-McpWorkflow.mdc`); Textsuche via `rg`.
 - **Orchestrierung & Skills (`.agents/skills/`)**: Größere Features, Konzepte oder Refactorings über spezialisierte Skills steuern (`concept-planner`, `project-orchestrator`, `mcp-ux-audit`).
 
 ---
