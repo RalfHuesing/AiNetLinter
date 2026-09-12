@@ -72,7 +72,7 @@
 
 - Advisory-Scanner verarbeiten die gesamte geänderte Dateimenge jeweils einmal statt pro Datei erneut zu traversieren.
 - Mehrdatei-Regression sichert aggregierte Counts, deterministische Reihenfolge und Gate-Isolation.
-- Commit: ausstehend.
+- Commit: `ab0b342c5d5488449600e88c937782364d3dc622`.
 
 ### Vorbereitung
 
