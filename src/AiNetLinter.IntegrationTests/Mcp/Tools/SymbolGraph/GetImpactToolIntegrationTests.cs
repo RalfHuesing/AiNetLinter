@@ -177,7 +177,23 @@ public sealed class GetImpactToolIntegrationTests
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 2, 1), CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_GitRefCommittedChange_ReturnsCallSites()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.CommitCalculatorAddBodyChange();
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("HEAD~1", null, 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("CalculatorCaller.cs", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -278,6 +294,38 @@ public sealed class GetImpactToolIntegrationTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", text, StringComparison.Ordinal);
         Assert.Contains("[Teilergebnis:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChangeContextCapsAboveContractAreClamped()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        fixture.ChangeCalculatorAddBodyWithoutCommitting();
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
+            catalog,
+            Config: new Config
+            {
+                Global = new GlobalConfig { EnforceSealedClasses = true },
+                Metrics = new MetricsConfig()
+            })));
+
+        var result = await GetImpactTool.ExecuteAsync(
+            state,
+            new GetImpactInput(
+                null,
+                null,
+                50,
+                0,
+                DetailLevel: "change-context",
+                MaxChangedSymbols: 101,
+                MaxTestsPerSymbol: 51),
+            CancellationToken.None);
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("gitDiff", result.StructuredContent!.Value.GetProperty("mode").GetString());
+        Assert.Equal("change-context", result.StructuredContent.Value.GetProperty("detailLevel").GetString());
     }
 
     [Fact]

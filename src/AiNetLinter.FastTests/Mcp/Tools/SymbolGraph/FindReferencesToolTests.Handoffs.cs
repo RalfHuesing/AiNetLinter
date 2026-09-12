@@ -74,4 +74,18 @@ public sealed partial class FindReferencesToolTests
         Assert.NotEqual(true, body.IsError);
         Assert.Contains("Greet", Assert.IsType<TextContentBlock>(Assert.Single(body.Content)).Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithMaxResults_TruncatesAndEmitsCountHeader()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await FindReferencesTool.ExecuteAsync(
+            state, "Greeter.Greet", maxResults: 2, depth: 1, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
+        Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
+    }
 }

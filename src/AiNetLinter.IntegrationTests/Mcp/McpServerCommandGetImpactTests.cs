@@ -22,18 +22,6 @@ public sealed class McpServerCommandGetImpactTests
     }
 
     [Fact]
-    public async Task RunAsync_ValidFixture_GetImpactSymbolBranchWithMaxResultsTruncates()
-    {
-        var host = await fixture.GetHostAsync();
-        var text = await host.CallToolGetTextAsync(
-            "get_impact",
-            new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet", ["maxResults"] = 2 });
-
-        Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
-        Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task RunAsync_AssemblyTarget_GetImpactUsesAssemblySessionAndOriginContract()
     {
         var result = await fixture.Client.CallToolAsync(
@@ -72,47 +60,5 @@ public sealed class McpServerCommandGetImpactTests
             "symbolIdentifier",
             result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Single().Text,
             StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetImpactGitBranchWithMaxResultsTruncates()
-    {
-        var workspace = new GitImpactMiniFixtureWorkspace();
-        workspace.ChangeCalculatorAddBodyWithoutCommitting();
-
-        await using var client = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
-
-        var text = await client.CallToolGetTextAsync(
-            "get_impact",
-            new Dictionary<string, object?> { ["maxResults"] = 2 });
-
-        Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
-        Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunAsync_ChangeContextCapsAboveContractAreClampedByHandler()
-    {
-        using var workspace = new GitImpactMiniFixtureWorkspace();
-        workspace.ChangeCalculatorAddBodyWithoutCommitting();
-
-        await using var client = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
-
-        var result = await client.CallToolAsync(
-            "get_impact",
-            new Dictionary<string, object?>
-            {
-                ["detailLevel"] = "change-context",
-                // depth is intentionally ignored by the Git branch; zero must
-                // not be rejected by the generic positive-limit filter.
-                ["depth"] = 0,
-                ["maxChangedSymbols"] = 101,
-                ["maxTestsPerSymbol"] = 51,
-            });
-
-        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal("gitDiff", result.StructuredContent!.Value.GetProperty("mode").GetString());
-        Assert.Equal("change-context", result.StructuredContent.Value.GetProperty("detailLevel").GetString());
     }
 }

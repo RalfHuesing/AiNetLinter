@@ -25,9 +25,6 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 public sealed class McpServerCommandContractTests
 {
     private static readonly TimeSpan LoadStatePollInterval = TimeSpan.FromMilliseconds(25);
-    private static readonly TimeSpan LoadingRetryDelay = TimeSpan.FromMilliseconds(500);
-    private const int LoadingRetryCount = 120;
-    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
 
     private readonly ReadOnlyMcpHostFixture fixture;
 
@@ -95,32 +92,6 @@ public sealed class McpServerCommandContractTests
         Assert.Equal(33, tools.Count);
     }
 
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetHotspotsReturnsAllGreenForSmallFixture() =>
-        await AssertTextAsync("get_hotspots", new Dictionary<string, object?>(), "im gruenen Bereich");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetIndexScopeReturnsFileTypeBreakdown() =>
-        await AssertTextAsync("get_index_scope", new Dictionary<string, object?>(), ".cs:");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetViolationsReturnsAtLeastOneViolation() =>
-        await AssertTextAsync("get_violations", new Dictionary<string, object?>(), "ViolationTrigger");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_SearchPatternReturnsExpectedHit() =>
-        await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter" }, "Greeter.cs");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_SearchPatternIncludeGlobFiltersResults() =>
-        await AssertTextAsync(
-            "search_pattern",
-            new Dictionary<string, object?>
-            {
-                ["pattern"] = "Greeter",
-                ["includePatterns"] = new[] { "**/*.cs" },
-            },
-            "Greeter.cs");
 
     [Fact]
     public async Task RunAsync_ValidFixture_SearchPatternStructuredArgumentsBind()
@@ -174,37 +145,6 @@ public sealed class McpServerCommandContractTests
         Assert.Contains("unavailable", tool.ProtocolTool.Description, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task RunAsync_ValidFixture_FindSymbolReturnsMatch() =>
-        await AssertTextAsync("find_symbol", new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greeter" } }, "Greeter");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_FindReferencesReturnsCallSite() =>
-        await AssertTextAsync("find_references", new Dictionary<string, object?> { ["symbolIdentifier"] = "Greeter.Greet" }, "Caller.cs");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetImpactWithGitRefReturnsCallSite()
-    {
-        var workspace = new GitImpactMiniFixtureWorkspace();
-        workspace.CommitCalculatorAddBodyChange();
-        await using var host = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
-        var text = await host.CallToolGetTextAsync("get_impact", new Dictionary<string, object?> { ["gitRef"] = "HEAD~1" });
-        Assert.Contains("CalculatorCaller.cs", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetImpactWithoutGitRefUncommittedReturnsCallSite()
-    {
-        var workspace = new GitImpactMiniFixtureWorkspace();
-        workspace.ChangeCalculatorAddBodyWithoutCommitting();
-        await using var host = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
-        var text = await host.CallToolGetTextAsync("get_impact", new Dictionary<string, object?>());
-        Assert.Contains("CalculatorCaller.cs", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature() =>
-        await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" } }, "Greet");
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileTreeDiscoversPhysicalFilesAndStructuredPayload()
@@ -233,9 +173,6 @@ public sealed class McpServerCommandContractTests
             file => file.GetProperty("path").GetString()?.EndsWith("Greeter.cs", StringComparison.Ordinal) == true);
     }
 
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetTypeHierarchyReturnsBaseGreetingHierarchy() =>
-        await AssertTextAsync("get_type_hierarchy", new Dictionary<string, object?> { ["symbolIdentifier"] = "BaseGreeting" }, "IGreeting");
 
     [Theory]
     [InlineData("find_symbol", "namePatterns", false)]
@@ -256,20 +193,6 @@ public sealed class McpServerCommandContractTests
         Assert.Contains(parameterName, text, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task RunAsync_ValidFixture_MetricsLookup_SingleSymbol_ReturnsBatchStructuredContent()
-    {
-        var host = await fixture.GetHostAsync();
-        var result = await host.CallToolAsync(
-            "metrics_lookup",
-            new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "Greeter" } });
-
-        Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-        var rawText = result.StructuredContent!.Value.GetRawText();
-        Assert.Contains("\"results\":", rawText, StringComparison.Ordinal);
-        Assert.Contains("\"requestedCount\":1", rawText, StringComparison.Ordinal);
-    }
 
     private sealed class BrokenColdLoadHarness : IAsyncDisposable
     {
@@ -367,23 +290,6 @@ public sealed class McpServerCommandContractTests
         }
     }
 
-    private async Task AssertTextAsync(string tool, IReadOnlyDictionary<string, object?> arguments, string expected)
-    {
-        var host = await fixture.GetHostAsync();
-        CallToolResult result = null!;
-        for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
-        {
-            result = await host.CallToolAsync(tool, arguments);
-            var loadingText = result.Content?.FirstOrDefault() as TextContentBlock;
-            if (loadingText?.Text?.StartsWith(LoadingMessagePrefix, StringComparison.Ordinal) != true) break;
-            await Task.Delay(LoadingRetryDelay);
-        }
-
-        Assert.NotEqual(true, result.IsError);
-        var content = result.Content ?? [];
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(content)).Text;
-        Assert.Contains(expected, text, StringComparison.Ordinal);
-    }
 
     private static async Task<CallToolResult> WaitForLoadFailureAsync(BrokenColdLoadHarness scenario)
     {

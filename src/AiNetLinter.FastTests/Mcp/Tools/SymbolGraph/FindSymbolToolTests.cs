@@ -90,6 +90,7 @@ public sealed class FindSymbolToolTests
         Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 
+
     [Fact]
     public async Task ExecuteAsync_ExceedsMaxPatternsCap_ReturnsRecoverableInvalidArgument()
     {

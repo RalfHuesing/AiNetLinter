@@ -119,6 +119,7 @@ public sealed partial class FindReferencesToolTests
         Assert.Contains("OtherCaller.cs", textContent.Text, StringComparison.Ordinal);
     }
 
+
     [Fact]
     public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsSelectableLocationsWithoutIds()
     {

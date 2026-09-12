@@ -9,6 +9,8 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Validation;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -20,6 +22,26 @@ namespace AiNetLinter.FastTests.Mcp.Wiring;
 [Trait("Category", "Unit")]
 public sealed class WiringToolCollectionContractTests
 {
+    [Fact]
+    public async Task FindSymbolKindContract_UsesCanonicalValuesForToolDescriptionAndValidator()
+    {
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var tools = McpServerToolCollectionFactory.Build(
+            registry,
+            AnalysisToolCall.CreateTargetRoute(
+                ProjectAnalysisDispatcher.CreateRoute(registry),
+                AssemblyAnalysisDispatcher.CreateRoute(null)));
+        var tool = Assert.Single(tools.Where(candidate => candidate.ProtocolTool.Name == "find_symbol"));
+
+        foreach (var kind in McpEnumValues.FindSymbolKinds)
+        {
+            Assert.Contains(kind, tool.ProtocolTool.Description, StringComparison.Ordinal);
+            Assert.Null(FindSymbolTool.ValidateKind(kind));
+        }
+
+        Assert.NotNull(FindSymbolTool.ValidateKind("trait"));
+    }
+
     [Fact]
     public async Task ToolCollection_FreezesTargetPathOnlyContract()
     {

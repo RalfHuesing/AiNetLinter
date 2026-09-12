@@ -14,7 +14,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 /// E2E-Vertraege fuer fehlende, widerspruechliche und ungueltige Toolargumente.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed partial class McpServerArgumentValidationE2ETests
+public sealed class McpServerArgumentValidationE2ETests
 {
     private readonly ReadOnlyMcpHostFixture _fixture;
 
