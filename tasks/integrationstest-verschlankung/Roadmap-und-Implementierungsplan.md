@@ -98,11 +98,11 @@ Abnahme: Die Umzugstabelle ist vollständig für alle nachfolgenden Scheiben; Ba
 
 Diese Scheibe enthält Tests, deren aktueller Methodenrumpf keine reale Boundary berührt.
 
-- [ ] Die Theorie `ValidateOptions_NonPositiveDiagnosticLimit_ReturnsFieldAwareInvalidArgument` aus `GetServerHealthToolTests` nach `FastTests/Mcp/Tools/ServerMaintenance` verschieben oder dort fachlich passend ergänzen.
-- [ ] Die sechs `Build_*`-Fälle aus `GetServerHealthToolTests` als FastTests beim `GetServerHealthResponseBuilder` verlagern: Compact/Detailed-Ansicht, leere Diagnosen, Session-Limit, Partial-Status und zielgerichtete Assembly-Auswahl.
-- [ ] Die drei `DiagnosticsProjection_*`-Fälle aus `AssemblyAnalysisDispatcherCapabilityTests` in einen FastTest neben `AssemblyAnalysisResponseLimits` überführen: Deduplizierung, Trunkierungsgrund und globales Sample-Budget.
-- [ ] Die bisherigen Integrationstestmethoden erst entfernen, wenn die zugeordneten FastTests exakt dieselbe fachliche Aussage einschließlich StructuredContent und Text-Projektion belegen.
-- [ ] Den kleinsten passenden FastTest-Lauf für die neuen Klassen ausführen und die FastTests-Dependency-Guards prüfen.
+- [X] Die Theorie `ValidateOptions_NonPositiveDiagnosticLimit_ReturnsFieldAwareInvalidArgument` aus `GetServerHealthToolTests` nach `FastTests/Mcp/Tools/ServerMaintenance` verschieben oder dort fachlich passend ergänzen.
+- [X] Die sechs `Build_*`-Fälle aus `GetServerHealthToolTests` als FastTests beim `GetServerHealthResponseBuilder` verlagern: Compact/Detailed-Ansicht, leere Diagnosen, Session-Limit, Partial-Status und zielgerichtete Assembly-Auswahl.
+- [X] Die drei `DiagnosticsProjection_*`-Fälle aus `AssemblyAnalysisDispatcherCapabilityTests` in einen FastTest neben `AssemblyAnalysisResponseLimits` überführen: Deduplizierung, Trunkierungsgrund und globales Sample-Budget.
+- [X] Die bisherigen Integrationstestmethoden erst entfernen, wenn die zugeordneten FastTests exakt dieselbe fachliche Aussage einschließlich StructuredContent und Text-Projektion belegen.
+- [X] Den kleinsten passenden FastTest-Lauf für die neuen Klassen ausführen und die FastTests-Dependency-Guards prüfen.
 
 Verbleibt als Integration: alle `ExecuteAsync_*`-Health-Fälle mit realem geladenem Snapshot sowie alle Assembly-Dispatcher-Fälle mit synthetisch kompilierten Assemblies.
 
