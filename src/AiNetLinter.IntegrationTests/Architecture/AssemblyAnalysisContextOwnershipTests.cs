@@ -18,6 +18,9 @@ public sealed class AssemblyAnalysisContextOwnershipTests
 
         Assert.DoesNotContain("InspectAssemblyTool.ExecuteAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("inspection.StructuredContent", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonObject", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonSerializer", source, StringComparison.Ordinal);
         Assert.Contains("InspectAssemblyTool.BuildPayload", source, StringComparison.Ordinal);
+        Assert.Contains("AssemblyAnalysisContextTextModel", source, StringComparison.Ordinal);
     }
 }

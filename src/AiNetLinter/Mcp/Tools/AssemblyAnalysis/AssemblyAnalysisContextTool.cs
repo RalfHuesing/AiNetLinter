@@ -4,11 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.FileStructure;
@@ -36,6 +33,16 @@ internal sealed record AssemblyAnalysisContextArguments(
     string? DetailLevel,
     string? Cursor);
 
+internal sealed record AssemblyAnalysisContextTextModel(
+    int TotalCount,
+    int ReturnedCount,
+    bool IsTruncated,
+    string? ContinuationToken,
+    string Scope,
+    string Completeness,
+    string? SymbolIdentifier,
+    IReadOnlyDictionary<string, string> Sections);
+
 internal static class AssemblyAnalysisContextTool
 {
     internal const int MaxBodyLinesCap = 1_000;
@@ -57,13 +64,17 @@ internal static class AssemblyAnalysisContextTool
                 arguments.MaxResponseBytes,
                 arguments.DetailLevel,
                 lease.Context.ResponseBudgetBytes);
+            var inspection = InspectAssemblyTool.BuildPayload(
+                lease,
+                new InspectAssemblyArguments(
+                    lease.CanonicalPath, null, null, null, true,
+                    AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, AssemblyAnalysisService.DefaultMaxResults, AssemblyAnalysisService.MaxResults),
+                    false, null, AssemblyAnalysisService.DefaultMaxMembers, arguments.IncludeReferences,
+                    budget, arguments.DetailLevel, arguments.Cursor));
             var sectionTexts = new Dictionary<string, string>(StringComparer.Ordinal);
-            var root = CreateRoot(lease, arguments);
-            await AddAssemblyAnalysisAsync(root, lease, arguments, budget).ConfigureAwait(false);
-            var symbolError = await AddSymbolSectionsAsync(root, lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
+            var symbolError = await AddSymbolSectionsAsync(lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
             if (symbolError is not null) return symbolError;
-            AddEnvelope(root);
-            return McpToolResults.Text(RenderText(root, sectionTexts));
+            return McpToolResults.Text(RenderText(CreateTextModel(lease, arguments, inspection, sectionTexts)));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -73,43 +84,7 @@ internal static class AssemblyAnalysisContextTool
         }
     }
 
-    private static JsonObject CreateRoot(AssemblyAnalysisLease lease, AssemblyAnalysisContextArguments arguments) => new()
-    {
-        ["contextId"] = CreateContextId(lease),
-        ["targetPath"] = lease.CanonicalPath,
-        ["scope"] = arguments.IncludeReferences ? "root+references" : "root",
-        ["completeness"] = lease.Context.Status.ResolveEffectiveStatus(
-            lease.Context.Diagnostics.Concat(lease.ReferenceExpansionDiagnostics).ToArray()).ToCompletenessLabel(),
-        ["symbolIdentifier"] = arguments.SymbolIdentifier,
-        ["identity"] = Serialize(lease.Context.Identity),
-        ["origin"] = Serialize(lease.Context.Origin),
-    };
-
-    private static string CreateContextId(AssemblyAnalysisLease lease)
-    {
-        var value = $"{lease.CanonicalPath}\n{lease.Context.Origin.ContentHash}";
-        return $"asm:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))}";
-    }
-
-    private static Task AddAssemblyAnalysisAsync(
-        JsonObject root,
-        AssemblyAnalysisLease lease,
-        AssemblyAnalysisContextArguments arguments,
-        int budget)
-    {
-        var inspection = InspectAssemblyTool.BuildPayload(
-            lease,
-            new InspectAssemblyArguments(
-                lease.CanonicalPath, null, null, null, true,
-                AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, AssemblyAnalysisService.DefaultMaxResults, AssemblyAnalysisService.MaxResults),
-                false, null, AssemblyAnalysisService.DefaultMaxMembers, arguments.IncludeReferences,
-                budget, arguments.DetailLevel, arguments.Cursor));
-        root["assemblyAnalysis"] = Serialize(inspection);
-        return Task.CompletedTask;
-    }
-
     private static async Task<CallToolResult?> AddSymbolSectionsAsync(
-        JsonObject root,
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
         Dictionary<string, string> sectionTexts,
@@ -197,46 +172,41 @@ internal static class AssemblyAnalysisContextTool
             Math.Clamp(arguments.MaxCallers, 1, MaxCallersCap),
             Math.Max(arguments.TopN, 1));
 
-    private static void AddEnvelope(JsonObject root)
-    {
-        var analysis = root["assemblyAnalysis"];
-        var analysisTotalCount = analysis?["totalCount"]?.GetValue<int>() ?? 0;
-        var analysisReturnedCount = analysis?["returnedCount"]?.GetValue<int>() ?? 0;
-        root["totalCount"] = analysisTotalCount > 0
-            ? analysisTotalCount
-            : analysis?["totalTypes"]?.GetValue<int>() ?? 0;
-        root["returnedCount"] = analysisReturnedCount > 0
-            ? analysisReturnedCount
-            : analysis?["shownCount"]?.GetValue<int>() ?? 0;
-        root["isTruncated"] = analysis?["isTruncated"]?.GetValue<bool>() ?? analysis?["truncated"]?.GetValue<bool>() ?? false;
-        root["continuationToken"] = analysis?["continuationToken"]?.GetValue<string>();
-        root["truncatedBy"] = analysis?["truncatedBy"]?.DeepClone() ?? new JsonArray();
-    }
+    private static AssemblyAnalysisContextTextModel CreateTextModel(
+        AssemblyAnalysisLease lease,
+        AssemblyAnalysisContextArguments arguments,
+        InspectAssemblyPayload inspection,
+        IReadOnlyDictionary<string, string> sectionTexts) =>
+        new(
+            inspection.TotalCount > 0 ? inspection.TotalCount : inspection.TotalTypes,
+            inspection.ReturnedCount > 0 ? inspection.ReturnedCount : inspection.ShownCount,
+            inspection.IsTruncated || inspection.Truncated,
+            inspection.ContinuationToken,
+            arguments.IncludeReferences ? "root+references" : "root",
+            lease.Context.Status.ResolveEffectiveStatus(
+                lease.Context.Diagnostics.Concat(lease.ReferenceExpansionDiagnostics).ToArray()).ToCompletenessLabel(),
+            arguments.SymbolIdentifier,
+            sectionTexts);
 
-    private static JsonNode? Serialize<T>(T value) =>
-        value is null ? null : JsonSerializer.SerializeToNode(value, McpJsonOptions.Default);
-
-    private static string RenderText(JsonObject root, Dictionary<string, string> sectionTexts)
+    internal static string RenderText(AssemblyAnalysisContextTextModel model)
     {
         var builder = new StringBuilder();
-        builder.AppendLine($"Assembly-Kontext: {root["returnedCount"]} von {root["totalCount"]}");
-        builder.AppendLine($"Scope: {root["scope"]}; Vollständigkeit: {root["completeness"]}");
-        if (root["symbolIdentifier"] is not null) builder.AppendLine($"Symbol: {root["symbolIdentifier"]}");
-        foreach (var property in root.Select(pair => pair.Key)
-            .Where(key => key is not ("contextId" or "targetPath" or "scope" or "completeness" or "symbolIdentifier" or "identity" or "origin" or "assemblyAnalysis" or "analysis" or "totalCount" or "returnedCount" or "isTruncated" or "continuationToken" or "wireBudget" or "truncatedBy")))
+        builder.AppendLine($"Assembly-Kontext: {model.ReturnedCount} von {model.TotalCount}");
+        builder.AppendLine($"Scope: {model.Scope}; Vollständigkeit: {model.Completeness}");
+        if (model.SymbolIdentifier is not null) builder.AppendLine($"Symbol: {model.SymbolIdentifier}");
+        foreach (var (section, content) in model.Sections)
         {
-            builder.AppendLine($"Abschnitt: {property}");
-            if (sectionTexts.TryGetValue(property, out var content) && !string.IsNullOrWhiteSpace(content))
+            if (!string.IsNullOrWhiteSpace(content))
             {
+                builder.AppendLine($"Abschnitt: {section}");
                 builder.AppendLine(content.Trim());
             }
         }
-        if (root["isTruncated"]?.GetValue<bool>() == true)
+        if (model.IsTruncated)
         {
-            var token = root["continuationToken"]?.GetValue<string>();
-            if (!string.IsNullOrWhiteSpace(token))
+            if (!string.IsNullOrWhiteSpace(model.ContinuationToken))
             {
-                builder.AppendLine($"Antwort gekürzt; continuationToken={token} für die Fortsetzung verwenden.");
+                builder.AppendLine($"Antwort gekürzt; continuationToken={model.ContinuationToken} für die Fortsetzung verwenden.");
             }
             else
             {

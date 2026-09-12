@@ -11,6 +11,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
@@ -83,6 +84,9 @@ public sealed class AssemblyAnalysisContextNavigationTests
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
+        var content = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Abschnitt: body", content, StringComparison.Ordinal);
+        Assert.Contains("Probe.Root.Read", content, StringComparison.Ordinal);
         Assert.Empty(rootLease.ReferenceLeasesSnapshot());
     }
 
