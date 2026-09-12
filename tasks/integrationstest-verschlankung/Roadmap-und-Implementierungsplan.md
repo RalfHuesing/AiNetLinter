@@ -139,13 +139,28 @@ Abnahme: Jede entfernte E2E-Argumentvariante besitzt einen spezifischen FastTest
 
 `McpServerToolBehaviorE2ETests` und `McpServerAssemblyHealthE2ETests` wiederholen viele Tool-spezifische Varianten über denselben Prozess.
 
-- [ ] Für `McpServerToolBehaviorE2ETests` die Varianten zu FindSymbol, FindReferences, CallTree, NamespaceTree, ClassStructure, Skeleton, Hotspots, TypeHierarchy, Violations und SearchPattern den bereits vorhandenen FastTest-Bereichen zuordnen.
-- [ ] In diesen FastTest-Bereichen fehlende Assertions für Filter vor Limit, „nicht gefunden“, Depth-Clamping, Response-Budget, Text-/StructuredContent-Gleichlauf und Navigation ergänzen.
-- [ ] In `McpServerToolBehaviorE2ETests` nur einen erfolgreichen Standardaufruf je Boundary-Gruppe sowie mindestens einen echten Cross-Tool-Handoff belassen; keine bloßen Parameter- oder Cap-Varianten.
-- [ ] Die Assembly-Health-Varianten zu Limits, `detailLevel`, ungültigen Array-Elementen und Budgetfehlern in die FastTests für Assembly-Tool, Response-Budget und Argumentvalidierung verlagern.
-- [ ] In `McpServerAssemblyHealthE2ETests` mindestens einen echten `inspect_assembly`-Durchlauf, einen Health-Aufruf und einen Registrierungs-/Schema-Vertrag behalten.
-- [ ] Je verschobenem Verhalten prüfen, dass Text, StructuredContent und Navigation im FastTest ebenso präzise abgedeckt sind wie zuvor im Wire-Test.
-- [ ] Fokussierte FastTest- und Integrationstestläufe ausführen.
+#### Detailzuordnung Schritt 3
+
+| Bisherige E2E-Varianten | Konkreter FastTest-Nachweis |
+| --- | --- |
+| FindSymbol-Kindfilter, Filter-vor-Limit und Leerresultat | `FindSymbolToolTests.ExecuteAsync_ClassKind_ExcludesRecordDeclarations`, `FindSymbolToolTests.ExecuteAsync_MultiplePatterns_OneMatchOneMiss_ContinuesAndIncludesMissHint` und `FindSymbolToolTests.ExecuteAsync_MultiplePatterns_TruncatesIndividuallyPerPattern`. |
+| FindReferences unknown, Scope-vor-Limit und Depth-Clamp | `FindReferencesToolTests.ExecuteAsync_UnknownSymbol_ReturnsRecoverableSymbolNotFound`, `ExecuteAsync_ScopeFiltersBeforeLimit_AndRanksProductionFirst` und `ExecuteAsync_DepthAboveCap_ClampsToThreeAndReturnsResult`. |
+| CallTree-, NamespaceTree- und DependencyGraph-Depth | `GetCallTreeToolTests.ExecuteAsync_DepthAboveCap_ClampsAndStillReturnsResult`, `GetNamespaceTreeToolTests.ExecuteAsync_DepthAboveCap_ReportsRequestedAndEffectiveDepth` und `DependencyGraphScannerTests.ScanFileAsync_DepthAboveCap_ClampsToThree`. |
+| NamespaceTree- und ClassStructure-Budget einschließlich Text-/StructuredContent-Gleichlauf | `GetNamespaceTreeToolTests.ExecuteAsync_MaxResponseBytes_ProjectsSameVisibleTypesIntoTextAndStructuredContent`, `ExecuteAsync_BudgetBelowLeafMinimum_ReturnsExactRetryableBudgetError` sowie `GetClassStructureToolTests.ExecuteAsync_MaxResponseBytes_UsesSameVisibleMembersInTextAndStructuredContent`. |
+| TypeHierarchy-, Skeleton-, Hotspots- und Violations-Varianten | `GetTypeHierarchyToolTests.ExecuteAsync_UnknownTypeIdentifier_ReturnsRecoverableSymbolNotFound`, `GetFileSkeletonToolTests.ExecuteAsync_UnknownFilePath_ReturnsRecoverableResourceNotFound`, `GetHotspotsToolTests.ExecuteAsync_MaxResultsAndMinLinePercentage_KeepDeterministicBoundedResults` und `GetViolationsToolTests.ExecuteAsync_ScopeFilterMatchesProjectName_StructuredContentDeserializesToRuleViolations`. |
+| SearchPattern-Regex, Ergebnisform, Leerresultat und Budget | `SearchPatternScannerTests.Scan_RegexUsesSameRangeModelAndStableOrdering`, `Scan_PlainText_EmitsAllMatchRangesAndStablePositions`, `Format_ZeroHitsWithWildcardAndPlainSearch_AppendsWildcardHint` und `Scan_MaxFilesAndMaxResponseBytes_ReportSeparateTruncationReasons`. |
+| Assembly-Limits, ungültige `memberNames`-Elemente und Navigation der Fehlerhülle | `McpArgumentValidationFilterTests.GetAssemblyContext_ZeroPositiveLimitReturnsFieldAwareInvalidArgument`, `GetAssemblyContext_UpperLimitReturnsFieldAwareInvalidArgument` und `AssemblyRoute_ArrayElementTypeMismatchReturnsIndexedFieldAwareInvalidArgument`. |
+| Assembly-Budgets und `detailLevel` | `AssemblyAnalysisToolTests.InspectAssembly_GlobalResponseBudgetUsesOneTypedSelectionForTextAndJson`, `AssemblyAnalysisPostNavigationResponseBudgetTests` sowie `AssemblyAnalysisResponseLimitsTests.AssemblyDetailLevelContract_UsesCanonicalValuesForToolsAndValidator`. |
+
+Die verbleibenden E2E-Tests prüfen ausschließlich je einen Standardaufruf der Symbol- und Struktur-Boundary, den SearchPattern-Transport, die zwei Cross-Tool-Handoffs sowie die echten Assembly-, Health-, Sicherheits- und Registrierungsszenarien.
+
+- [X] Für `McpServerToolBehaviorE2ETests` die Varianten zu FindSymbol, FindReferences, CallTree, NamespaceTree, ClassStructure, Skeleton, Hotspots, TypeHierarchy, Violations und SearchPattern den bereits vorhandenen FastTest-Bereichen zuordnen.
+- [X] In diesen FastTest-Bereichen fehlende Assertions für Filter vor Limit, „nicht gefunden“, Depth-Clamping, Response-Budget, Text-/StructuredContent-Gleichlauf und Navigation ergänzen.
+- [X] In `McpServerToolBehaviorE2ETests` nur einen erfolgreichen Standardaufruf je Boundary-Gruppe sowie mindestens einen echten Cross-Tool-Handoff belassen; keine bloßen Parameter- oder Cap-Varianten.
+- [X] Die Assembly-Health-Varianten zu Limits, `detailLevel`, ungültigen Array-Elementen und Budgetfehlern in die FastTests für Assembly-Tool, Response-Budget und Argumentvalidierung verlagern.
+- [X] In `McpServerAssemblyHealthE2ETests` mindestens einen echten `inspect_assembly`-Durchlauf, einen Health-Aufruf und einen Registrierungs-/Schema-Vertrag behalten.
+- [X] Je verschobenem Verhalten prüfen, dass Text, StructuredContent und Navigation im FastTest ebenso präzise abgedeckt sind wie zuvor im Wire-Test.
+- [X] Fokussierte FastTest- und Integrationstestläufe ausführen.
 
 Abnahme: Der echte MCP-Prozess deckt Verträge und Zusammensetzung ab; Toolvarianten werden ausschließlich im schnellen, verantwortlichen Testbereich gepflegt.
 

@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using AiNetLinter.Mcp.Validation;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Xunit;
 
@@ -10,6 +11,16 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 [Trait("Category", "Unit")]
 public sealed class AssemblyAnalysisResponseLimitsTests
 {
+    [Fact]
+    public void AssemblyDetailLevelContract_UsesCanonicalValuesForToolsAndValidator()
+    {
+        Assert.Equal(["compact", "standard", "full"], McpEnumValues.AssemblyDetailLevels);
+        Assert.Null(AssemblyAnalysisResponseLimits.ValidateDetailLevel(McpEnumValues.AssemblyDetailLevelCompact));
+        Assert.Null(AssemblyAnalysisResponseLimits.ValidateDetailLevel(McpEnumValues.AssemblyDetailLevelStandard));
+        Assert.Null(AssemblyAnalysisResponseLimits.ValidateDetailLevel(McpEnumValues.AssemblyDetailLevelFull));
+        Assert.NotNull(AssemblyAnalysisResponseLimits.ValidateDetailLevel("verbose"));
+    }
+
     [Fact]
     public void DiagnosticsProjection_DeduplicatesAfterDisplayTruncation()
     {

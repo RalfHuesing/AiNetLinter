@@ -200,6 +200,47 @@ public sealed class McpArgumentValidationFilterTests
         AssertFilterError(error, "$.maxResponseBytes");
     }
 
+    [Theory]
+    [InlineData("maxBodyLines", 0)]
+    [InlineData("maxCallers", 0)]
+    [InlineData("depth", 0)]
+    [InlineData("topN", 0)]
+    public void GetAssemblyContext_ZeroPositiveLimitReturnsFieldAwareInvalidArgument(string fieldName, int value)
+    {
+        var error = McpArgumentValidationFilter.ValidateArguments(
+            "get_assembly_context",
+            Schema(fieldName),
+            Arguments($"{{\"{fieldName}\":{value}}}"));
+
+        AssertProjectedFilterError(error, $"$.{fieldName}", "mindestens 1");
+    }
+
+    [Theory]
+    [InlineData("maxBodyLines", 1001)]
+    [InlineData("maxCallers", 201)]
+    [InlineData("depth", 4)]
+    [InlineData("topN", 201)]
+    public void GetAssemblyContext_UpperLimitReturnsFieldAwareInvalidArgument(string fieldName, int value)
+    {
+        var error = McpArgumentValidationFilter.ValidateArguments(
+            "get_assembly_context",
+            Schema(fieldName),
+            Arguments($"{{\"{fieldName}\":{value}}}"));
+
+        AssertProjectedFilterError(error, $"$.{fieldName}", "höchstens");
+    }
+
+    [Fact]
+    public void AssemblyRoute_ArrayElementTypeMismatchReturnsIndexedFieldAwareInvalidArgument()
+    {
+        var error = McpArgumentValidationFilter.ValidateArguments(
+            "inspect_assembly",
+            Schema("memberNames"),
+            Arguments("{\"memberNames\":[\"Dispose\",42]}"));
+
+        AssertProjectedFilterError(error, "$.memberNames[1]", "INVALID_ARGUMENT");
+    }
+
     [Fact]
     public void ValidateArguments_SafeguardNonPositiveMaxViolations_PreservesToolCompatibility()
     {
@@ -218,6 +259,7 @@ public sealed class McpArgumentValidationFilterTests
             null => "{}",
             "namePatterns" => "{\"namePatterns\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}",
             "includeExtensions" => "{\"includeExtensions\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}",
+            "memberNames" => "{\"memberNames\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}",
             "includeDiagnostics" => "{\"includeDiagnostics\":{\"type\":\"boolean\"}}",
             _ => $"{{\"{propertyName}\":{{\"type\":\"integer\"}}}}",
         };
@@ -234,5 +276,17 @@ public sealed class McpArgumentValidationFilterTests
         Assert.NotEqual(true, result!.IsError);
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal(fieldPath, result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    private static void AssertProjectedFilterError(
+        ModelContextProtocol.Protocol.CallToolResult? error,
+        string fieldPath,
+        string textFragment)
+    {
+        AssertFilterError(error, fieldPath);
+        var projected = McpArgumentValidationFilter.ProjectFilterError(error!, null, "C:\\virtual\\fixture.slnx");
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(projected.Content)).Text;
+        Assert.Contains(textFragment, text, System.StringComparison.Ordinal);
+        Assert.True(projected.StructuredContent!.Value.TryGetProperty("navigation", out _));
     }
 }
