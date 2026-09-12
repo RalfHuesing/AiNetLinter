@@ -60,7 +60,7 @@ internal static class SkeletonMarkdownRenderer
         sb.AppendLine();
         var modifierTag = BuildModifierTag(type.Modifiers);
         var basePart = type.BaseTypes != null ? $" {type.BaseTypes}" : "";
-        sb.AppendLine($"### {type.Name}{basePart}{modifierTag} — `{type.RelativePath}`");
+        sb.AppendLine($"### {type.Name}{basePart}{modifierTag} — `{type.RelativePath}`{BuildHandoffSuffix(type.Id)}");
 
         if (type.Members.Count > 0)
         {
@@ -100,7 +100,7 @@ internal static class SkeletonMarkdownRenderer
             var line = m.MetaComment != null
                 ? $"{m.Signature} /* {m.MetaComment} */"
                 : m.Signature;
-            sb.AppendLine(line);
+            sb.AppendLine($"{line}{BuildHandoffSuffix(m.Id)}");
         }
 
         return true;
@@ -112,5 +112,10 @@ internal static class SkeletonMarkdownRenderer
         if (modifiers.Contains("abstract")) return " `abstract`";
         if (modifiers.Contains("static"))   return " `static`";
         return "";
+    }
+
+    private static string BuildHandoffSuffix(string? id)
+    {
+        return string.IsNullOrWhiteSpace(id) ? "" : $" // handoffId: `{id}`";
     }
 }
