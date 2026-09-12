@@ -14,7 +14,7 @@
 
 - Vertragsmodelle und rote Inventory-/E2E-Verträge für `verify` ergänzt.
 - Modelltests und Build grün; Runtime-Verträge erwartungsgemäß rot, da `verify` noch nicht registriert ist.
-- Commit: ausstehend.
+- Commit: `f9315ba1d85b4e5ab605786ea4193efd12cf60d5`.
 
 ### Vorbereitung
 
