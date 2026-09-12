@@ -81,12 +81,13 @@ internal static class OverviewResourceRegistration
             _ => "ok",
         };
         var navigation = McpNavigationProjection.Create(
-            target,
-            operationStatus,
-            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "not_applicable" : "complete",
-            snapshot.Server.LoadState == ServerLoadState.LoadFailed
-                ? "Solution-Loadfehler beheben und den Target-Call wiederholen."
-                : null);
+            new McpNavigationProjectionParameters(
+                target,
+                operationStatus,
+                snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "not_applicable" : "complete",
+                Hint: snapshot.Server.LoadState == ServerLoadState.LoadFailed
+                    ? "Solution-Loadfehler beheben und den Target-Call wiederholen."
+                    : null));
         return new ReadResourceResult
         {
             Contents =

@@ -49,12 +49,13 @@ internal static class RulesResourceRegistration
             AnalysisTargetResolver.ResolveRequiredSourceTarget(snapshot.Definition.SolutionPath),
             snapshot.Server);
         var navigation = McpNavigationProjection.Create(
-            target,
-            notConfigured ? "not_configured" : "ok",
-            notConfigured ? "not_configured" : "complete",
-            notConfigured
-                ? "ainetlinter-rules.json neben dem adressierten Target anlegen und die Resource erneut lesen."
-                : null);
+            new McpNavigationProjectionParameters(
+                target,
+                notConfigured ? "not_configured" : "ok",
+                notConfigured ? "not_configured" : "complete",
+                Hint: notConfigured
+                    ? "ainetlinter-rules.json neben dem adressierten Target anlegen und die Resource erneut lesen."
+                    : null));
         return new ReadResourceResult
         {
             Contents =

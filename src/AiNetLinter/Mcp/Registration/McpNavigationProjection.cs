@@ -15,26 +15,21 @@ internal static class McpNavigationProjection
         CallToolResult response,
         AnalysisTarget? target,
         string? targetPath = null) =>
-        Create(
+        Create(new McpNavigationProjectionParameters(
             target,
             response.IsError == true ? "error" : "ok",
             response.IsError == true ? "not_applicable" : "complete",
-            targetPath: targetPath);
+            TargetPath: targetPath));
 
-    internal static McpNavigationPayload Create(
-        AnalysisTarget? target,
-        string operationStatus,
-        string completeness,
-        string? hint = null,
-        string? code = null,
-        string? targetPath = null)
+    internal static McpNavigationPayload Create(McpNavigationProjectionParameters parameters)
     {
+        var target = parameters.Target;
         var navigationTarget = target is not null
             ? new McpNavigationTarget(
                 target.CanonicalPath,
                 target.AnalysisRoot,
                 target.Origin == AnalysisTargetOrigin.Source ? "source" : "assembly")
-            : new McpNavigationTarget(targetPath ?? string.Empty, string.Empty, "none");
+            : new McpNavigationTarget(parameters.TargetPath ?? string.Empty, string.Empty, "none");
         var snapshot = new McpNavigationSnapshot(
             target?.AnalysisSnapshotFingerprint ?? string.Empty,
             target?.AnalysisSnapshotFingerprint is null ? "unavailable" : "source",
@@ -49,10 +44,10 @@ internal static class McpNavigationProjection
             2,
             navigationTarget,
             snapshot,
-            new McpNavigationStatus(operationStatus, completeness, code),
+            new McpNavigationStatus(parameters.OperationStatus, parameters.Completeness, parameters.Code),
             analysis,
             null,
-            hint is null ? null : new McpNavigationNext("hint", hint));
+            parameters.Hint is null ? null : new McpNavigationNext("hint", parameters.Hint));
     }
 
     internal static AnalysisTarget WithSourceSnapshot(AnalysisTarget target, McpCodeGraphServer server)
