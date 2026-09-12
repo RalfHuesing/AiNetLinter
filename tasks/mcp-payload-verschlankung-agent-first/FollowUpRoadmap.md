@@ -1,6 +1,6 @@
 # Follow-up-Roadmap: MCP-Payload-Verschlankung
 
-Stand: 2026-09-12  
+Stand: 2026-09-12
 Baseline: `3e3c97b` (Release 1.0.195)
 
 Jeder Schritt wird strikt seriell durch einen frischen Agenten umgesetzt, nach den passenden Gates geprüft und mit einem ausschließlich auftragsbezogenen deutschen Conventional Commit abgeschlossen.
