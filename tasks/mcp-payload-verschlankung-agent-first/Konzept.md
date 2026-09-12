@@ -91,7 +91,8 @@ Voraussichtlich betroffen sind:
   lesen oder deserialisieren;
 - DTOs und JSON-Optionen, soweit sie ausschließlich den entfernten Wirekanal
   bedienen;
-- Toolbeschreibungen, Server-Instructions, Agent-Guide und MCP-Workflowregel;
+- Toolbeschreibungen, Server-Instructions, Agent-Guide sowie
+  `.agents/rules/AiNetLinter-Richtlinien.mdc` und die MCP-Workflowregel;
 - Fast-, Integration-, Wire- und Dogfoodtests des öffentlichen
   Responsevertrags.
 
@@ -258,8 +259,11 @@ Envelope-Overhead sind nicht Teil dieses agentischen Inhaltsbudgets.
    Ausgabeimplementierung.
 8. Contentbudget, Auswahl und Recovery sind deterministisch und arbeiten auf
    vollständigen Evidenzeinheiten.
-9. Öffentliche Toolbeschreibungen, Guides, Regeln und Tests kennen nur den
-   Content-only-Vertrag.
+9. `.agents/rules/AiNetLinter-Richtlinien.mdc` verankert kurz und verbindlich
+   als harten Architekturfakt, dass Toolergebnisse ausschließlich `content`
+   nutzen, `structuredContent` bewusst nicht verwendet wird und nicht erneut
+   eingeführt werden darf. Öffentliche Toolbeschreibungen, weitere Regeln,
+   Guides und Tests kennen ebenfalls nur diesen Content-only-Vertrag.
 10. Es verbleiben keine Legacy-, Dual-Write-, Adapter-, Feature-Flag- oder
     Formatparameterpfade für den entfernten Kanal.
 
@@ -379,6 +383,8 @@ Negativsuche findet keinen aktiven öffentlichen StructuredContent-Vertrag.
   Assembly-Verträge behalten.
 - Server-Instructions, Toolbeschreibungen, Agent-Guide, API-/Integrationsdoku,
   `IsErrorPolicy.md` und MCP-Workflowregel auf Content-Handoffs umstellen.
+- `AiNetLinter-Richtlinien.mdc` um den kurzen verbindlichen Hard-Cut-Fakt
+  ergänzen, damit spätere Agenten `structuredContent` nicht erneut einführen.
 - Die separate Roadmap zur Integrationstestverschlankung gegen den neuen
   Vertrag neu bewerten; ihre StructuredContent-Paritätsforderungen gelten nach
   diesem Hard Cut nicht mehr.
@@ -431,6 +437,13 @@ Tooltests ersetzen weder den globalen Negativguard noch das agentische
 Dogfooding.
 
 ## Dokumentationsbedarf
+
+- `.agents/rules/AiNetLinter-Richtlinien.mdc`: als kurze verbindliche
+  Architekturregel aufnehmen:
+
+  > **MCP-Output:** Toolergebnisse nutzen ausschließlich `content`;
+  > `structuredContent` wird bewusst nicht verwendet und darf nicht eingeführt
+  > werden.
 
 - `.agents/rules/AiNetLinter-McpWorkflow.mdc`: IDs und Status ausschließlich
   aus dem Content übernehmen; keine StructuredContent-Anweisung.
