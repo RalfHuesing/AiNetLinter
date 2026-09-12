@@ -20,7 +20,7 @@ namespace AiNetLinter.Mcp.Tools.DeadCode;
 /// <summary>
 /// Statische Scan-Pipeline fuer das Auffinden von unreferenziertem/totem Code in einer Roslyn-Solution.
 /// </summary>
-public static class FindDeadCodeScanner
+internal static class FindDeadCodeScanner
 {
     public const int DefaultMaxResults = 50;
 

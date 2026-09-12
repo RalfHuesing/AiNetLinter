@@ -9,7 +9,7 @@ namespace AiNetLinter.Mcp.Tools.DeadCode;
 /// <summary>
 /// Filter fuer Deklarations-Sichtbarkeit bei find_dead_code.
 /// </summary>
-public enum DeadCodeAccessibilityFilter
+internal enum DeadCodeAccessibilityFilter
 {
     All,
     Private,
@@ -21,7 +21,7 @@ public enum DeadCodeAccessibilityFilter
 /// <summary>
 /// Filter fuer Vertrauensstufe bei find_dead_code.
 /// </summary>
-public enum DeadCodeConfidenceFilter
+internal enum DeadCodeConfidenceFilter
 {
     Both,
     High,
@@ -31,7 +31,7 @@ public enum DeadCodeConfidenceFilter
 /// <summary>
 /// Filter fuer Symbol-Art bei find_dead_code.
 /// </summary>
-public enum DeadCodeKindFilter
+internal enum DeadCodeKindFilter
 {
     All,
     Type,
@@ -46,7 +46,7 @@ public enum DeadCodeKindFilter
 /// <summary>
 /// Modus fuer find_dead_code (Symbol-Graph, Compiler-Diagnosen oder beides).
 /// </summary>
-public enum DeadCodeMode
+internal enum DeadCodeMode
 {
     Members,
     Locals,
@@ -56,7 +56,7 @@ public enum DeadCodeMode
 /// <summary>
 /// Ausfuehrungs-Argumente fuer find_dead_code.
 /// </summary>
-public sealed record FindDeadCodeArgs(
+internal sealed record FindDeadCodeArgs(
     DeadCodeAccessibilityFilter Accessibility = DeadCodeAccessibilityFilter.PrivateInternal,
     DeadCodeConfidenceFilter Confidence = DeadCodeConfidenceFilter.Both,
     DeadCodeKindFilter Kind = DeadCodeKindFilter.All,
@@ -117,7 +117,7 @@ public sealed record FindDeadCodeArgs(
 /// <summary>
 /// Einzelner toter Code-Fund im Structured Output von find_dead_code.
 /// </summary>
-public sealed record DeadCodeEntry(
+internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("kind")] string Kind,
     [property: JsonPropertyName("containerType")] string ContainerType,
@@ -136,7 +136,7 @@ public sealed record DeadCodeEntry(
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
 /// </summary>
-public sealed record DeadCodeSummary(
+internal sealed record DeadCodeSummary(
     [property: JsonPropertyName("documentsInScope")] int DocumentsInScope,
     [property: JsonPropertyName("scannedSymbols")] int ScannedSymbols,
     [property: JsonPropertyName("totalDead")] int TotalDead,
@@ -153,14 +153,14 @@ public sealed record DeadCodeSummary(
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
 /// </summary>
-public sealed record DeadCodeRecommendedNextAction(
+internal sealed record DeadCodeRecommendedNextAction(
     [property: JsonPropertyName("action")] string Action,
     [property: JsonPropertyName("reason")] string Reason);
 
 /// <summary>
 /// Gesamtergebnis des Dead-Code-Scanners.
 /// </summary>
-public sealed record DeadCodeScanResult(
+internal sealed record DeadCodeScanResult(
     [property: JsonPropertyName("candidates")] IReadOnlyList<DeadCodeEntry> DeadSymbols,
     [property: JsonPropertyName("summary")] DeadCodeSummary Summary,
     [property: JsonPropertyName("limits")] IReadOnlyList<string> Limits,
@@ -172,7 +172,7 @@ public sealed record DeadCodeScanResult(
 /// <summary>
 /// Konstante Standard-Limits fuer die Heuristik-Transparenz.
 /// </summary>
-public static class DeadCodeLimits
+internal static class DeadCodeLimits
 {
     public static readonly IReadOnlyList<string> DefaultLimits =
     [

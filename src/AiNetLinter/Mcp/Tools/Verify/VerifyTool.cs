@@ -11,7 +11,6 @@ using AiNetLinter.Baseline;
 using AiNetLinter.Core.Git;
 using AiNetLinter.Mcp.Tools.DeadCode;
 using AiNetLinter.Mcp.Tools.MagicValues;
-using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;

@@ -49,7 +49,7 @@ public sealed class McpHandshakeToolRegistrationTests
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
 
         Assert.Contains(tools, t => t.Name == "find_symbol");
-        Assert.Contains(tools, t => t.Name == "get_violations");
+        Assert.Contains(tools, t => t.Name == "verify");
         Assert.Contains(tools, t => t.Name == "get_test_context");
         Assert.Contains(tools, t => t.Name == "get_file_tree");
 

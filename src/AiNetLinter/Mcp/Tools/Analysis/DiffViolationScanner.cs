@@ -11,6 +11,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
+using AiNetLinter.Mcp.Tools.Verify;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
@@ -49,7 +50,7 @@ internal static class DiffViolationScanner
         IReadOnlyCollection<RuleViolation> violations;
         try
         {
-            violations = await GetViolationsScanner.RunSolutionLintAsync(
+            violations = await VerifyLintRunner.RunAsync(
                 request.Solution, request.Config, request.Console, request.CancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

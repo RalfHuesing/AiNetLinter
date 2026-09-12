@@ -8,7 +8,7 @@ using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.Safeguard;
+namespace AiNetLinter.Mcp.Tools.Verify;
 
 // Parameter- und Ergebnis-Records sowie die Malfunction-Exception fuer SafeguardScanner — aus der
 // Scanner-Datei ausgelagert, damit die eigentliche Score-Berechnungslogik unter dem

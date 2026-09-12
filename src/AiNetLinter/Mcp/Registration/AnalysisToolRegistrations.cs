@@ -8,13 +8,10 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
-using AiNetLinter.Mcp.Tools.DeadCode;
 using AiNetLinter.Mcp.Tools.FeatureContext;
-using AiNetLinter.Mcp.Tools.MagicValues;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
-using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Mcp.Tools.TestContext;
 using AiNetLinter.Mcp.Tools.Verify;
 using ModelContextProtocol.Protocol;
@@ -23,9 +20,7 @@ using ModelContextProtocol.Server;
 namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
-/// Registriert die analyse-orientierten Tools (aktuell <c>get_violations</c>, <c>safeguard</c>,
-/// <c>search_pattern</c>, <c>metrics_tree</c>, <c>metrics_lookup</c>, <c>pattern_detect</c>,
-/// <c>find_magic_values</c>, <c>find_dead_code</c>, <c>get_feature_context</c> und <c>get_test_context</c>) an der von <see cref="McpServerOptionsFactory"/>
+/// Registriert die analyse-orientierten Tools an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection.
 /// </summary>
 internal static class AnalysisToolRegistrations
@@ -41,14 +36,10 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute = null)
     {
         AddVerify(tools, registry);
-        AddGetViolations(tools, registry);
-        AddSafeguard(tools, registry);
         AddSearchPattern(tools, registry);
         AddMetricsTree(tools, registry, targetRoute);
         AddMetricsLookup(tools, registry, targetRoute);
         AddPatternDetect(tools, registry);
-        AddFindMagicValues(tools, registry);
-        AddFindDeadCode(tools, registry);
         AddGetFeatureContext(tools, registry);
         AddGetTestContext(tools, registry);
     }
@@ -74,46 +65,6 @@ internal static class AnalysisToolRegistrations
                 VerifyContract.ToolName,
                 "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution.")));
     }
-
-    private static void AddGetViolations(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
-    {
-        tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? scopeFilter = null, string? ruleId = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-            {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
-                    registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet, ruleId, minSeverity), ct));
-            },
-            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_violations", GetViolationsDescription)));
-    }
-
-    private const string GetViolationsDescription =
-        "Lint-Verstoesse der Source-Solution; optional nach Scope, Regel und Severity filtern. Snippets sind opt-in.";
-
-    private static void AddSafeguard(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
-    {
-        tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-            {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
-                    registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease => SafeguardTool.ExecuteAsync(lease.Server, scopeFilter, minScore, maxViolations, ct));
-            },
-            TargetPathToolRegistrationOptions.SourceReadOnlyTool("safeguard", SafeguardDescription)));
-    }
-
-    private const string SafeguardDescription =
-        "Deterministisches Quality-Gate mit Score, Schwellwert und priorisierten Verstoessen fuer die Source-Solution.";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -232,94 +183,6 @@ internal static class AnalysisToolRegistrations
 
     private const string PatternDetectDescription =
         "Solution-weite, nach Pattern gruppierte Heuristiken wie God-Class, async-void oder lange Methoden; kein Ersatz fuer Regelverstosse.";
-
-    private static void AddFindMagicValues(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
-    {
-        tools.Add(McpServerTool.Create(
-            async (
-                RequestContext<CallToolRequestParams> context,
-                string targetPath,
-                string? scopeFilter = null,
-                string? valueType = "all",
-                string? categoryFilter = "all",
-                int minOccurrences = 2,
-                int maxResults = FindMagicValuesScanner.DefaultMaxResults,
-                int[]? ignoreNumbers = null,
-                bool includeTests = false,
-                bool includeSuppressed = false,
-                bool changedOnly = false,
-                CancellationToken ct = default) =>
-            {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
-                    registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease =>
-                    {
-                        var effective = new FindMagicValuesToolArgs(
-                            ScopeFilter: scopeFilter,
-                            ValueType: valueType ?? "all",
-                            CategoryFilter: categoryFilter ?? "all",
-                            MinOccurrences: minOccurrences,
-                            MaxResults: maxResults,
-                            IgnoreNumbers: ignoreNumbers,
-                            IncludeTests: includeTests,
-                            IncludeSuppressed: includeSuppressed,
-                            ChangedOnly: changedOnly);
-                        return FindMagicValuesTool.ExecuteAsync(lease.Server, effective, ct);
-                    });
-            },
-            TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_magic_values", FindMagicValuesDescription)));
-    }
-
-    private const string FindMagicValuesDescription =
-        "Audit fuer Magic-Values (wiederholte literale Zahlen/Strings). " +
-        "Unterstuetzt Git-Diff (changedOnly) und Respektierung von '// ainetlinter-disable MagicValues'. " +
-        "categoryFilter: 'all', 'number', 'string' etc. valueType: 'all', 'numbers', 'strings'.";
-
-    private static void AddFindDeadCode(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
-    {
-        tools.Add(McpServerTool.Create(
-            async (
-                RequestContext<CallToolRequestParams> context,
-                string targetPath,
-                string? accessibility = "private_internal",
-                string? confidence = "both",
-                string? kind = "all",
-                string? scopeFilter = null,
-                bool includeTests = false,
-                string? mode = "members",
-                int maxResults = 50,
-                CancellationToken ct = default) =>
-            {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
-                    registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease =>
-                    {
-                        var effective = new FindDeadCodeToolArgs(
-                            Accessibility: accessibility,
-                            Confidence: confidence,
-                            Kind: kind,
-                            ScopeFilter: scopeFilter,
-                            IncludeTests: includeTests,
-                            Mode: mode,
-                            MaxResults: maxResults);
-                        return FindDeadCodeTool.ExecuteAsync(lease.Server, effective, ct);
-                    });
-            },
-            TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_dead_code", FindDeadCodeDescription)));
-    }
-
-    private const string FindDeadCodeDescription =
-        "Kandidaten fuer unreferenzierten Code nach Sichtbarkeit, Confidence, Symbolart und Scope; Public- oder Framework-Code bleibt nur heuristisch.";
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,

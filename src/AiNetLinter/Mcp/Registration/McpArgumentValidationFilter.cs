@@ -45,12 +45,10 @@ internal static partial class McpArgumentValidationFilter
             ["get_namespace_tree"] = Set("depth", "maxResults"),
             ["get_file_tree"] = Set("maxResults"),
             ["get_hotspots"] = Set("maxResults"),
-            ["get_violations"] = Set("maxResults"),
             ["search_pattern"] = Set("maxResults"),
             ["metrics_tree"] = Set("depth", "topN"),
             ["pattern_detect"] = Set("maxResultsPerPattern"),
             ["find_duplicates"] = Set("maxResults"),
-            ["find_dead_code"] = Set("maxResults"),
             ["get_feature_context"] = Set("maxCallers", "maxTests"),
             ["get_test_context"] = Set("maxResults"),
             ["get_assembly_context"] = Set("maxBodyLines", "maxCallers", "depth", "topN"),
@@ -67,7 +65,6 @@ internal static partial class McpArgumentValidationFilter
             ["get_file_skeleton"] = Set("maxResponseBytes"),
             ["get_namespace_tree"] = Set("maxResponseBytes"),
             ["get_class_structure"] = Set("maxResponseBytes"),
-            ["get_violations"] = Set("contextLines"),
             ["search_pattern"] = Set("maxFiles", "contextLines", "maxResponseBytes"),
             ["search_assembly"] = Set("maxResults", "maxFiles", "contextLines", "maxResponseBytes"),
             ["inspect_assembly"] = Set("maxResults", "maxMembers", "maxResponseBytes"),
@@ -107,7 +104,6 @@ internal static partial class McpArgumentValidationFilter
             ["get_test_context"] = Limits(
                 ("maxResults", GetTestContextTool.MaxResultsCap),
                 ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_violations"] = Limits(("contextLines", GetViolationsScanner.MaxContextLines)),
             ["search_assembly"] = Limits(
                 ("maxResults", AssemblySearchTool.MaxResultsCap),
                 ("maxFiles", GetFileTreeTool.MaxResultsCap),

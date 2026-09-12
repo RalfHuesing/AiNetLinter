@@ -4,14 +4,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
-using AiNetLinter.Mcp.Tools.Safeguard;
+using AiNetLinter.Mcp.Tools.Verify;
 using AiNetLinter.TestKit;
 using AiNetLinter.FastTests.Fixtures;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
+namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 
-public sealed partial class SafeguardScannerTests
+public sealed partial class VerifyGateScannerTests
 {
     [Fact]
     public async Task ComputeScoreAsync_ConfiguredGeneratedFileExclusion_DoesNotPoisonSolutionScore()

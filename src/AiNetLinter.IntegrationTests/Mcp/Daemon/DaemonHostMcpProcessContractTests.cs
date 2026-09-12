@@ -48,7 +48,7 @@ public sealed class DaemonHostMcpProcessContractTests
             var tools = await client.ListToolsAsync(cancellationToken: cancellation.Token).ConfigureAwait(false);
 
             Assert.Contains(tools, tool => tool.Name == "find_symbol");
-            Assert.Contains(tools, tool => tool.Name == "get_violations");
+            Assert.Contains(tools, tool => tool.Name == "verify");
 
             var inspect = await client.CallToolAsync(
                 "inspect_assembly",

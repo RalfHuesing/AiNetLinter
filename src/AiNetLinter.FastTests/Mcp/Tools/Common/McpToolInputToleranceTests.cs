@@ -103,9 +103,7 @@ public sealed class McpToolInputToleranceTests
         Assert.Contains("\"root\"", toolsByName["get_file_tree"]);
         Assert.Contains("\"fileFilter\"", toolsByName["get_file_tree"]);
         Assert.Contains("\"filePaths\"", toolsByName["get_file_skeleton"]);
-        Assert.Contains("\"scopeFilter\"", toolsByName["get_violations"]);
-        Assert.Contains("\"ruleId\"", toolsByName["get_violations"]);
-        Assert.Contains("\"scopeFilter\"", toolsByName["safeguard"]);
+        Assert.Contains("\"scope\"", toolsByName["verify"]);
         Assert.Contains("\"symbolIdentifiers\"", toolsByName["get_symbol_body"]);
         Assert.Contains("\"scopeDir\"", toolsByName["find_duplicates"]);
         Assert.Contains("\"helperSymbol\"", toolsByName["find_duplicates"]);

@@ -3,7 +3,7 @@
 - [X] Slice 01 – Öffentlichen `verify`-Vertrag festlegen und rot absichern
 - [X] Slice 02 – Gate-Kern mit festen `10.0`/`0`-Invarianten implementieren
 - [X] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
-- [ ] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
+- [X] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 - [ ] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [ ] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [ ] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
@@ -27,6 +27,12 @@
 - Dead-Code- und Magic-Value-Scanner liefern nur für `changes` advisory-Evidenz mit expliziter Unsicherheit.
 - Deterministische Projektion, vollständige Counts, Nichtblockierung und Solution-Ausschluss fokussiert grün geprüft.
 - Commit: `7c6884588bd9c8f956d23b18088fae18bed2cd37`.
+
+### Slice 04
+
+- Vier öffentliche Legacy-Tools samt Registrierungen, Adaptern und positiven Tooltests entfernt; Scanner gehören nun `verify`.
+- Inventar- und Runtime-Negativtests grün; Explorations- und Metrikwerkzeuge bleiben erhalten.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

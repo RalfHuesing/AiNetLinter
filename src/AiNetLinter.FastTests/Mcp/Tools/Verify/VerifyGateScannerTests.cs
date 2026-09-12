@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools;
-using AiNetLinter.Mcp.Tools.Safeguard;
+using AiNetLinter.Mcp.Tools.Verify;
 using AiNetLinter.Models;
 using AiNetLinter.FastTests;
 using AiNetLinter.FastTests.Fixtures;
@@ -16,7 +16,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
+namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 
 /// <summary>
 /// Tests fuer <see cref="SafeguardScanner"/>. Etabliert ein neues Scanner-Test-Pattern (es
@@ -24,11 +24,11 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
 /// deterministischen Score-Pfad, Threshold-Logik, Edge-Cases und den Malfunction-Pfad ab.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed partial class SafeguardScannerTests
+public sealed partial class VerifyGateScannerTests
 {
     private readonly McpInMemoryTestContext _fixture;
 
-    public SafeguardScannerTests() { _fixture = new McpInMemoryTestContext(); }
+    public VerifyGateScannerTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
     public async Task ComputeScoreAsync_EmptySolution_ReturnsNotDecidableWithoutPassClaim()
@@ -460,7 +460,7 @@ public class Greeter { public string Hello() => ""hi""; }";
 
     private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
         RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\SafeguardScannerTests.slnx",
+            @"C:\ainetlinter-virtual\VerifyGateScannerTests.slnx",
             new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 
     /// <summary>

@@ -15,7 +15,7 @@ using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.Safeguard;
+namespace AiNetLinter.Mcp.Tools.Verify;
 
 internal static partial class SafeguardScanner
 {

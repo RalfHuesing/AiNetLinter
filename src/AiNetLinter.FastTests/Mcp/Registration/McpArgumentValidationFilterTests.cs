@@ -60,9 +60,6 @@ public sealed class McpArgumentValidationFilterTests
         Assert.Equal(GetTestContextTool.MaxResultsCap, limits["get_test_context"]["maxResults"]);
         Assert.Equal(McpResponseBudgetLimits.MaxBytes, limits["get_test_context"]["maxResponseBytes"]);
 
-        // get_violations
-        Assert.Equal(GetViolationsScanner.MaxContextLines, limits["get_violations"]["contextLines"]);
-
         // search_assembly
         Assert.Equal(AssemblySearchTool.MaxResultsCap, limits["search_assembly"]["maxResults"]);
         Assert.Equal(GetFileTreeTool.MaxResultsCap, limits["search_assembly"]["maxFiles"]);
@@ -125,7 +122,6 @@ public sealed class McpArgumentValidationFilterTests
     [Theory]
     [InlineData("get_type_hierarchy", "wrongParam")]
     [InlineData("get_feature_context", "unexpectedOption")]
-    [InlineData("get_violations", "unrecognizedField")]
     [InlineData("find_symbol", "unknownInput")]
     [InlineData("get_file_skeleton", "filePath")]
     public void ValidateArguments_UnknownArgument_ReturnsPreciseFieldPath(string toolName, string unknownField)
@@ -172,7 +168,6 @@ public sealed class McpArgumentValidationFilterTests
     [InlineData("get_call_tree", "topN", 0, "$.topN")]
     [InlineData("find_duplicates", "maxResults", -5, "$.maxResults")]
     [InlineData("get_namespace_tree", "maxResponseBytes", -1, "$.maxResponseBytes")]
-    [InlineData("get_violations", "contextLines", -1, "$.contextLines")]
     [InlineData("get_test_context", "maxResults", 101, "$.maxResults")]
     [InlineData("get_namespace_tree", "maxResults", 201, "$.maxResults")]
     public void ValidateArguments_LimitOutsideContract_ReturnsPreciseFieldPath(
@@ -239,17 +234,6 @@ public sealed class McpArgumentValidationFilterTests
             Arguments("{\"memberNames\":[\"Dispose\",42]}"));
 
         AssertProjectedFilterError(error, "$.memberNames[1]", "INVALID_ARGUMENT");
-    }
-
-    [Fact]
-    public void ValidateArguments_SafeguardNonPositiveMaxViolations_PreservesToolCompatibility()
-    {
-        var error = McpArgumentValidationFilter.ValidateArguments(
-            "safeguard",
-            Schema("maxViolations"),
-            Arguments("{\"maxViolations\":0}"));
-
-        Assert.Null(error);
     }
 
     private static JsonElement Schema(string? propertyName = null)

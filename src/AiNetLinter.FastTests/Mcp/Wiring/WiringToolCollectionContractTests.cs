@@ -55,7 +55,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(32, tools.Count);
+        Assert.Equal(29, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -97,9 +97,8 @@ public sealed class WiringToolCollectionContractTests
         };
         var projectOnly = new[]
         {
-            "find_dead_code", "find_duplicates", "find_magic_values", "get_feature_context",
-            "get_hotspots", "get_index_scope", "get_test_context",
-            "get_violations", "pattern_detect", "reload_config", "safeguard", "search_pattern",
+            "find_duplicates", "get_feature_context", "get_hotspots", "get_index_scope", "get_test_context",
+            "pattern_detect", "reload_config", "search_pattern", "verify",
         };
 
         foreach (var name in projectAndAssembly)
@@ -249,9 +248,7 @@ public sealed class WiringToolCollectionContractTests
             ["dependency_graph"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_assembly_extensions"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["search_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,
-            ["find_dead_code"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_duplicates"] = ToolAnnotationExpectation.ReadOnlyProfile,
-            ["find_magic_values"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_references"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_symbol"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_call_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
@@ -268,16 +265,15 @@ public sealed class WiringToolCollectionContractTests
             ["get_test_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_type_hierarchy"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_impact"] = ToolAnnotationExpectation.ReadOnlyProfile,
-            ["get_violations"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["metrics_lookup"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["metrics_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["pattern_detect"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["reload_config"] = new(false, false, true, false),
-            ["safeguard"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["search_pattern"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["inspect_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["resolve_type_origin"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_implementations"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["verify"] = ToolAnnotationExpectation.ReadOnlyProfile,
         };
 
     private readonly record struct ToolAnnotationExpectation(

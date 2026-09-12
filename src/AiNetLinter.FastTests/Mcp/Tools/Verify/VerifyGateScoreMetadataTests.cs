@@ -2,14 +2,14 @@
 
 using System;
 using AiNetLinter.FastTests;
-using AiNetLinter.Mcp.Tools.Safeguard;
+using AiNetLinter.Mcp.Tools.Verify;
 using AiNetLinter.Models;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
+namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 
 [Trait("Category", "Component")]
-public sealed class SafeguardScoreMetadataTests
+public sealed class VerifyGateScoreMetadataTests
 {
     [Fact]
     public void BuildScoreResult_ReportsTotalAndShownViolationCounts()
