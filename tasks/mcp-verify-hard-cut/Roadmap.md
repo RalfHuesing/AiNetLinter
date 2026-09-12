@@ -38,7 +38,7 @@
 
 - MCP-Referenz, Integrationsguide, Laufzeithinweise, Agentenregeln und Audit-Prompt auf den Endvertrag umgestellt.
 - Doku-Smoke und Legacy-Negativsuche grün; vollständiges Gate folgt nach Gesamtaudit.
-- Commit: ausstehend.
+- Commit: `10af0ca5367d210370f74a6029ef2ff6da35397b`.
 
 ### Vorbereitung
 
