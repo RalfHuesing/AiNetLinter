@@ -1,7 +1,7 @@
 # Roadmap – MCP-Qualitätsprüfung auf `verify` konsolidieren
 
 - [X] Slice 01 – Öffentlichen `verify`-Vertrag festlegen und rot absichern
-- [ ] Slice 02 – Gate-Kern mit festen `10.0`/`0`-Invarianten implementieren
+- [X] Slice 02 – Gate-Kern mit festen `10.0`/`0`-Invarianten implementieren
 - [ ] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
 - [ ] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 - [ ] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
@@ -15,6 +15,12 @@
 - Vertragsmodelle und rote Inventory-/E2E-Verträge für `verify` ergänzt.
 - Modelltests und Build grün; Runtime-Verträge erwartungsgemäß rot, da `verify` noch nicht registriert ist.
 - Commit: `f9315ba1d85b4e5ab605786ea4193efd12cf60d5`.
+
+### Slice 02
+
+- `verify` führt den festen Score-/Violation-Gatekern inklusive Contract-v2-Content-Projektion aus.
+- Build und sechs fokussierte E2E-Verträge grün; Legacy-Inventar bleibt bis Slice 04 absichtlich rot.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

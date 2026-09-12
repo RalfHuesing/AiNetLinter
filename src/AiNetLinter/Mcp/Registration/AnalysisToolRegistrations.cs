@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.ComponentModel;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Scope;
@@ -15,6 +16,7 @@ using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.PatternDetect;
 using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.Mcp.Tools.TestContext;
+using AiNetLinter.Mcp.Tools.Verify;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -38,6 +40,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry,
         AnalysisToolRoute? targetRoute = null)
     {
+        AddVerify(tools, registry);
         AddGetViolations(tools, registry);
         AddSafeguard(tools, registry);
         AddSearchPattern(tools, registry);
@@ -48,6 +51,28 @@ internal static class AnalysisToolRegistrations
         AddFindDeadCode(tools, registry);
         AddGetFeatureContext(tools, registry);
         AddGetTestContext(tools, registry);
+    }
+
+    private static void AddVerify(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry)
+    {
+        tools.Add(McpServerTool.Create(
+            async (RequestContext<CallToolRequestParams> context, string targetPath, [Description("changes (Default) oder solution")] string? scope = null, CancellationToken ct = default) =>
+            {
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return VerifyResponseFormatter.Error(
+                    "INVALID_ARGUMENT", "Der Request enthält ein unbekanntes Argument.", "Nur targetPath und scope verwenden.");
+                if (!VerifyContract.TryParseScope(scope, out var parsedScope)) return VerifyResponseFormatter.Error(
+                    "INVALID_ARGUMENT", "scope muss changes oder solution sein.", "scope auf changes oder solution setzen.", "$.scope");
+                if (!VerifyContract.IsSourceSolutionTarget(targetPath)) return VerifyResponseFormatter.Error(
+                    "ASSEMBLY_TARGET_UNSUPPORTED", "verify akzeptiert ausschließlich .sln- oder .slnx-Source-Ziele.", "targetPath auf eine .sln oder .slnx setzen.", "$.targetPath");
+                return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
+                    VerifyTool.ExecuteAsync(lease.Server, parsedScope, ct));
+            },
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool(
+                VerifyContract.ToolName,
+                "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution.")));
     }
 
     private static void AddGetViolations(
