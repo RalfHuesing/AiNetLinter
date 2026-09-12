@@ -59,4 +59,68 @@ public sealed class Foo
             }
         });
     }
+
+    [Fact]
+    public async Task ScanAsync_CategoryFilter_RendersOnlyTheRequestedCategory()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public void M()
+    {
+        var endpoint = ""https://api.example.test/v1"";
+        var format = ""yyyy-MM-dd"";
+    }
+}";
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(
+            ("Foo.cs", source), category: MagicValueCategory.ConfigCandidates);
+
+        Assert.Contains("- config_candidates:", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("- constant_candidates:", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ScanAsync_MixedCategories_RendersHigherPrioritySecurityFindingsFirst()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public void M()
+    {
+        var apiKey = ""sk-example-secret"";
+        var endpoint = ""https://api.example.test/v1"";
+    }
+}";
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+
+        var securityPosition = result.Text.IndexOf("- security_candidates:", StringComparison.Ordinal);
+        var configPosition = result.Text.IndexOf("- config_candidates:", StringComparison.Ordinal);
+        Assert.True(securityPosition >= 0);
+        Assert.True(configPosition >= 0);
+        Assert.True(securityPosition < configPosition);
+    }
+
+    [Fact]
+    public async Task ScanAsync_TruncatedResults_RenderOnlyCategoriesWithVisibleFindings()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public void M()
+    {
+        var apiKey = ""sk-example-secret"";
+        var endpoint = ""https://api.example.test/v1"";
+    }
+}";
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), maxResults: 1);
+
+        Assert.Contains("- security_candidates:", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("- config_candidates:", result.Text, StringComparison.Ordinal);
+    }
 }

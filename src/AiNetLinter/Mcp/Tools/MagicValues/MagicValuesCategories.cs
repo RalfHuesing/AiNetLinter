@@ -67,6 +67,18 @@ internal static class MagicValueCategoryExtensions
             "security_candidates",
         ]);
 
+    internal static int GetPriority(this MagicValueCategory category) => category switch
+    {
+        MagicValueCategory.SecurityCandidates => 0,
+        MagicValueCategory.ConfigCandidates => 1,
+        MagicValueCategory.EnumCandidates => 2,
+        MagicValueCategory.StandardCandidates => 3,
+        MagicValueCategory.ConstantCandidates => 4,
+        MagicValueCategory.NameofCandidates => 5,
+        MagicValueCategory.LocalizationCandidates => 6,
+        _ => int.MaxValue,
+    };
+
     internal static (string EvidenceBoundary, string Recommendation) Semantics(this MagicValueCategory category) => category switch
     {
         MagicValueCategory.ConfigCandidates => (

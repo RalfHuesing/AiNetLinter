@@ -340,9 +340,10 @@ internal static partial class FindMagicValuesScanner
                 FirstLine: g.Min(x => x.Line),
                 FirstColumn: g.Min(x => x.Column)))
             .Where(g => g.Occurrences >= minOccurrences)
-            .OrderBy(g => g.FilePath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Category.GetPriority())
+            .ThenByDescending(g => g.Occurrences)
+            .ThenBy(g => g.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(g => g.FirstLine)
-            .ThenBy(g => g.Category)
             .ToList();
 
         return grouped;
@@ -358,7 +359,7 @@ internal static partial class FindMagicValuesScanner
 
         var sb = new StringBuilder();
         AppendReportSummary(sb, summary);
-        AppendCategorySummary(sb, payload);
+        AppendCategorySummary(sb, payload, grouped.Take(maxResults).ToList());
 
         sb.AppendLine();
         if (grouped.Count == 0)
@@ -397,14 +398,19 @@ internal static partial class FindMagicValuesScanner
         sb.AppendLine($"Truncation: total={summary.Total}, returnedCount={summary.ReturnedCount}, truncatedBy={summary.TruncatedBy}"); sb.AppendLine();
     }
 
-    private static void AppendCategorySummary(StringBuilder sb, FindMagicValuesPayload payload)
+    private static void AppendCategorySummary(
+        StringBuilder sb,
+        FindMagicValuesPayload payload,
+        IReadOnlyList<GroupedMagicValue> grouped)
     {
         sb.AppendLine("Kategorien:");
-        foreach (var category in payload.Categories)
+        foreach (var category in grouped
+            .Select(group => group.Category)
+            .Distinct()
+            .OrderBy(category => category.GetPriority())
+            .Select(category => payload.Categories.Single(summary => summary.Category == category.ToStringValue())))
         {
             sb.AppendLine($"- {category.Category}: status={category.Status}, total={category.Total}, returnedCount={category.ReturnedCount}, truncatedBy={category.TruncatedBy}, confidence={category.Confidence}");
-            sb.AppendLine($"  Ursache: {category.Cause}"); sb.AppendLine($"  Evidence: {category.EvidenceBoundary}"); sb.AppendLine($"  Scope: {category.Scope}"); sb.AppendLine($"  Empfehlung: {category.Recommendation}");
-            if (category.Next is not null) sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
         }
     }
 
