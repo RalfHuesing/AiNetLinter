@@ -162,7 +162,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string MetricsLookupDescription =
-        "Metriken und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole; akzeptiert Handoff, Doc-ID, Position oder qualifizierten Namen.";
+        "Metriken und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole. symbolIdentifiers: Array; h:…-Werte aus vorherigen Toolantworten unverändert übernehmen, alternativ Doc-ID, Position oder qualifizierter Name. Navigierbare Einträge enthalten h:… für direkte Folgeparameter.";
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -218,7 +218,8 @@ internal static class AnalysisToolRegistrations
 
     private const string GetFeatureContextDescription =
         "Wann nutzen: One-Shot-Kontext fuer C#-Symbol (Deklaration, Metriken, Caller, Tests, Violations). " +
-        "symbolIdentifier: Typ oder Member ('M:Namespace.Klasse.Methode', 'Klasse.Methode'). " +
+        "symbolIdentifier: Pflicht-Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID oder Name. " +
+        "Navigierbare Caller enthalten h:… für direkte Folgeparameter. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "maxCallers (Default 10), maxTests (Default 10), maxResponseBytes.";
 
@@ -255,7 +256,7 @@ internal static class AnalysisToolRegistrations
 
     private const string GetTestContextDescription =
         "Wann nutzen: Statische Testkandidaten fuer ein C#-Symbol mit Zuordnung und Testkategorie. " +
-        "symbolIdentifier: Typ oder Member ('M:Namespace.Klasse.Methode', 'Klasse.Methode'). " +
+        "symbolIdentifier: Pflicht-Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID oder Name. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "maxResults (Default 30), maxResponseBytes.";
 }

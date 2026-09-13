@@ -11,6 +11,7 @@
 - [X] 9. Assembly-Referenz-Handoffs bis zu allen Folge-Consumern reparieren
 - [X] 10. Öffentlichen Handoff-Vertrag vollständig vereinheitlichen
 - [X] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
+- [X] 12. MCP-Toolbeschreibungen für direkte Handle-Übergabe verdichten
 
 ## Durchführungsprotokoll
 
@@ -79,3 +80,9 @@
 - Live-Prüfung bestätigt Source- und Assembly-Toolketten mit unverändert weitergegebenen Handles.
 - Inventur des relevanten Source-, Test- und Doku-Scopes bestätigt ausschließlich den aktuellen Vertrag.
 - Build, beide Verify-Scopes, 2.636 FastTests und 236 IntegrationTests grün.
+
+### 12. MCP-Toolbeschreibungen für direkte Handle-Übergabe verdichten
+
+- Alle Handle-Consumer nennen direkte Übergabe bevorzugt; Listen, Einzelwerte und Pflichtfelder bleiben präzise.
+- Producer weisen knapp auf direkt nutzbare Handles hin; derselbe `targetPath` bleibt Teil jedes Folgeaufrufs.
+- Frisches `tools/list`, reale Ketten, Build, `verify(changes)` sowie 14 Vertrags-/Doku-/E2E-Tests grün.

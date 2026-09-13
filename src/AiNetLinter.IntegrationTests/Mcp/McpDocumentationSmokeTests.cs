@@ -183,10 +183,10 @@ public sealed class McpDocumentationSmokeTests
         var findReferencesSection = docText.Substring(findReferencesStart, getImpactStart - findReferencesStart);
         var getImpactSection = docText.Substring(getImpactStart, nextBulletStart - getImpactStart);
 
-        Assert.Contains("`find_references(symbolIdentifier: \"MyClass.MyMethod\", depth: 2)`", findReferencesSection, StringComparison.Ordinal);
+        Assert.Contains("`find_references(symbolIdentifier: \"h:…\", depth: 2)`", findReferencesSection, StringComparison.Ordinal);
         Assert.Contains("`includeReferences: true`", findReferencesSection, StringComparison.Ordinal);
         Assert.DoesNotContain("`get_impact`", findReferencesSection, StringComparison.Ordinal);
-        Assert.Contains("`get_impact(symbolIdentifier: ..., depth: 2)`", getImpactSection, StringComparison.Ordinal);
+        Assert.Contains("`get_impact(symbolIdentifier: \"h:…\", depth: 2)`", getImpactSection, StringComparison.Ordinal);
         Assert.Contains("ausschließlich `symbolIdentifier`", getImpactSection, StringComparison.Ordinal);
         Assert.Contains("`includeReferences=false` bleibt root- beziehungsweise owner-only", getImpactSection, StringComparison.Ordinal);
         Assert.Contains("`true` öffnet die bounded Referenz-Closure", getImpactSection, StringComparison.Ordinal);

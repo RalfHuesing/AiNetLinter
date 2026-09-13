@@ -17,13 +17,13 @@ namespace AiNetLinter.Mcp.Registration;
 internal static class TargetPathToolRegistrationOptions
 {
     private const string SourceTargetContract =
-        " Ziel: absolute .sln/.slnx (Source).";
+        " Ziel: absolute .sln/.slnx (Source); Folgeaufrufe nutzen denselben targetPath.";
 
     private const string ProjectAssemblyTargetContract =
-        " Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly).";
+        " Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly); Folgeaufrufe nutzen denselben targetPath.";
 
     private const string AssemblyTargetContract =
-        " Ziel: absolute .dll/.exe.";
+        " Ziel: absolute .dll/.exe; Folgeaufrufe nutzen denselben targetPath.";
 
     private static readonly AnnotationValues ReadOnlyValues = new(
         ReadOnly: true,

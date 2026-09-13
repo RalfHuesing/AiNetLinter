@@ -107,6 +107,10 @@ Ein Handoff-Handle hat das Format `h:…` und wird aus der im Content explizit a
 Handoff-ID ausgewiesenen Zeile unverändert übernommen, nie aus einem Anzeigenamen.
 Es ist nur eine technische Adresse: Symbolart, Name/Signatur und Fundort bleiben
 im umgebenden Content sichtbar. Das Mapping gilt für die Laufzeit des MCP-Hosts.
+Für den Folgeaufruf bleibt `targetPath` derselbe absolute Zielpfad; das Handle
+kommt direkt in den passenden Symbolparameter. `symbolIdentifiers` ist dabei
+ein Array, die übrigen Symbolparameter nehmen einen Einzelwert. Doc-ID, Name
+oder Position sind nur der Fallback ohne verfügbares Handle.
 Nach einem Host-Neustart liefert ein alter Handle `HANDOFF_UNKNOWN`; das Symbol
 anhand der sichtbaren Informationen erneut mit einem passenden Producer (etwa
 `find_symbol` oder `get_file_skeleton`) ermitteln. Bei Assembly-Tools trennt

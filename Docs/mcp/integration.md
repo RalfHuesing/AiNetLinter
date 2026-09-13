@@ -100,6 +100,12 @@ Daemon- oder Stdio-Neustart sind frühere Handles bewusst ungültig
 Nur `h:…` wird als Handoff-Handle interpretiert; andere Eingaben folgen dem
 jeweiligen Symbolparameter-Vertrag.
 
+Beim Folgeaufruf bleibt `targetPath` derselbe absolute Zielpfad. Einen
+verfügbaren `h:…` direkt für `symbolIdentifier`, `symbolIdentifiers`,
+`helperSymbol` oder `typeName` verwenden; Namen, Doc-IDs und Positionen sind
+nur Fallbacks. `symbolIdentifiers` bleibt ein Array, die übrigen genannten
+Felder nehmen jeweils einen Einzelwert.
+
 Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen `maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, den passenden Handle oder Typ ermitteln und erst danach Bodies, Referenzen oder weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
 
 1. **Zuerst** `get_file_tree(view: "summary")` für die Dateityp- und Routingübersicht, danach C#-Symbole mit `find_symbol` und den semantischen Folge-Tools. Das vermeidet, dass Nicht-C#-Dateien als leere C#-Symbolabfrage fehlinterpretiert werden.
@@ -108,13 +114,13 @@ Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit k
 
 Konkret:
 
-- Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`
-- Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`
+- Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "h:…")`
+- Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "h:…")`
 - Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "class")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "class")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
-- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
-- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur die im Content markierte Handoff-ID übernehmen.
+- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "h:…", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
+- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: "h:…", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur die im Content markierte Handoff-ID übernehmen.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
-- Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
+- Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["h:…"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Text in einer externen Assembly suchen → `search_assembly(targetPath: "C:/libs/Library.dll", searchKind: "text", pattern: "Repository", maxResults: 20)`; für typische Persistenz-/Datenzugriffe `searchKind: "data_access"`, für HTTP/RPC/Socket/Prozessaufrufe `searchKind: "external_calls"`

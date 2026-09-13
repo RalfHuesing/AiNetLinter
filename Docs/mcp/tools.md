@@ -49,14 +49,13 @@ auch bei `partial` oder `degraded` einen frischen Snapshot melden, sofern der
 Content-Hash und die analysierbare Generation vorhanden sind; bei `loading`,
 `failed` oder fehlendem Hash bleibt der Snapshot `unavailable` bzw. `fresh=false`.
 
-Kopierbare Folgecalls verwenden ausschließlich das als Handoff-ID markierte
-opaque Handle `h:…` aus dem Content. Es ist nur für den aktuellen MCP-Hostlauf
-gültig; Symbolart, Signatur und Fundort bleiben als fachlicher Kontext sichtbar.
-FQNs, DocCommentIds sowie Anzeigenamen bleiben zulässige semantische Inputs,
-wenn das jeweilige Tool sie dokumentiert. Ein unbekannter Handle (typisch nach
-einem Neustart) liefert `HANDOFF_UNKNOWN`; ein nach der Wiederermittlung
-restaurierter interner Verweis kann weiterhin `TARGET_MISMATCH` oder
-`STALE_SNAPSHOT` liefern.
+Kopierbare Folgecalls setzen das als Handoff-ID markierte opaque Handle `h:…`
+aus dem Content unverändert in den passenden Symbolparameter ein; dies ist der
+bevorzugte und kürzeste Weg. Der absolute `targetPath` bleibt dabei derselbe;
+das Handle ersetzt nur die Symboladresse. Doc-IDs, Namen und Positionen bleiben
+sekundäre Eingaben, wenn das jeweilige Tool sie dokumentiert. Ein unbekannter
+Handle (typisch nach einem Neustart) liefert `HANDOFF_UNKNOWN`; Symbol dann mit
+dem sichtbaren Kontext erneut ermitteln.
 
 Ein recoverable Symbol-Miss wird im Envelope mit
 `status.operation=symbol_not_found`, `status.completeness=not_applicable` und
@@ -108,6 +107,12 @@ Zusatzparameter. Die Endung bestimmt Source (`.sln`/`.slnx`) oder Assembly
 nur Source oder nur Assembly unterstützt. `get_server_health` kann ohne Target
 global aggregieren oder optional einen `targetPath` erhalten; Feedback bleibt
 ungebunden.
+
+Bei Symbol-Folgeaufrufen bleibt dieser `targetPath` unverändert. `symbolIdentifier`,
+`helperSymbol` und `typeName` nehmen einen Einzelwert an; `symbolIdentifiers`
+nimmt ein Array. Für jedes dieser Felder ist ein `h:…` aus einer vorherigen
+Toolantwort die bevorzugte Eingabe; nur ohne Handle sind der jeweils
+dokumentierte Name, die Doc-ID oder Position der Fallback.
 
 ### Capability-Matrix und gemeinsame Session
 

@@ -52,7 +52,7 @@ internal static class DuplicateDetectionToolRegistrations
     private const string FindDuplicatesDescription =
         "Suche nach Code-Duplikaten auf Methodenebene. " +
         "mode: 'clone' [Default: aehnliche Cluster], 'refactoring-drift' [baut helperSymbol nach statt Aufruf], 'structural' [strukturelle Aehnlichkeit]. " +
-        "helperSymbol: Zielmethode (Pflicht bei mode='refactoring-drift'). " +
+        "helperSymbol: Einzelwert, bei mode='refactoring-drift' Pflicht; bevorzugt h:… einer Methode aus vorheriger Toolantwort unverändert, sonst Doc-ID, Position oder Name. " +
         "similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), 'fuzzy' (>=0.65 [Default]). " +
         "minTokens: Mindest-Tokens (Default 30). normalizeIdentifiers: Variablenumbenennungen ignorieren (Default false). " +
         "scopeDir: Verzeichnispfad. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Default 20.";

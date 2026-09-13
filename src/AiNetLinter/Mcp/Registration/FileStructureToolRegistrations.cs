@@ -186,7 +186,8 @@ internal static class FileStructureToolRegistrations
 
     private static readonly string GetClassStructureDescription =
         "Tabellarische Uebersicht aller Member eines Typs (Kind, Name, Sichtbarkeit, Zeilen, Signatur). " +
-        "symbolIdentifier: Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Typname. " +
+        "Navigierbare Member enthalten h:… für direkte Folgeparameter. " +
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: Method, Property, Field, Constructor, all. " +
         "nameFilter: Substring-Filter. maxMembers: Default 50, Cap " + GetClassStructureTool.MaxMembersCap + ". " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
@@ -219,7 +220,7 @@ internal static class FileStructureToolRegistrations
     private const string GetFileSkeletonDescription =
         "Ueberblick ueber Typen und Signaturen von C#-Dateien ohne Bodies (Batch in 1 Turn). " +
         "filePaths: Array von Dateipfaden (relativ oder absolut). " +
-        "Liefert stabile Handoff-IDs fuer direkte Folge-Calls an get_symbol_body. " +
+        "Navigierbare Typen und Member enthalten h:… für direkte Folgeparameter, etwa get_symbol_body.symbolIdentifiers. " +
         "maxResponseBytes (Default 24576, Min 512, Max 65536).";
 
     private static void AddGetIndexScope(

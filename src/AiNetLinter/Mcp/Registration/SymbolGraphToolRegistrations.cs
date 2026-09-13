@@ -108,6 +108,7 @@ internal static class SymbolGraphToolRegistrations
 
     private static readonly string FindSymbolDescription =
         "Fundstellen von C#-Symbolen per Namens-Substring finden. " +
+        "Navigierbare Treffer enthalten h:… für direkte Folgeparameter. " +
         "namePatterns: Array von Mustern (max. 10) oder pattern fuer Einzelsuche. " +
         $"kind: optionaler Typfilter ({McpEnumValues.FindSymbolKindsHint}). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
@@ -163,7 +164,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindReferencesDescription =
         "Findet alle Aufrufstellen eines C#-Symbols, optional transitiv. " +
-        "symbolIdentifier: \"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Name. " +
+        "Navigierbare Treffer enthalten h:… für direkte Folgeparameter. " +
         "depth: Traversierungstiefe (Default 1, Cap 3, max. 200 Knoten). " +
         "maxResults: Trefferbegrenzung (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
@@ -203,11 +205,11 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetCallTreeDescription =
         "Transitiver Aufrufer-/Aufgerufenen-Baum eines C#-Symbols als Eltern-Kind-Struktur. " +
-        "symbolIdentifier: \"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\" oder \"Klasse.Methode\". " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Name. " +
         "direction: 'incoming' [Default: wer ruft auf], 'outgoing' [wen ruft es auf], 'both'. " +
         "depth: Tiefe (Default 2, Cap 5). topN: Fan-Out je Ebene (Default 10, max. 250 Knoten). " +
         "format: 'ascii' [Default] oder 'mermaid'. " +
-        "Jeder navigierbare Graph-Knoten enthält seine kanonische handoffId; incoming zeigt nur echte Aufrufe, keine Override-Deklarationen. " +
+        "Jeder navigierbare Graph-Knoten enthält h:… für direkte Folgeparameter; incoming zeigt nur echte Aufrufe, keine Override-Deklarationen. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "includeBcl: Framework-Symbole bei outgoing (Default false). " +
         "includeReferences (Default false): bei Assemblies Referenzen einbeziehen. " +
@@ -247,7 +249,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetImpactDescription =
         "Analysiert die Auswirkung von Aenderungen (Git-Diff oder Einzelsymbol). " +
-        "Ohne Parameter: uncommittete Aenderungen. Alternativ gitRef ODER symbolIdentifier angeben (nicht beide; Assemblies nur symbolIdentifier). " +
+        "Ohne Parameter: uncommittete Aenderungen. Alternativ gitRef ODER symbolIdentifier: Einzelwert (bei Assemblies allein; bevorzugt h:… aus vorheriger Toolantwort unverändert, sonst Doc-ID, Position oder Name); nicht beide. " +
+        "Navigierbare Call-Sites enthalten h:… für direkte Folgeparameter. " +
         "detailLevel: 'callers' [Default] oder 'change-context' (Git-Diff-Modus: geaenderte Symbole, Call-Sites, Tests, Violations, dotnet-test-Filter). " +
         "depth: Tiefe im Symbol-Modus (Default 1, Cap 3, max. 200 Knoten). " +
         "maxResults: Trefferlimit (Default 50). " +
@@ -299,7 +302,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetTypeHierarchyDescription =
         "Vererbungs- und Interface-Hierarchie eines Typs (Basisklassen, Interfaces, Subtypen, DI-Registrierungen). " +
-        "symbolIdentifier: 'T:Namespace.Typ', 'Datei.cs:Zeile:Spalte' oder Typname. " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Typname. " +
+        "Navigierbare Einträge enthalten h:… für direkte Folgeparameter. " +
         "maxResults: Limit abgeleiteter Typen (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 
@@ -336,7 +340,7 @@ internal static class SymbolGraphToolRegistrations
 
     private const string DependencyGraphDescription =
         "Semantischer Abhaengigkeitsgraph fuer Datei oder Typ (SemanticModel-Typreferenzen). " +
-        "filePath (ganze Datei) ODER symbolIdentifier (Typ) angeben (nicht beide). " +
+        "filePath: ganze Datei. symbolIdentifier: Einzelwert für Typ; bevorzugt h:… aus vorheriger Toolantwort unverändert, sonst Doc-ID, Position oder Typname (nicht beide). " +
         "direction: 'incoming', 'outgoing', 'both' (Default). " +
         "depth: Traversierungstiefe (Default 1, Cap 3, max. 150 Dateien). " +
         "maxResults: Begrenzung der Kanten (Default 50). " +
@@ -361,7 +365,7 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string ResolveTypeOriginDescription =
-        "Ermittelt zu einem Typnamen oder einer Typ-Handoff-ID die definierende Assembly (Name und Dateipfad der DLL), vollqualifizierten Namen und Symbol-Kind ueber Roslyn-Metadatenreferenzen.";
+        "Ermittelt die definierende Assembly (Name und DLL-Dateipfad), vollqualifizierten Namen und Symbol-Kind eines Typs. typeName: Pflicht-Einzelwert; bevorzugt h:… eines Typs aus vorheriger Toolantwort unverändert, alternativ Typname.";
 
     private static void AddFindImplementations(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -407,8 +411,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindImplementationsDescription =
         "Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties. " +
-        "symbolIdentifier: 'IInterface', 'BaseClass.Method' oder 'M:Namespace.Klasse.Methode'. " +
-        "Sichtbare Eintraege enthalten kopierbare Handoff-IDs fuer Folgeaufrufe. " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Name. " +
+        "Sichtbare Eintraege enthalten h:… für direkte Folgeparameter. " +
         "maxResults: Trefferlimit (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 }

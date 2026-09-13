@@ -55,7 +55,7 @@ internal static class SymbolBodyToolRegistrations
 
     private const string GetSymbolBodyDescription =
         "Source-Body eines oder mehrerer C#-Symbole lesen (Batch in 1 Turn). " +
-        "symbolIdentifiers: Array von Symbol-IDs ('M:Namespace.Klasse.Methode', 'Datei.cs:Zeile:Spalte' oder 'Klasse.Methode'). " +
+        "symbolIdentifiers: Array für Batch in 1 Turn; h:…-Werte aus vorherigen Toolantworten unverändert übernehmen, alternativ Doc-ID, Position oder Name. " +
         "maxBodyLines: Begrenzung je Body (Default 80). " +
         "startLine: 1-basierte Startzeile im Body fuer Windowing (Default 1). " +
         "endLine: optionale Endzeile im Body. Bei Assembly-Zielen beschreibt Assembly-Scope den effektiven Suchmodus.";

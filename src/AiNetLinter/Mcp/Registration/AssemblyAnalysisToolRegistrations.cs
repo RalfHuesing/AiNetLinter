@@ -358,7 +358,7 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private static readonly string GetAssemblyContextDescription =
         "Composite-Einstieg fuer lokale .NET-Assemblies (.dll/.exe): Identitaet, Scope, optional Metriken, Referenzen, Caller/Impact, Body und Klassenstruktur. " +
-        "symbolIdentifier: DocCommentId, Typname oder Datei:Zeile:Spalte. " +
+        "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Typname. " +
         "includeReferences (Default false): Referenz-Closure einbeziehen. " +
         "Flags: includeMetrics, includeReferences, includeCallers, includeImpact, includeBody, includeClassStructure. " +
         $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
