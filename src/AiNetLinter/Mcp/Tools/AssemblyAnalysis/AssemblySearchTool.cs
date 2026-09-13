@@ -67,6 +67,8 @@ internal static partial class AssemblySearchTool
             var payload = await Task.Run(
                 () => BuildPayloadWithBinding(root, arguments, binding, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
+            payload = await EnrichDeclarationHandoffsAsync(payload, arguments, lease, root, cancellationToken)
+                .ConfigureAwait(false);
             var text = RenderText(payload);
             return McpToolResults.Text(text);
         }
@@ -472,7 +474,7 @@ internal static partial class AssemblySearchTool
         builder.AppendLine($"Scope: {payload.Scope}; Vollständigkeit: {payload.Completeness}");
         foreach (var match in payload.Results)
         {
-            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}");
+            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}{FormatHandoffSuffix(match.HandoffId)}");
         }
 
         if (payload.IsTruncated)

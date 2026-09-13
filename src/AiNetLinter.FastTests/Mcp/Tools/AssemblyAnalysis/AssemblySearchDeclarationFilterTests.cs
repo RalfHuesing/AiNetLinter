@@ -1,7 +1,12 @@
 #nullable enable
 
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -124,6 +129,61 @@ public sealed class AssemblySearchDeclarationFilterTests
         var propPayload = AssemblySearchTool.Scan(temp.DirectoryPath, propArgs, CancellationToken.None);
         var propMatch = Assert.Single(propPayload.Results);
         Assert.Contains("public string WidgetHandlerValue { get; set; }", propMatch.LineText);
+    }
+
+    [Theory]
+    [InlineData("SearchProbe", "type", "SearchProbe")]
+    [InlineData("Run", "method", "Run")]
+    [InlineData("Title", "property", "Title")]
+    public async Task ExecuteAsync_DeclarationMatch_PublishesReusableAssemblyHandoff(
+        string pattern,
+        string kind,
+        string expectedBodyContent)
+    {
+        using var temp = TestTempDirectory.Create("assembly-search-handoff-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "SearchHandoffProbe", """
+            namespace Probe;
+            public sealed class SearchProbe
+            {
+                public string Title { get; set; } = "";
+                public void Run() { }
+            }
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
+
+        var result = await AssemblySearchTool.ExecuteAsync(
+            lease,
+            new AssemblySearchArguments(pattern, false, "text", 10, 0, 0, 0, null, null, null, true, kind),
+            CancellationToken.None);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        var handoffId = Regex.Match(text, @"handoffId: `(?<id>a:[^`]+)`").Groups["id"].Value;
+
+        Assert.NotEmpty(handoffId);
+        var body = await GetSymbolBodyTool.ExecuteAsync(lease, [handoffId], 80, CancellationToken.None);
+        Assert.NotEqual(true, body.IsError);
+        Assert.Contains(expectedBodyContent, AssemblyAnalysisTestSupport.TextOf(body), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TextMatch_DoesNotPromiseHandoff()
+    {
+        using var temp = TestTempDirectory.Create("assembly-search-raw-text-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SearchRawTextProbe",
+            "namespace Probe; public sealed class SearchProbe { public void Run() { var marker = \"needle\"; } }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
+
+        var result = await AssemblySearchTool.ExecuteAsync(
+            lease,
+            new AssemblySearchArguments("needle", false, "text", 10),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("handoffId:", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
     }
 
     [Theory]

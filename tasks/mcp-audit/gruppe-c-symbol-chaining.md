@@ -14,9 +14,9 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 6 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 5 Major, 1 Minor
 
-CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) war durchgängig möglich, inkl. `get_feature_context`. Die übrigen Ketten erfordern manuelles Parsen/Umbauen oder ein Ausweich-Tool.
+CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) und CHAIN-04 waren durchgängig möglich. Die übrigen Ketten erfordern manuelles Parsen/Umbauen oder ein Ausweich-Tool.
 
 ---
 
@@ -52,20 +52,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) war durchgängig möglic
   - Ein Agent, der Handoff-IDs unverändert weiterreicht, bricht in Schritt 3. Er muss den FQCN aus Text oder aus dem Suffix der ID extrahieren. Parametername `typeName` vs. `symbolIdentifier` ist im Schema dokumentiert — der **Output-Handoff** ist trotzdem kein gültiger Input.
 - **Empfehlung**:
   - `resolve_type_origin` soll `s:…`/`a:…`-Handoffs akzeptieren **oder** `find_implementations`/`get_type_hierarchy` zusätzlich ein Feld `typeName` liefern, das 1:1 weitergegeben werden kann. `find_implementations` braucht dieselben `handoffId`s wie die Hierarchie.
-
-### [Major] C-03: `search_assembly` liefert keine `symbolId` für `get_symbol_body` (CHAIN-04)
-
-- **Betroffenes Tool / Schema**: `search_assembly` -> `get_symbol_body` (`symbolIdentifiers`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `inspect_assembly(targetPath=LOCAL-01)` -> `search_assembly(targetPath=LOCAL-01, pattern=<Typ-Substring>, kind="type")` -> `get_symbol_body(symbolIdentifiers=[…])`
-- **Beobachtung / Ist-Verhalten**:
-  - `inspect_assembly` liefert konsumierbare `handoffId`s (`a:…:T:Type#…`); Direktübergabe an `get_symbol_body` auf `LOCAL-01` funktioniert, Signaturen lesbar, **kein** `TARGET_MISMATCH`.
-  - `search_assembly` liefert nur Textzeilen `relativer/Pfad.cs:Zeile: <Deklarationstext>` — **keine** `handoffId`/`symbolId`.
-  - `get_symbol_body` akzeptiert die manuell kopierte `Pfad.cs:Zeile` und löst danach eine `handoffId` auf.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Die vorgeschriebene Kette Schritt 3→4 ist ohne Parsing nicht geschlossen. Der Agent muss entweder `search_assembly` überspringen oder Datei:Zeile aus dem Treffertext schneiden.
-- **Empfehlung**:
-  - Pro Search-Hit dieselbe `handoffId` wie `inspect_assembly`/`find_symbol` ausgeben. Textsuche darf den Token nicht weglassen.
 
 ### [Major] C-04: `get_impact` ohne Risiko-Einstufung, irreführende Projektliste (TC-C09)
 
@@ -125,6 +111,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) war durchgängig möglic
 
 ---
 
-Gruppe C: 0 Critical, 6 Major, 1 Minor
-IDs: C-01, C-02, C-03, C-04, C-05, C-06, C-07
+Gruppe C: 0 Critical, 5 Major, 1 Minor
+IDs: C-01, C-02, C-04, C-05, C-06, C-07
 Blocker: none

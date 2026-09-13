@@ -86,6 +86,7 @@ internal sealed record AssemblySearchMatch(
     IReadOnlyList<AssemblySearchMatchRange> MatchRanges,
     string LineText,
     IReadOnlyList<string> ContextBefore,
-    IReadOnlyList<string> ContextAfter);
+    IReadOnlyList<string> ContextAfter,
+    string? HandoffId = null);
 
 internal sealed record AssemblySearchMatchRange(int Column, int Length);
