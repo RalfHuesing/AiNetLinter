@@ -91,6 +91,18 @@ public sealed class ProjectDefinitionLoaderTests
         Assert.Contains(missing, failed.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("*.sln")]
+    [InlineData("C:\\repo\\*.slnx")]
+    [InlineData("C:\\repo\\???.sln")]
+    public void Load_WildcardTarget_ReportsInvalidArgument(string wildcardPath)
+    {
+        var failed = AsFailed(ProjectDefinitionLoader.LoadSolutionTarget(wildcardPath));
+
+        Assert.Equal(AiNetLinter.Output.LinterErrorCodes.InvalidArgument, failed.ErrorCode);
+        Assert.Contains("Wildcards oder Suchmasken", failed.Message, StringComparison.Ordinal);
+    }
+
     private static ProjectDefinition AsLoaded(ProjectDefinitionLoadResult result)
     {
         Assert.True(result.Succeeded, result.Message);
