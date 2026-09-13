@@ -25,7 +25,7 @@ internal sealed record HandoffCounterState(
 /// </summary>
 internal sealed class HandoffCounterStore : IHandoffCounterStore
 {
-    internal const int DefaultBatchSize = 100;
+    internal const int DefaultBatchSize = 1000;
     private static readonly Lazy<HandoffCounterStore> DefaultStore = new(() => new HandoffCounterStore(DefaultFilePath));
     private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(5);
 
