@@ -229,10 +229,10 @@ Die Umstellung muss vollständig sein. Vor der Implementierung wird per Codeinve
 
 ### 5.1 Producer
 
-- [ ] `find_symbol`
+- [x] `find_symbol` (Gruppe 1 migriert)
 - [ ] `get_file_skeleton`
-- [ ] `get_symbol_body`
-- [ ] `find_references`
+- [x] `get_symbol_body` (Gruppe 1 migriert)
+- [x] `find_references` (Gruppe 1 migriert, CallGraph-Knoten)
 - [ ] `get_call_tree`
 - [ ] `get_impact`
 - [ ] `get_type_hierarchy`
@@ -257,9 +257,9 @@ Für jeden gefundenen Producer:
 
 ### 5.2 Consumer
 
-- [ ] `get_symbol_body.symbolIdentifiers[]`
+- [x] `get_symbol_body.symbolIdentifiers[]` (Gruppe 1 migriert)
 - [ ] `metrics_lookup.symbolIdentifiers[]`
-- [ ] `find_references.symbolIdentifier`
+- [x] `find_references.symbolIdentifier` (Gruppe 1 migriert)
 - [ ] `get_call_tree.symbolIdentifier`
 - [ ] `get_impact.symbolIdentifier`
 - [ ] `get_type_hierarchy.symbolIdentifier`
@@ -391,8 +391,8 @@ Fehlertexte geben keine vollständige interne ID aus. `HANDOFF_UNKNOWN` erklärt
 
 ### 8.4 Reale Toolketten
 
-- [ ] `find_symbol -> get_symbol_body`
-- [ ] `find_symbol -> find_references`
+- [x] `find_symbol -> get_symbol_body` (Gruppe 1 Unit & E2E getestet)
+- [x] `find_symbol -> find_references` (Gruppe 1 Unit & Integration getestet)
 - [ ] `find_symbol -> get_type_hierarchy`
 - [ ] `find_symbol -> metrics_lookup`
 - [ ] `get_file_skeleton -> get_symbol_body`

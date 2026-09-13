@@ -402,7 +402,7 @@ public sealed partial class GetTestContextToolTests
 
     private static string ExtractHandoffId(string text)
     {
-        var match = System.Text.RegularExpressions.Regex.Match(text, "handoffId: `(?<id>s:[^`]+)`");
+        var match = System.Text.RegularExpressions.Regex.Match(text, "handoffId: `(?<id>[sh]:[^`]+)`");
         Assert.True(match.Success, text);
         return match.Groups["id"].Value;
     }

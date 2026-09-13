@@ -44,7 +44,7 @@ public sealed class SourceHandoffLifecycleIntegrationTests
                 CancellationToken.None);
             Assert.False(discovery.IsError == true, Text(discovery));
             handoffId = ExtractHandoffId(Text(discovery));
-            Assert.StartsWith("s:", handoffId, StringComparison.Ordinal);
+            Assert.StartsWith("h:", handoffId, StringComparison.Ordinal);
 
             firstLease.Dispose();
             clock.Advance(TimeSpan.FromMinutes(2));
@@ -98,7 +98,7 @@ public sealed class SourceHandoffLifecycleIntegrationTests
 
     private static string ExtractHandoffId(string text)
     {
-        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>s:[^`]+)`", RegexOptions.CultureInvariant);
+        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant);
         return match.Success
             ? match.Groups["id"].Value
             : throw new InvalidOperationException("Der Content muss eine kopierbare Source-Handoff-ID enthalten.");

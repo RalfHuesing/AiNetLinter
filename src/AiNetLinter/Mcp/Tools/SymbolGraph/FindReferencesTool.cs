@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
@@ -71,15 +72,34 @@ internal static partial class FindReferencesTool
     private static CallToolResult? ValidateRequest(
         ISolutionStateProvider state, FindReferencesRequest request, out Solution? solution, out string? symbolIdentifier)
     {
-        solution = null; symbolIdentifier = null;
+        solution = null;
+        symbolIdentifier = null;
         if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes)) return InvalidResponseBudget();
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
-        symbolIdentifier = request.EffectiveSymbolIdentifier;
-        return string.IsNullOrEmpty(symbolIdentifier)
-            ? McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.", hint: McpToolResults.SymbolIdentifierHint)
-            : null;
+        var rawIdentifier = request.EffectiveSymbolIdentifier;
+        if (string.IsNullOrEmpty(rawIdentifier))
+        {
+            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.", hint: McpToolResults.SymbolIdentifierHint);
+        }
+
+        if (HandoffCounterAlphabet.IsValidHandle(rawIdentifier) || rawIdentifier.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(rawIdentifier);
+            if (!restored.IsSuccess)
+            {
+                return McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
+            }
+
+            symbolIdentifier = restored.Value!;
+        }
+        else
+        {
+            symbolIdentifier = rawIdentifier;
+        }
+
+        return null;
     }
 
     private static async Task<CallToolResult> ExecuteResolvedAsync(

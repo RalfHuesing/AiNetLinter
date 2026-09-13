@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -240,7 +241,11 @@ internal static class TransitiveCallGraphFormatter
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        var handoff = string.IsNullOrEmpty(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        var handoff = string.IsNullOrEmpty(entry.Id)
+            ? string.Empty
+            : HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(entry.Id) is { IsSuccess: true } handle
+                ? $"; handoffId: `{handle.Value}`"
+                : string.Empty;
         return $"{text}{origin}{handoff}";
     }
 

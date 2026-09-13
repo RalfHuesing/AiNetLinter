@@ -136,7 +136,7 @@ public sealed partial class FindReferencesToolTests
 
         Assert.Null(symbol);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
-        Assert.Contains("handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.ContentHash, text, StringComparison.Ordinal);
         Assert.DoesNotContain($":{identity.Generation}:M:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);

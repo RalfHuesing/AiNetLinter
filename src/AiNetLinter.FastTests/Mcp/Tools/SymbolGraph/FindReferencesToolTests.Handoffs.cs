@@ -40,11 +40,11 @@ public sealed partial class FindReferencesToolTests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         var id = ExtractHandoffId(text);
-        Assert.StartsWith("s:", id, StringComparison.Ordinal);
+        Assert.StartsWith("h:", id, StringComparison.Ordinal);
         Assert.All(
             text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Where(line => line.Contains("handoffId:", StringComparison.Ordinal)),
-            line => Assert.Equal(1, Regex.Matches(line, @"handoffId: `s:[^`]+`", RegexOptions.CultureInvariant).Count));
+            line => Assert.Equal(1, Regex.Matches(line, @"handoffId: `h:[^`]+`", RegexOptions.CultureInvariant).Count));
         Assert.DoesNotContain("targetPath", text, StringComparison.Ordinal);
         Assert.DoesNotContain("snapshot", text, StringComparison.Ordinal);
     }
@@ -66,7 +66,7 @@ public sealed partial class FindReferencesToolTests
 
     private static string ExtractHandoffId(string text)
     {
-        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>s:[^`]+)`", RegexOptions.CultureInvariant);
+        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>[sh]:[^`]+)`", RegexOptions.CultureInvariant);
         return match.Success
             ? match.Groups["id"].Value
             : throw new InvalidOperationException("Der Content muss eine kopierbare Symbol-Handoff-ID enthalten.");

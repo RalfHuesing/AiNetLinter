@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Validation;
@@ -347,7 +348,11 @@ internal static class FindSymbolTool
         var locations = additionalLocations is { Count: > 0 }
             ? $"; weitere Deklarationen: {string.Join(", ", additionalLocations)}"
             : string.Empty;
-        var handoff = string.IsNullOrWhiteSpace(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        var handoff = string.IsNullOrWhiteSpace(entry.Id)
+            ? string.Empty
+            : HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(entry.Id) is { IsSuccess: true } handle
+                ? $"; handoffId: `{handle.Value}`"
+                : string.Empty;
         return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{locations}{handoff}";
     }
 

@@ -37,7 +37,7 @@ public sealed class FindSymbolScopeRankingTests
         using var fixture = CreateFixture(("App", documents, null));
 
         var original = await ExecuteAsync(fixture, "BudgetTarget", maxResults: 50);
-        var projected = FindSymbolTool.ApplyFinalResponseBudget(original, 2_048);
+        var projected = FindSymbolTool.ApplyFinalResponseBudget(original, 1_024);
 
         Assert.True(projected.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;

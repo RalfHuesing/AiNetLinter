@@ -229,6 +229,26 @@ internal static class SymbolIdentifierResolver
                 || string.Equals(NormalizeDocCommentId(declarationId), NormalizeDocCommentId(stableId), StringComparison.Ordinal));
     }
 
+    private static bool TryRestoreOpaqueHandle(string value, out string restoredValue, out CallToolResult? error)
+    {
+        error = null;
+        restoredValue = value;
+        if (!HandoffCounterAlphabet.IsValidHandle(value) && !value.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(value);
+        if (!restored.IsSuccess)
+        {
+            error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
+            return false;
+        }
+
+        restoredValue = restored.Value!;
+        return true;
+    }
+
     private static bool TryNormalizeHandoffId(
         string value,
         AnalysisSymbolIdentity? expectedIdentity,
@@ -240,7 +260,13 @@ internal static class SymbolIdentifierResolver
         normalizedId = value;
         isAssemblyId = false;
         isHandoff = false;
-        error = null;
+
+        if (!TryRestoreOpaqueHandle(value, out value, out error))
+        {
+            return false;
+        }
+        normalizedId = value;
+
         if (!SymbolHandoffIdentifier.HasWirePrefix(value)
             && !SymbolHandoffIdentifier.HasUnsupportedPrefix(value))
         {

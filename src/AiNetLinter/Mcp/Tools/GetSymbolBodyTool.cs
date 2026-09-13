@@ -49,13 +49,9 @@ internal static partial class GetSymbolBodyTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
-        if (identifiers.Count == 0)
+        if (!TryNormalizeAndRestoreIdentifiers(request.SymbolIdentifiers, out var identifiers, out var error))
         {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifiersBatchHint);
+            return error;
         }
 
         try
@@ -85,14 +81,10 @@ internal static partial class GetSymbolBodyTool
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lease);
-        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
         if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes)) return InvalidResponseBudget();
-        if (identifiers.Count == 0)
+        if (!TryNormalizeAndRestoreIdentifiers(request.SymbolIdentifiers, out var identifiers, out var error))
         {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifiersBatchHint);
+            return error;
         }
 
         var requests = new List<RenderSingleSymbolRequest>(identifiers.Count);
@@ -150,13 +142,9 @@ internal static partial class GetSymbolBodyTool
         }
         var solution = lease.Solution;
         if (solution is null) return McpToolResults.SolutionNotLoaded();
-        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
-        if (identifiers.Count == 0)
+        if (!TryNormalizeAndRestoreIdentifiers(request.SymbolIdentifiers, out var identifiers, out var error))
         {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifiersBatchHint);
+            return error;
         }
 
         var result = await RenderSymbolBodiesAsync(
@@ -299,7 +287,12 @@ internal static partial class GetSymbolBodyTool
         {
             markdown.Line($"angefordert: `{request.Identifier}`");
         }
-        if (!string.IsNullOrEmpty(idSuffix)) markdown.Line($"handoffId: `{idSuffix}`");
+        if (!string.IsNullOrEmpty(idSuffix))
+        {
+            var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(idSuffix);
+            var outputId = handle.IsSuccess ? handle.Value : idSuffix;
+            markdown.Line($"handoffId: `{outputId}`");
+        }
         markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
         if (bodyResolution.TotalBodyLines > 0)
         {
@@ -415,6 +408,45 @@ internal static partial class GetSymbolBodyTool
         return request.AssemblyIdentity is null
             ? $"{Path.GetFileName(request.OutputRoot)}/{ToRelative(request.OutputRoot, symbol)}"
             : Path.GetFullPath(path);
+    }
+
+    private static bool TryNormalizeAndRestoreIdentifiers(
+        string[]? symbolIdentifiers,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out IReadOnlyList<string>? identifiers,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out CallToolResult? error)
+    {
+        error = null;
+        var normalized = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
+        if (normalized.Count == 0)
+        {
+            identifiers = null;
+            error = McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifiersBatchHint);
+            return false;
+        }
+
+        var restoredList = new List<string>(normalized.Count);
+        for (var i = 0; i < normalized.Count; i++)
+        {
+            var id = normalized[i];
+            if (HandoffCounterAlphabet.IsValidHandle(id) || id.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+            {
+                var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(id);
+                if (!restored.IsSuccess)
+                {
+                    identifiers = null;
+                    error = McpToolResults.HandoffError(restored.Error, $"$.symbolIdentifiers[{i}]");
+                    return false;
+                }
+                id = restored.Value!;
+            }
+            restoredList.Add(id);
+        }
+
+        identifiers = restoredList;
+        return true;
     }
 
 }

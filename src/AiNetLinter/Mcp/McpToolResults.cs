@@ -246,6 +246,19 @@ internal static partial class McpToolResults
     }
 
     /// <summary>
+    /// Baut ein Ergebnis fuer einen Fehler bei der Handoff-Aufloesung oder -Validierung.
+    /// </summary>
+    internal static CallToolResult HandoffError(ResultError? error, string? fieldPath = null)
+    {
+        return Recoverable(
+            error?.Code ?? LinterErrorCodes.InvalidArgument,
+            error?.Message ?? "Ungültiger Handoff-Bezeichner.",
+            new McpErrorParameters(
+                Hint: error?.Hint ?? "Einen gueltigen Bezeichner uebergeben.",
+                FieldPath: fieldPath));
+    }
+
+    /// <summary>
     /// Kurzform fuer den Fall, dass ein per Dateipfad angegebenes Tool-Argument (z. B.
     /// <c>get_file_skeleton</c>s <c>filePaths</c>-Array) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
     /// in der Solution aufloest. IsError=false (recoverable) — Pfad korrigieren oder find_symbol
