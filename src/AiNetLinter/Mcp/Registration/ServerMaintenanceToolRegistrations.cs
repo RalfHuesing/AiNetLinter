@@ -190,5 +190,5 @@ internal static class ServerMaintenanceToolRegistrations
     private static readonly string GetServerHealthDescription =
         "Prueft Server-Status und residente Projekt- und Assembly-Sessions. " +
         "Ohne targetPath: globaler Status. Mit targetPath (.sln/.slnx oder .dll/.exe): gezielte Pruefung. " +
-        "includeDiagnostics (Default false): Diagnose-Samples fuer targetPath anfordern (maxDiagnostics: Default 50).";
+        "includeDiagnostics (Default false): Diagnose-Samples fuer targetPath anfordern (maxDiagnostics: Default 20).";
 }
