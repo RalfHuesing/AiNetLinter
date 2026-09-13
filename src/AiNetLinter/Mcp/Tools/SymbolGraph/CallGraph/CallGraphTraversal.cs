@@ -111,7 +111,7 @@ internal static class CallGraphTraversal
                     cancellationToken).ConfigureAwait(false);
                 if (request.ScopeFilter is not null && documentScope is null) continue;
 
-                request.State.Add(CreateCallSiteEntry(
+                request.State.Add(await CreateCallSiteEntryAsync(
                     new CreateCallSiteEntryRequest(
                         reference,
                         referenceLocation,
@@ -119,7 +119,8 @@ internal static class CallGraphTraversal
                         request.ReachedFromSymbol,
                         request.Depth,
                         request.AssemblyIdentity,
-                        documentScope)));
+                        documentScope),
+                    cancellationToken).ConfigureAwait(false));
             }
         }
     }
@@ -140,8 +141,9 @@ internal static class CallGraphTraversal
             : null;
     }
 
-    private static TransitiveCallSiteEntry CreateCallSiteEntry(
-        CreateCallSiteEntryRequest request)
+    private static async Task<TransitiveCallSiteEntry> CreateCallSiteEntryAsync(
+        CreateCallSiteEntryRequest request,
+        CancellationToken cancellationToken)
     {
         var location = request.ReferenceLocation.Location;
         var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
@@ -149,7 +151,11 @@ internal static class CallGraphTraversal
             ? PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath)
             : Path.GetFullPath(location.SourceTree!.FilePath);
         var line = location.GetLineSpan().StartLinePosition.Line + 1;
-        var handoffId = request.AssemblyIdentity?.FormatHandoff(request.Reference.Definition);
+        var caller = await ResolveEnclosingMemberAsync(request.ReferenceLocation, cancellationToken)
+            .ConfigureAwait(false);
+        var handoffId = caller is null
+            ? null
+            : GetStableSymbolId(caller, request.AssemblyIdentity);
         return new TransitiveCallSiteEntry(
             filePath,
             line,
@@ -158,7 +164,7 @@ internal static class CallGraphTraversal
             request.Depth,
             FormatReachedFromSymbolId(request.ReachedFromSymbol, request.AssemblyIdentity),
             Id: handoffId,
-            HandoffKind: handoffId is null ? null : request.Reference.Definition is INamedTypeSymbol ? "type" : "member",
+            HandoffKind: handoffId is null ? null : caller is INamedTypeSymbol ? "type" : "member",
             ScopeType: request.DocumentScope is { } scope ? McpScopeValues.ToWireValue(scope.ProjectKind) : null,
             SourceKind: request.DocumentScope is { } source ? McpScopeValues.ToWireValue(source.SourceKind) : null);
     }

@@ -148,11 +148,13 @@ public sealed partial class GetFeatureContextToolTests
         Assert.Contains("Consumer.cs", text);
         Assert.Contains("Consumer.Run()", text);
         Assert.Contains("Consumer.RunOther()", text);
+        Assert.Matches(@"Consumer\.cs:\d+.*handoffId: `h:[^`]+`", text);
 
         // 4. Test-Kontext
         Assert.Contains("## 4. Test-Kontext (statische Testkandidaten", text);
         Assert.Contains("CalculatorTests.cs", text);
         Assert.Contains("Add_PositiveNumbers_ReturnsSum", text);
+        Assert.Matches(@"testKlassen:.*CalculatorTests.*handoffId: `h:[^`]+`", text);
 
         // 5. Violations
         Assert.Contains("## 5. Offene Violations auf dieser Datei", text);

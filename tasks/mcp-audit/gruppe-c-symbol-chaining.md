@@ -38,37 +38,6 @@
   - `filePaths` soll `h:…` (Datei oder enthaltenes Symbol) unverändert akzeptieren und auf das deklarierende Dokument mappen.
   - Alternativ eigene Datei-`h:…` in `find_symbol` / `get_symbol_body` ausweisen.
 
-### [Major] C-04: Referenz-/Impact-Handoffs zeigen auf das abgefragte Symbol, nicht auf die Aufrufstelle
-
-- **Betroffenes Tool / Schema**: `find_references`, `get_impact` (Parameter: `symbolIdentifier`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source); gleiches Muster auf `LOCAL-01`
-- **Konkreter Aufruf**: `find_references(targetPath=<SOURCE-01>, symbolIdentifier=<h:Klasse>)` bzw. `get_impact(..., symbolIdentifier=<h:Klasse>)`
-- **Beobachtung / Ist-Verhalten**:
-  - Trefferlisten enthalten Datei:Zeile der Aufrufstellen, aber **jede** Zeile trägt dieselbe `handoffId` wie das **Ursprungssymbol**.
-  - Ein Folge-`get_symbol_body` mit dieser ID landet wieder bei der Definition, nicht bei der aufrufenden Methode.
-  - `get_call_tree` liefert dagegen **knotenweise unterschiedliche** `h:…` (Soll-Verhalten).
-  - `get_impact` selbst: `risk`, `completeness`, direkte/transitive Call-Sites, **kein** Verify-Verdict — dieser Teil ist kontraktgerecht.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Schema: navigierbare Treffer enthalten `h:…` für direkte Folgeparameter. Der Agent kann von einer Referenz nicht zur Call-Site ketten, ohne Pfad+Zeile selbst zu bauen.
-- **Empfehlung**:
-  - Pro Treffer die `h:…` des enthaltenden Members (oder der Call-Site) ausgeben; Ursprungssymbol separat halten.
-
-### [Major] C-05: `get_feature_context` / `get_test_context` ohne konsumierbare Caller- und Test-Handoffs
-
-- **Betroffenes Tool / Schema**: `get_feature_context` (Caller), `get_test_context`
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_feature_context(targetPath=<SOURCE-01>, symbolIdentifier=<h:Klasse>, maxCallers=8)` und `get_test_context(targetPath=<SOURCE-01>, symbolIdentifier=<h:Klasse>)`
-- **Beobachtung / Ist-Verhalten**:
-  - `get_feature_context` akzeptiert die Klassen-`h:…` (Chaining-Schritt selbst ok). Call-Sites in Abschnitt 3 haben Pfad/Zeile/Methodennamen, **keine** `h:…`. Schema verspricht navigierbare Caller mit `h:…`.
-  - Composite-Completeness `truncated` bei `maxCallers` ist nachvollziehbar.
-  - `get_test_context`: Status `complete`, „10 Evidenztreffer in 3 Testdateien“, aber **0 von 10 Evidenztreffer zurückgegeben**; nur Dateipfade, keine Testmethoden-`h:…`.
-  - Auf `LOCAL-01`: beide Tools `ASSEMBLY_TARGET_UNSUPPORTED` mit `capability=unsupported` — recoverable, kein Befund.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - TC-C13 verlangt Verknüpfung Feature → Tests/Caller. Ohne `h:…` muss der Agent Namen oder Pfade zusammenbauen. 10 gefundene, 0 sichtbare Methodentreffer ist ein Vollständigkeitsbruch der Nutzlast, kein leeres Target.
-- **Empfehlung**:
-  - Caller wie in `get_call_tree` mit `h:…`.
-  - Testkandidaten methodengenau mit `h:…` ausgeben oder Counts nicht höher als die sichtbare Liste setzen.
-
 ### [Major] C-06: `includeReferences=true` verdrängt das Assembly-Target durch Referenztreffer
 
 - **Betroffenes Tool / Schema**: `find_symbol` (Parameter: `includeReferences`, `maxResults`)

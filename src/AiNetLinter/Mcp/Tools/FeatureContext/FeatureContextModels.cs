@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
+using AiNetLinter.Mcp.Tools.TestContext;
 
 namespace AiNetLinter.Mcp.Tools.FeatureContext;
 
@@ -109,7 +110,8 @@ internal sealed record StaticTestCandidateFileDto(
     int TotalTestCount = 0,
     IReadOnlyList<string>? TestClassNames = null,
     string ScopeType = "unknown",
-    string SourceKind = "editable"
+    string SourceKind = "editable",
+    IReadOnlyList<TestClassHandoff>? TestClasses = null
 );
 
 /// <summary>

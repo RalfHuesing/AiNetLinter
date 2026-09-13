@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Handoffs;
+using AiNetLinter.Mcp.Tools.TestContext;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
@@ -113,7 +115,10 @@ internal static class FeatureContextFormatter
                 var callerDesc = !string.IsNullOrEmpty(call.CallerMemberName)
                     ? $"`{call.CallerMemberName}()` in `{call.ProjectName}`"
                     : $"Aufruf in `{call.ProjectName}`";
-                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}; scope={call.ScopeType}; sourceKind={call.SourceKind}");
+                var handoff = string.IsNullOrEmpty(call.CallerId)
+                    ? string.Empty
+                    : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(call.CallerId)}`";
+                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}; scope={call.ScopeType}; sourceKind={call.SourceKind}{handoff}");
             }
 
         }
@@ -160,6 +165,7 @@ internal static class FeatureContextFormatter
                     ? $"{file.TestMethods.Count} von {file.TotalMatchingMethods} konkrete Testmethoden"
                     : $"{file.TotalTestCount} Tests auf Klassenebene ({classCount} Testklasse(n)); keine Methode behauptet";
                 sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason}; scope={file.ScopeType}; sourceKind={file.SourceKind})");
+                TestClassHandoffFormatter.Append(sb, file.TestClasses);
                 foreach (var method in file.TestMethods)
                 {
                     sb.AppendLine($"  - `{method}()`");

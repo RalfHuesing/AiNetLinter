@@ -44,7 +44,14 @@ internal static partial class FeatureContextScanner
             ? await CollectCallersAsync(symbol, context.Solution, context.Options.MaxCallers, context.Options.Scope, classifier, ct)
             : null;
         var tests = context.Options.IncludeTests
-            ? await CollectTestsAsync(symbol, context.Solution, context.Options.MaxTests, context.Options.Scope, classifier, ct)
+            ? await CollectTestsAsync(
+                symbol,
+                context.Solution,
+                context.Options.MaxTests,
+                context.Options.Scope,
+                classifier,
+                context.AssemblySymbolIdentity,
+                ct)
             : null;
         var violations = context.Options.IncludeViolations
             ? await CollectViolationsAsync(context.Solution, declaration, context.Config, context.Console, ct)
@@ -162,6 +169,7 @@ internal static partial class FeatureContextScanner
         int requestedMaxTests,
         McpScopeInput scopeInput,
         McpScopeClassifier classifier,
+        AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
         var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
@@ -169,7 +177,13 @@ internal static partial class FeatureContextScanner
         var maxTests = Math.Clamp(requestedMaxTests, 1, MaxTestFilesLimit);
         var isTruncated = scoped.Visible.Count > maxTests;
         var testFiles = isTruncated ? scoped.Visible.Take(maxTests).ToList() : scoped.Visible;
-        var projection = ProjectTestCandidates(testFiles, scoped.Scopes, isTruncated);
+        var projection = await ProjectTestCandidatesAsync(
+            testFiles,
+            scoped.Scopes,
+            solution,
+            assemblyIdentity,
+            isTruncated,
+            ct).ConfigureAwait(false);
         var totalMatchingTests = scoped.Visible.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
 
         return new StaticTestContextReportDto(
@@ -190,10 +204,13 @@ internal static partial class FeatureContextScanner
             ExcludedCount: scoped.ExcludedCount);
     }
 
-    private static TestCandidateProjection ProjectTestCandidates(
+    private static async Task<TestCandidateProjection> ProjectTestCandidatesAsync(
         IReadOnlyList<TestFileCoverageResult> testFiles,
         IReadOnlyDictionary<string, McpDocumentScope> scopes,
-        bool isTruncated)
+        Solution solution,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        bool isTruncated,
+        CancellationToken ct)
     {
         var reasons = isTruncated ? new List<string> { "maxTests" } : [];
         var remainingMethods = MaxTestMethodsTotal;
@@ -228,7 +245,12 @@ internal static partial class FeatureContextScanner
                 file.TotalClassTests,
                 file.TestClassNames,
                 McpScopeValues.ToWireValue(scope.ProjectKind),
-                McpScopeValues.ToWireValue(scope.SourceKind)));
+                McpScopeValues.ToWireValue(scope.SourceKind),
+                await AiNetLinter.Mcp.Tools.TestContext.TestClassHandoffResolver.ResolveAsync(
+                    file,
+                    solution,
+                    assemblyIdentity,
+                    ct).ConfigureAwait(false)));
         }
 
         if (methodsAfterPerFileCaps > MaxTestMethodsTotal && !reasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))

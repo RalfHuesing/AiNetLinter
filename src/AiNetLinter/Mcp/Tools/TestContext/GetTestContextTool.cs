@@ -56,14 +56,14 @@ internal static class GetTestContextTool
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
             var scoped = await FilterTestFilesAsync(testResults.TestFiles, solution, options.Scope, ct);
-            var payload = BuildPayload(new TestContextPayloadRequest(
+            var payload = await BuildPayloadAsync(new TestContextPayloadRequest(
                 symbol,
                 solution,
                 scoped.Visible,
                 scoped.Scopes,
                 options,
                 scoped.ExcludedCount,
-                state.HandoffSymbolIdentity));
+                state.HandoffSymbolIdentity), ct).ConfigureAwait(false);
             return TestContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -74,7 +74,9 @@ internal static class GetTestContextTool
         }
     }
 
-    private static TestContextPayload BuildPayload(TestContextPayloadRequest request)
+    private static async Task<TestContextPayload> BuildPayloadAsync(
+        TestContextPayloadRequest request,
+        CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
         var targetFilePath = ExtractFilePath(request.Symbol, solutionDir);
@@ -91,13 +93,15 @@ internal static class GetTestContextTool
             ? SuggestTestFilePath(request.Symbol, targetFilePath, request.Solution, solutionDir)
             : null;
 
+        var candidates = await CreateCandidatesAsync(testFiles, request, ct).ConfigureAwait(false);
+
         return new TestContextPayload(
             request.Symbol.ToDisplayString(),
             request.Symbol.Kind.ToString(),
             targetFilePath,
             totalMatchingTests,
             request.ScopedTestFiles.Count,
-            testFiles.Select(file => ToStaticCandidate(file, request.TestFileScopes[file.FilePath])).ToList(),
+            candidates,
             BuildRecommendedCommands(request.ScopedTestFiles),
             isUntested,
             isTruncated,
@@ -122,6 +126,25 @@ internal static class GetTestContextTool
         TestContextOptions Options,
         int ExcludedTestFileCount,
         AnalysisSymbolIdentity? HandoffIdentity);
+
+    private static async Task<List<StaticTestCandidateFile>> CreateCandidatesAsync(
+        IReadOnlyList<TestFileCoverageResult> testFiles,
+        TestContextPayloadRequest request,
+        CancellationToken ct)
+    {
+        var candidates = new List<StaticTestCandidateFile>(testFiles.Count);
+        foreach (var file in testFiles)
+        {
+            var testClasses = await TestClassHandoffResolver.ResolveAsync(
+                file,
+                request.Solution,
+                request.HandoffIdentity,
+                ct).ConfigureAwait(false);
+            candidates.Add(ToStaticCandidate(file, request.TestFileScopes[file.FilePath], testClasses));
+        }
+
+        return candidates;
+    }
 
     private static async Task<(List<TestFileCoverageResult> Visible, IReadOnlyDictionary<string, McpDocumentScope> Scopes, int ExcludedCount)> FilterTestFilesAsync(
         IReadOnlyList<TestFileCoverageResult> testFiles,
@@ -153,7 +176,10 @@ internal static class GetTestContextTool
         return (visible, scopes, excluded);
     }
 
-    private static StaticTestCandidateFile ToStaticCandidate(TestFileCoverageResult file, McpDocumentScope scope) =>
+    private static StaticTestCandidateFile ToStaticCandidate(
+        TestFileCoverageResult file,
+        McpDocumentScope scope,
+        IReadOnlyList<TestClassHandoff> testClasses) =>
         new(
             file.FilePath,
             file.TestClassName,
@@ -167,7 +193,8 @@ internal static class GetTestContextTool
             file.TotalClassTests,
             file.TestClassNames,
             McpScopeValues.ToWireValue(scope.ProjectKind),
-            McpScopeValues.ToWireValue(scope.SourceKind));
+            McpScopeValues.ToWireValue(scope.SourceKind),
+            testClasses);
 
     private static string ExtractFilePath(ISymbol symbol, string solutionDir)
     {

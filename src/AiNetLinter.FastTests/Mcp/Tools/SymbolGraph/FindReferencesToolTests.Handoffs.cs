@@ -61,7 +61,9 @@ public sealed partial class FindReferencesToolTests
             state, [id], 80, CancellationToken.None);
 
         Assert.NotEqual(true, body.IsError);
-        Assert.Contains("Greet", Assert.IsType<TextContentBlock>(Assert.Single(body.Content)).Text, StringComparison.Ordinal);
+        var bodyText = Assert.IsType<TextContentBlock>(Assert.Single(body.Content)).Text;
+        Assert.Contains("Run", bodyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Greeter.Greet", bodyText, StringComparison.Ordinal);
     }
 
     private static string ExtractHandoffId(string text)

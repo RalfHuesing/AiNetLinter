@@ -63,5 +63,11 @@ public sealed record StaticTestCandidateFile(
     [property: JsonPropertyName("totalTestCount")] int TotalTestCount = 0,
     [property: JsonPropertyName("testClassNames")] IReadOnlyList<string>? TestClassNames = null,
     string ScopeType = "unknown",
-    string SourceKind = "editable"
+    string SourceKind = "editable",
+    [property: JsonIgnore] IReadOnlyList<TestClassHandoff>? TestClasses = null
 );
+
+/// <summary>
+/// Kettenfaehige Testklassen-Evidenz ohne Behauptung konkreter Testmethoden.
+/// </summary>
+public sealed record TestClassHandoff(string Name, string Id);

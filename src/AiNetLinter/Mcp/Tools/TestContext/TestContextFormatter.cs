@@ -65,6 +65,7 @@ internal static class TestContextFormatter
             ? $"{file.TestMethods.Count} konkrete Methoden"
             : $"{file.TotalTestCount} Tests auf Klassenebene; keine Methode behauptet";
         sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason}; scope={file.ScopeType}; sourceKind={file.SourceKind})");
+        TestClassHandoffFormatter.Append(sb, file.TestClasses);
         foreach (var method in file.TestMethods) sb.AppendLine($"  - `{method}()`");
     }
 

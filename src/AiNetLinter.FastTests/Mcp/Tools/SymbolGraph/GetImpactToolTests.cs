@@ -71,6 +71,22 @@ public sealed class GetImpactToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SymbolIdentifierGiven_CallSiteHandoffNavigatesToCaller()
+    {
+        var state = _fixture.CreateServer();
+
+        var impact = await GetImpactTool.ExecuteAsync(
+            state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
+        var handoffId = ExtractHandoffId(TextOf(impact));
+
+        var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
+
+        var bodyText = TextOf(body);
+        Assert.Contains("Run", bodyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Greeter.Greet", bodyText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_SymbolIdentifier_EnrichesResponseWithAffectedProjectsAndTests()
     {
         var state = _fixture.CreateServer();
@@ -318,4 +334,15 @@ public sealed class GetImpactToolTests
 
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+    private static string ExtractHandoffId(string text)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"handoffId: `(?<id>h:[^`]+)`",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return match.Success
+            ? match.Groups["id"].Value
+            : throw new InvalidOperationException("Die Call-Site muss einen Handoff ausgeben.");
+    }
 }

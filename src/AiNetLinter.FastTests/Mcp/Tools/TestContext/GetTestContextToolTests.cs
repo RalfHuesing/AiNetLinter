@@ -169,6 +169,7 @@ public sealed partial class GetTestContextToolTests
         Assert.Contains("typeNamingConvention", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("confidence=low", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("2 Tests auf Klassenebene", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Matches(@"testKlassen:.*CalculatorTests.*handoffId: `h:[^`]+`", textContent.Text);
     }
 
     [Fact]
