@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.TestKit;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Xunit;
@@ -16,6 +17,51 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 [Trait("Category", "Unit")]
 public sealed class AssemblyAnalysisContextTextModelTests
 {
+    [Fact]
+    public async Task MetricsForAssembly_ReturnsUnsupportedInDirectAndCompositeCalls()
+    {
+        using var temp = TestTempDirectory.Create("assembly-context-metrics-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ContextMetricsProbe",
+            "namespace Probe.Api; public sealed class PublicApi { }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
+
+        var direct = await MetricsLookupTool.ExecuteAsync(
+            lease.Server,
+            ["Probe.Api.PublicApi"],
+            CancellationToken.None);
+        var directText = AssemblyAnalysisTestSupport.TextOf(direct);
+        Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", directText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ainetlinter-rules.json", directText, StringComparison.Ordinal);
+
+        var composite = await AssemblyAnalysisContextTool.ExecuteAsync(
+            lease,
+            new AssemblyAnalysisContextArguments(
+                SymbolIdentifier: "Probe.Api.PublicApi",
+                IncludeMetrics: true,
+                IncludeReferences: false,
+                IncludeCallers: false,
+                IncludeImpact: false,
+                IncludeBody: false,
+                IncludeClassStructure: false,
+                MaxResults: 10,
+                MaxBodyLines: 80,
+                MaxCallers: 10,
+                Depth: 1,
+                TopN: 10,
+                MaxResponseBytes: 2_048,
+                DetailLevel: null,
+                Cursor: null),
+            CancellationToken.None);
+        var compositeText = AssemblyAnalysisTestSupport.TextOf(composite);
+        Assert.Contains("Abschnitt: metrics", compositeText, StringComparison.Ordinal);
+        Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", compositeText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ainetlinter-rules.json", compositeText, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ExecuteWithoutSymbol_ProvidesAssemblyOverview()
     {

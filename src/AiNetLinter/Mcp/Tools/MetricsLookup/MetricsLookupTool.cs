@@ -40,6 +40,13 @@ internal static class MetricsLookupTool
                 "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifiersBatchHint);
         }
+        if (state.AssemblySymbolIdentity?.IsAssembly == true)
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.AssemblyTargetUnsupported,
+                "metrics_lookup unterstützt keine dekompilierten Assembly-Ziele, weil regelgebundene Schwellwerte keine Assembly-zugeordnete Konfiguration besitzen.",
+                hint: "Für die Assembly `inspect_assembly`, `get_class_structure` oder `get_symbol_body` verwenden; regelgebundene Metriken nur mit targetPath auf eine .sln/.slnx-Datei abrufen.");
+        }
 
         try
         {

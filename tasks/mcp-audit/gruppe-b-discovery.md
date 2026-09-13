@@ -10,24 +10,11 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 2 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 1 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] B-05: `includeMetrics` auf Assembly ergibt irreführendes Solution-`NOT_CONFIGURED`
-
-- **Betroffenes Tool / Schema**: `get_assembly_context` (Parameter: `includeMetrics`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `get_assembly_context(targetPath="<LOCAL-01>", symbolIdentifier="<Handoff-ID>", includeMetrics=true, includeReferences=true)`
-- **Beobachtung / Ist-Verhalten**:
-  - Abschnitt `metrics`: `NOT_CONFIGURED: Diese Operation ist fuer die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.`
-  - Hint fordert, `ainetlinter-rules.json` neben der adressierten Solution anzulegen – Ziel ist jedoch eine Assembly, keine Solution.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Irreführender Fehler: Agent sucht eine nicht existente Solution/Rules-Datei am falschen Artefakt. Metriken sind im Decompiled-Modus erwartbar `unsupported`, nicht „fehlende Solution-Konfiguration“.
-- **Empfehlung**:
-  - Assembly-Modus: `unsupported` / `origin=decompiled` für Metriken; kein Solution-Rules-Hint.
 
 ### [Major] B-06: `search_assembly`-Treffer ohne Handoff-IDs
 

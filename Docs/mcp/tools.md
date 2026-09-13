@@ -181,6 +181,8 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 
 Ohne `symbolIdentifier` beginnt `get_assembly_context` mit einer kompakten Assembly-Übersicht: Identität, best-effort Zielframework, öffentliche Namespaces sowie bei `includeReferences=true` die begrenzte Referenzliste. Die Typenliste bleibt bei `inspect_assembly`.
 
+`metrics_lookup` akzeptiert keine dekompilierten Assembly-Ziele: Regel-Schwellenwerte sind an eine Source-Solution und ihre Konfiguration gebunden. Der Aufruf liefert `ASSEMBLY_TARGET_UNSUPPORTED` ohne Rules-Datei-Hinweis; für Assemblys stehen `inspect_assembly`, `get_class_structure` und `get_symbol_body` zur Verfügung.
+
 Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
 
 Bei `get_feature_context` ist der Caller-Bereich ebenfalls statisch: Er basiert auf
