@@ -121,11 +121,12 @@ Empfohlene API-Semantik:
 |---|---|
 | `external_library` | Extern sichtbare Symbole sind API-geschützt; externe Consumer sind möglich. |
 | `closed_solution` | Extern sichtbare Symbole dürfen als Kandidat erscheinen, aber nur mit niedriger Sicherheit und Laufzeit-Gegenprüfung. |
-| `unknown` | Keine sichere Dead-Code-Aussage zu extern sichtbaren Symbolen treffen; sie bleiben geschützt beziehungsweise nicht entscheidbar. |
+| `unknown` | Konfiguration unvollständig; der Dead-Code-MCP-Aufruf bricht mit einem verständlichen Konfigurationsfehler ab. |
 
-Der Default soll sicher sein: `unknown`. Für AiNetLinter selbst wird die
-eigene Solution explizit als `closed_solution` konfiguriert, sofern öffentliche
-Member untersucht werden sollen. Ein anderes Projekt kann seine DLL-Projekte
+Der Default soll sicher sein: `unknown`. `unknown` ist dabei kein zulässiger
+operativer Analysezustand, sondern ein Sentinel für „Projekt-API noch nicht
+entschieden“. Für AiNetLinter selbst wird die eigene Solution explizit als
+`closed_solution` konfiguriert. Ein anderes Projekt kann seine DLL-Projekte
 als `external_library` markieren.
 
 Die Information wird nicht als Aufrufparameter und nicht als globaler
@@ -133,9 +134,10 @@ Boolean geführt, sondern als Teil der geladenen Projektkonfiguration. Ein
 Boolean `PublicApi: true/false` wäre zu grob und hätte keinen sicheren dritten
 Zustand für unbekannte externe Consumer. Außerdem würde `true` entweder alle
 öffentlichen Symbole schützen oder eine zusätzliche Ausnahmelogik benötigen.
-Die dreistufige Policy macht die Sicherheitsentscheidung explizit und wird
-über die vorhandenen `ProjectOverrides` automatisch anhand des
-Roslyn-Projekts aufgelöst.
+Die Policy macht die Sicherheitsentscheidung explizit und wird über die
+vorhandenen `ProjectOverrides` automatisch anhand des Roslyn-Projekts
+aufgelöst. Bleibt der effektive Wert für ein im Dead-Code-Scope liegendes
+Projekt `unknown`, darf der Scanner kein Ergebnis erzeugen.
 
 Geschützt werden mindestens:
 
@@ -189,7 +191,8 @@ unterscheiden:
 - **keine produktive statische Referenz gefunden:** Kandidat für Dead Code;
 - **API-geschützt:** keine sichere Aussage wegen möglicher externer Consumer;
 - **Laufzeitbindung möglich:** statisch unreferenziert, aber Gegenprüfung nötig;
-- **nicht entscheidbar:** Klassifizierung oder API-Vertrag unvollständig.
+- **Konfiguration fehlt:** Dead-Code-Scan abgebrochen; der MCP-Aufrufer muss
+  die API-Einordnung beim Nutzer erfragen.
 
 Bekannte Framework- und Einstiegspunktmarker bleiben über die bestehende
 Whitelist geschützt. Reflection, DI, Generatoren und `dynamic` bleiben als
@@ -197,6 +200,28 @@ Countercheck im Ergebnis sichtbar. Ein `public`-Symbol außerhalb einer
 geschützten externen API darf bei `closed_solution` weiterhin als Kandidat
 erscheinen, sollte wegen möglicher Laufzeitbindung aber mindestens niedrige
 Sicherheit erhalten.
+
+### 3.6 Fehlende API-Konfiguration als MCP-Fehler
+
+Vor Beginn eines Dead-Code-Scans wird die effektive `ApiSurface`-Konfiguration
+für jedes Projekt im angeforderten Kandidatenscope aufgelöst. Ist mindestens
+ein solcher Wert `unknown`, bricht der MCP-Aufruf vor der eigentlichen
+Referenzanalyse mit einem Fehler ab.
+
+Der Fehler muss mindestens enthalten:
+
+- die Kennung beziehungsweise den Namen jedes nicht konfigurierten Projekts;
+- den Hinweis, dass `unknown` nicht für einen Dead-Code-Scan genügt;
+- den erwarteten Konfigurationsort in `ainetlinter-rules.json`;
+- ein kopierbares Beispiel für `closed_solution` und
+  `external_library`;
+- die Aufforderung an den aufrufenden Agenten, die Einordnung beim Nutzer zu
+  erfragen.
+
+Der Aufruf darf in diesem Fall keine partiellen Dead-Code-Kandidaten liefern.
+Das ist ein Konfigurationsfehler des Analyseauftrags und kein leerer
+Analyseausschnitt. Die MCP-Fehlerantwort bleibt dabei im geltenden
+Content-only-Vertrag und setzt `isError`.
 
 ## 4. Architektur und betroffene Bereiche
 
@@ -267,7 +292,10 @@ Referenzen bewertet:
   Dead-Code-Aussage.
 - `closed_solution` ermöglicht die Prüfung öffentlicher Symbole innerhalb
   einer geschlossenen Solution.
-- `unknown` führt nicht zu einer unsicheren Löschbehauptung.
+- `unknown` führt beim Dead-Code-MCP-Aufruf zu einem verständlichen
+  Konfigurationsfehler statt zu einem geschützten oder partiellen Ergebnis.
+- Der Fehler nennt alle betroffenen Projekte und zeigt den erwarteten
+  `ProjectOverrides`-Eintrag mit der Aufforderung zur Nutzerentscheidung.
 - Ungültige oder nicht auflösbare API-Konfiguration fällt sicher auf
   `unknown` zurück und wird diagnostisch sichtbar.
 - Reflection, DI, Generatoren, `dynamic` und externe Consumer bleiben als
@@ -303,8 +331,11 @@ Referenzen bewertet:
 - Ein unreferenzierter öffentlicher Member in einem `closed_solution`-
   Projekt kann als Kandidat erscheinen und wird nicht fälschlich als sicher
   löschbar dargestellt.
-- Ein unreferenzierter öffentlicher Member in einem `unknown`-Projekt wird
-  nicht als sicherer Dead-Code-Fund ausgegeben.
+- Ein Dead-Code-Scan mit einem `unknown`-Projekt bricht mit `isError` ab und
+  liefert keine Kandidaten.
+- Der Fehler nennt das unbekannte Projekt, verweist auf
+  `ProjectOverrides.<Projekt>.DeadCode.ApiSurface` und fordert die
+  Nutzerentscheidung an.
 - Die Konfiguration eines einzelnen API-Projekts beeinflusst nicht die
   Klassifizierung anderer Projekte.
 - Der Default ohne API-Konfiguration ist sicher und erzeugt keine
@@ -346,11 +377,11 @@ Löschvorschlag erzeugen.
 - Kann eine Referenzstelle nicht zuverlässig klassifiziert werden, wird der
   Kandidat als nicht entscheidbar beziehungsweise mit niedriger Sicherheit
   ausgegeben oder aus dem sicheren Ergebnis zurückgehalten.
-- Ist die API-Oberfläche eines Projekts unbekannt, werden extern sichtbare
-  Symbole geschützt.
+- Ist die API-Oberfläche eines im Scan-Scope liegenden Projekts unbekannt,
+  bricht der Dead-Code-MCP-Aufruf vor der Analyse mit `isError` ab.
 - Fehler beim Laden der Dead-Code-Konfiguration führen nicht zu einem
-  stillen Wechsel auf `closed_solution`; die sichere `unknown`-Semantik bleibt
-  bestehen und der Fehler wird diagnostisch sichtbar.
+  stillen Wechsel auf `closed_solution`; der Fehler wird diagnostisch sichtbar
+  und fordert eine Nutzerentscheidung an.
 - Bestehende Roslyn-, Target-, Snapshot- und Analysefehler bleiben unter der
   bisherigen Fehlerzuständigkeit.
 
@@ -434,6 +465,9 @@ Die spätere Umsetzung muss mindestens folgende Nachweise liefern:
 - Konfigurations- und Integrations-Tests für den Solution-weiten Default,
   Projekt-Overrides und die automatische Zuordnung zur richtigen Roslyn-
   Projektkonfiguration.
+- Vertragstest für einen Dead-Code-MCP-Aufruf mit `unknown`: `isError`,
+  betroffene Projektnamen, kopierbarer Konfigurationshinweis und keine
+  Dead-Code-Kandidaten.
 - Tests für Interface-Implementierungen, Overrides, Whitelist und Suppression.
 - Verify- beziehungsweise Integrationstests mit realer Solution und
   mindestens einem Testprojekt.
@@ -482,6 +516,8 @@ Das Vorhaben ist erst umsetzungsfertig, wenn:
 - unbekannte Laufzeit- und API-Bindungen nicht als sichere Löschbehauptung
   erscheinen;
 - die Verify-Ausgabe die produktive Referenzsemantik korrekt beschreibt;
+- ein Dead-Code-Aufruf mit nicht konfigurierter API-Oberfläche deterministisch
+  mit `isError` und einer handlungsfähigen Nutzeraufforderung abbricht;
 - die vollständigen produktionsbezogenen Test-, Build- und MCP-Gates grün
   sind;
 - die Konfigurations-, CLI- und MCP-Dokumentation synchronisiert ist.
