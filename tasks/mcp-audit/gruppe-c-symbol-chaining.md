@@ -22,24 +22,6 @@
 
 ## 2. Negative Befunde
 
-### [Critical] C-01: Handoff-IDs nach Reload als TARGET_MISMATCH auf demselben Target
-
-- **Betroffenes Tool / Schema**: `get_symbol_body` (Parameter: `symbolIdentifiers`); Handoff-Vertrag aller Folgetools
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_symbol_body(targetPath=<SOURCE-01>, symbolIdentifiers=["h:…"])` mit einer zuvor auf demselben Target ausgegebenen kanonischen ID
-- **Beobachtung / Ist-Verhalten**:
-  - Zwischen zwei `find_symbol`-Aufrufen auf `SOURCE-01` kam `[INFO]: Server laedt die Solution noch.`
-  - Dieselbe Klasse erhielt danach eine **neue** `h:…`.
-  - Die **alte** ID auf dem **selben** `targetPath` liefert `TARGET_MISMATCH: Die angegebene Handoff-ID gehört zu einem anderen Target` plus Hint, eine ID aus demselben `targetPath` zu verwenden.
-  - Dieselbe alte ID auf `LOCAL-01` liefert ebenfalls `TARGET_MISMATCH` (kein Rebound sichtbar).
-  - Die neue ID auf `SOURCE-01` löst korrekt auf.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Eine auf `SOURCE-01` ausgestellte `h:…` muss auf `SOURCE-01` gültig bleiben oder mit `STALE_HANDOFF` / Index-Generation klar sterben.
-  - `TARGET_MISMATCH` plus Hint „anderes Target“ ist falsch: der Agent hat das Target nicht gewechselt. Chaining über einen Reload (realistischer Mehr-Target-Lauf) bricht vollständig ab.
-- **Empfehlung**:
-  - Stale-IDs als eigene Diagnose (`STALE_HANDOFF` / `INDEX_RELOADED`) mit Generation/Lease, nicht als Target-Wechsel.
-  - Hint nur dann „anderes Target“, wenn die ID nachweislich an ein anderes `targetPath` gebunden ist.
-
 ### [Critical] C-02: CHAIN-04 — `search_assembly` liefert keine durchreichbare Symbol-ID
 
 - **Betroffenes Tool / Schema**: `search_assembly` (Parameter: `pattern`, `kind`) → `get_symbol_body` (`symbolIdentifiers`)
