@@ -28,4 +28,9 @@ internal static class LinterErrorCodes
     internal const string ProjectTargetUnsupported  = "PROJECT_TARGET_UNSUPPORTED";
     internal const string InvalidAssembly    = "INVALID_ASSEMBLY";
     internal const string TargetUnreadable   = "TARGET_UNREADABLE";
+    internal const string InvalidHandoff     = "INVALID_HANDOFF";
+    internal const string UnsupportedHandoffFormat = "UNSUPPORTED_HANDOFF_FORMAT";
+    internal const string HandoffUnknown     = "HANDOFF_UNKNOWN";
+    internal const string HandoffCounterUnavailable = "HANDOFF_COUNTER_UNAVAILABLE";
 }
+
