@@ -13,10 +13,10 @@
   - CHAIN-01 (`SOURCE-01`): `find_symbol` → `get_symbol_body` → `find_references` → `get_impact` (optional `get_feature_context`) — **innerhalb einer Index-Generation durchreichbar**
   - CHAIN-02 (`SOURCE-01`): `find_symbol(kind=class)` → `get_class_structure` → Member-`h:…` → `get_symbol_body` — **ohne String-Bau**
   - CHAIN-03 (`SOURCE-01`): `get_type_hierarchy` → Interface-`h:…` → `find_implementations` → `resolve_type_origin` — **qualifizierte Namen konsistent**
-  - CHAIN-03 (`LOCAL-01`): Hierarchie-Basis ohne konsumierbare `h:…` — **Bruch**
-  - CHAIN-04 (`LOCAL-01`): `inspect_assembly` → `search_assembly` → `get_symbol_body` — **Bruch** (Direktpfad `inspect_assembly`-`h:…` → `get_symbol_body` funktioniert)
+  - CHAIN-03 (`LOCAL-01`): Externe Hierarchie-Basis mit stabilem vollqualifiziertem Namen; fehlende Referenzen werden strukturiert gemeldet.
+  - CHAIN-04 (`LOCAL-01`): `inspect_assembly` → `search_assembly` → `get_symbol_body` — Direktpfad und symbolbasierte Weitergabe sind durchreichbar.
 - **FALSE-01:** recoverable `INVALID_ASSEMBLY`, kein Crash
-- **Gefundene Befunde:** 0 Critical, 2 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 0 Major, 0 Minor
 
 ---
 
