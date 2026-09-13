@@ -14,29 +14,13 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 4 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 3 Major, 1 Minor
 
-CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02 und CHAIN-04 waren durchgängig möglich. Die übrigen Ketten erfordern manuelles Parsen/Umbauen oder ein Ausweich-Tool.
+CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und CHAIN-04 sind durchgängig möglich.
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-02: Handoff-IDs passen nicht zu `resolve_type_origin`; `find_implementations` ohne IDs (CHAIN-03)
-
-- **Betroffenes Tool / Schema**: `get_type_hierarchy` / `find_implementations` / `resolve_type_origin` (Parameter: `typeName`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_type_hierarchy(symbolIdentifier=<ISiteRegistry-handoffId>)` -> `find_implementations(symbolIdentifier=<dieselbe ID>)` -> `resolve_type_origin(typeName=…)`
-- **Beobachtung / Ist-Verhalten**:
-  - `get_type_hierarchy` liefert für Implementierer kanonische `handoffId`s (`s:…:T:…`) und FQCN.
-  - `find_implementations` listet dieselben Typen als FQCN plus `Datei:Zeile:Spalte`, **ohne** `handoffId`.
-  - `resolve_type_origin(typeName=<Hierarchy-handoffId>)` -> `SYMBOL_NOT_FOUND` (Token wird als Typname gesucht).
-  - `resolve_type_origin(typeName=<FQCN>)` und unqualifizierter Kurzname funktionieren.
-  - Anzeigenamen sind über die Tools hinweg als `Namespace.Type` konsistent; der Handoff-Token ist es nicht.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Ein Agent, der Handoff-IDs unverändert weiterreicht, bricht in Schritt 3. Er muss den FQCN aus Text oder aus dem Suffix der ID extrahieren. Parametername `typeName` vs. `symbolIdentifier` ist im Schema dokumentiert — der **Output-Handoff** ist trotzdem kein gültiger Input.
-- **Empfehlung**:
-  - `resolve_type_origin` soll `s:…`/`a:…`-Handoffs akzeptieren **oder** `find_implementations`/`get_type_hierarchy` zusätzlich ein Feld `typeName` liefern, das 1:1 weitergegeben werden kann. `find_implementations` braucht dieselben `handoffId`s wie die Hierarchie.
 
 ### [Major] C-04: `get_impact` ohne Risiko-Einstufung, irreführende Projektliste (TC-C09)
 
@@ -96,6 +80,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02 und CHAIN-04 w
 
 ---
 
-Gruppe C: 0 Critical, 4 Major, 1 Minor
-IDs: C-02, C-04, C-05, C-06, C-07
+Gruppe C: 0 Critical, 3 Major, 1 Minor
+IDs: C-04, C-05, C-06, C-07
 Blocker: none

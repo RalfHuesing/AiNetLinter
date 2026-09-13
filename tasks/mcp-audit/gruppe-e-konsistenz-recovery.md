@@ -10,7 +10,7 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 1 Critical, 3 Major, 2 Minor
+- **Gefundene Befunde:** 1 Critical, 2 Major, 2 Minor
 
 ---
 
@@ -57,23 +57,6 @@
 - **Empfehlung**:
   - Einheitlicher Floor, als JSON-Feld `minimumResponseBytes` auch bei Unterschreitung des Floors (nicht nur als `INVALID_ARGUMENT`-Prosa).
   - Schema-`default` und Laufzeit-Floor angleichen; `fieldPath` auch auf dem Assembly-Pfad setzen.
-
-### [Major] E-04: `resolve_type_origin` weist kanonische Handoff-IDs als `SYMBOL_NOT_FOUND` ab
-
-- **Betroffener Querschnittsbereich**: Handoff-Vertrag / irreführende Validierung
-- **Betroffenes Tool / Schema**: `resolve_type_origin` (Parameter: `typeName`; kein `symbolIdentifier`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `resolve_type_origin(targetPath=SOURCE-01, typeName=<kanonische find_symbol-Handoff-ID derselben Klasse>)`
-- **Beobachtung / Ist-Verhalten**:
-  - `[ERROR] SYMBOL_NOT_FOUND`: die gesamte Handoff-ID wird als Typname in referenzierten Assemblies gesucht (Hinweis „Durchsuchte Referenzen (427): …“).
-  - Kontrollaufruf mit einfachem Typnamen derselben Klasse: Erfolg (Vollqualifizierter Name, Symbol-Art, Herkunft).
-  - Schema verlangt `typeName` (string, required); `symbolIdentifier` existiert hier nicht. Andere Typ-Tools (`get_type_hierarchy`, `find_implementations`, `get_class_structure`, `get_feature_context`) akzeptieren genau die Handoff-ID.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Handoff-Vertrag: Output von Schritt N ohne manuelle String-Zerlegung in Schritt N+1. Hier muss der Agent die DocComment-/Typ-Suffixe aus der Handoff-ID selbst extrahieren.
-  - `SYMBOL_NOT_FOUND` nach 427-Referenz-Suche ist irreführend: das Argument ist syntaktisch eine Handoff-ID, kein fehlender Typ. Erwartet wäre `INVALID_ARGUMENT` mit Hinweis „Handoff-ID nicht akzeptiert, `typeName` als Typname übergeben“ **oder** Annahme der kanonischen Handoff-ID.
-- **Empfehlung**:
-  - Dieselbe Handoff-ID wie die übrigen Symbol-Tools akzeptieren (`symbolIdentifier` oder `typeName` als Union).
-  - Andernfalls früh `INVALID_ARGUMENT` mit `fieldPath` und Beispiel, statt einer Origin-Suche über die Handoff-Zeichenkette.
 
 ### [Major] E-05: `find_dead_code` nennt bei ungültigen Enums keine gültigen Werte
 

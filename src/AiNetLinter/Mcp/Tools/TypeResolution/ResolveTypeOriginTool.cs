@@ -34,6 +34,17 @@ internal static class ResolveTypeOriginTool
                 hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'.");
         }
 
+        var (handoffType, handoffError) = await ResolveTypeOriginHandoffResolver.TryResolveTypeAsync(
+            solution, typeName, server.HandoffSymbolIdentity, ct).ConfigureAwait(false);
+        if (handoffError is not null) return handoffError;
+        if (handoffType is not null)
+        {
+            var project = solution.Projects.FirstOrDefault(candidate =>
+                string.Equals(candidate.AssemblyName, handoffType.ContainingAssembly.Name, StringComparison.Ordinal));
+            var handoffContext = CreateContext(typeName, solution.FilePath ?? ".", null, isAssemblyTarget: false, ct);
+            return BuildSuccess(handoffType, project?.OutputFilePath, isSource: true, handoffContext, project, [handoffType.ContainingAssembly.Name]);
+        }
+
         var context = CreateContext(typeName, solution.FilePath ?? ".", null, isAssemblyTarget: false, ct);
         var searchedAssemblies = new List<string>();
 
@@ -50,25 +61,38 @@ internal static class ResolveTypeOriginTool
         return NotFoundResult(context.TypeName, searchedAssemblies);
     }
 
-    internal static Task<CallToolResult> ExecuteAssemblyAsync(
+    internal static async Task<CallToolResult> ExecuteAssemblyAsync(
         AssemblyAnalysisLease lease,
         string typeName,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(typeName))
         {
-            return Task.FromResult(McpToolResults.InvalidArgument(
+            return McpToolResults.InvalidArgument(
                 "typeName darf nicht leer sein.",
-                hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'."));
+                hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'.");
+        }
+
+        var solution = lease.Server.GetCurrentSolution();
+        if (solution is not null)
+        {
+            var (handoffType, handoffError) = await ResolveTypeOriginHandoffResolver.TryResolveTypeAsync(
+                solution, typeName, lease.Server.HandoffSymbolIdentity, ct).ConfigureAwait(false);
+            if (handoffError is not null) return handoffError;
+            if (handoffType is not null)
+            {
+                var handoffContext = CreateContext(typeName, lease.CanonicalPath, lease.Context.References, isAssemblyTarget: true, ct);
+                return BuildSuccess(handoffType, lease.CanonicalPath, isSource: true, handoffContext, project: null, [handoffType.ContainingAssembly.Name]);
+            }
         }
 
         var context = CreateContext(typeName, lease.CanonicalPath, lease.Context.References, isAssemblyTarget: true, ct);
         var compilation = lease.Context.Compilation;
         var searchedAssemblies = new List<string>();
         var result = SearchInCompilation(compilation, context, searchedAssemblies, project: null);
-        if (result is not null) return Task.FromResult(result);
+        if (result is not null) return result;
 
-        return Task.FromResult(NotFoundResult(context.TypeName, searchedAssemblies));
+        return NotFoundResult(context.TypeName, searchedAssemblies);
     }
 
     internal static CallToolResult ExecuteCompilation(

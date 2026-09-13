@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **15 Befunde:** 1 Critical, 9 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **13 Befunde:** 1 Critical, 7 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -17,8 +17,6 @@ Der MCP-Server ist **stabil erreichbar** (Daemon-Health, Uptime, Version). Sourc
 **Querschnittsmuster (höchste Hebelwirkung):**
 
 1. **Budget-Vertrag ist nicht einheitlich.** Tool-spezifische Floors verhindern eine kanonische 500-Byte-Probe (E-03); `get_class_structure` liefert dabei eine leere Hülle (E-01).
-2. **Handoff-IDs werden abgewiesen**, sobald die Kette über `find_implementations` oder `resolve_type_origin` läuft (C-02, E-04). CHAIN-03 braucht manuelles Parsen.
-
 Lint-/Metrik-Tools auf `SOURCE-01` sind grundsätzlich nutzbar; Assembly-Lint wird als nicht unterstützt erkannt. Qualitäts-Tools haben weniger Blocker als Discovery/Chaining, aber zwei klare Agentenfallen (`scopeType=production` vs. Testhilfen, stilles `enrichCSharp`).
 
 ---
@@ -31,8 +29,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 |---|---|---|---|---|---|
 | Critical | E-01 | `get_class_structure` | Floor-Budget 512: leere Member-Hülle als Erfolg (`0 von 12`, „Keine Member gefunden“) | Falscher Envelope; Member-Ketten werden als „klasse leer“ abgebrochen | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | E-03 | `find_symbol`, `get_class_structure`, `inspect_assembly` | `maxResponseBytes=500` trifft Tool-spezifische Floors (512 vs. 2048 vs. akzeptieren) | Kanonischer 500-Byte-Probe nicht ausführbar | [E](gruppe-e-konsistenz-recovery.md) |
-| Major | C-02 | `resolve_type_origin`, `find_implementations` | Handoff-ID → `SYMBOL_NOT_FOUND`; Implementierer ohne IDs | CHAIN-03 bricht in Schritt 3 | [C](gruppe-c-symbol-chaining.md) |
-| Major | E-04 | `resolve_type_origin` | Kanonische Handoff-ID als Typname über 427 Referenzen gesucht | Irreführend `SYMBOL_NOT_FOUND` statt `INVALID_ARGUMENT`/Annahme der ID | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | C-05 | `get_call_tree` | Keine Node-Handoffs; Incoming vermischt Overrides als Calls | Baum nicht kettenfähig, semantisch irreführend | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-04 | `get_impact` | Keine Risiko-Stufe; Projektliste unvollständig (Host fehlt) | Unterschätzung der Produktionswirkung | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-06 | `find_symbol`, `find_references`, `get_symbol_body` | Assembly: `partial` vs. Body-`complete`; `includeReferences` ohne Scope-Objekt | Lease/„keine Treffer“/Cap nicht unterscheidbar | [C](gruppe-c-symbol-chaining.md) |
@@ -49,8 +45,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 
 1. **E-01** — leere Erfolgs-Hülle von `get_class_structure` (einziger Critical).
 2. **Einheitlicher Budget-Vertrag** — E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
-3. **Handoff schließen** — C-02/E-04 (Origin-IDs).
-
 ---
 
 ## 3. Positiv bestätigte Eigenschaften

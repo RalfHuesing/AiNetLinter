@@ -359,7 +359,7 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string ResolveTypeOriginDescription =
-        "Ermittelt zu einem Typnamen die definierende Assembly (Name und Dateipfad der DLL), vollqualifizierten Namen und Symbol-Kind ueber Roslyn-Metadatenreferenzen.";
+        "Ermittelt zu einem Typnamen oder einer Typ-Handoff-ID die definierende Assembly (Name und Dateipfad der DLL), vollqualifizierten Namen und Symbol-Kind ueber Roslyn-Metadatenreferenzen.";
 
     private static void AddFindImplementations(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -406,6 +406,7 @@ internal static class SymbolGraphToolRegistrations
     private const string FindImplementationsDescription =
         "Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties. " +
         "symbolIdentifier: 'IInterface', 'BaseClass.Method' oder 'M:Namespace.Klasse.Methode'. " +
+        "Sichtbare Eintraege enthalten kopierbare Handoff-IDs fuer Folgeaufrufe. " +
         "maxResults: Trefferlimit (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 }

@@ -36,7 +36,8 @@ public sealed class ManagedAssemblyBinaryTests
             CancellationToken.None);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains("Assembly: `ManagedExeProbe`", text, StringComparison.Ordinal);
-        Assert.Contains(".exe", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("decompileRoot:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(assemblyPath, text, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Describe()", text, StringComparison.Ordinal);
         Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
     }

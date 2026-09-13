@@ -390,6 +390,7 @@ internal static class FindImplementationsTool
                 : $"{item.TypeName}.{item.MemberName}";
             sb.AppendLine($"- [{item.Status}] {symbolLabel} ({item.Kind})");
             sb.AppendLine($"  {item.DisplayLocation}");
+            if (!string.IsNullOrWhiteSpace(item.Id)) sb.AppendLine($"  handoffId: `{item.Id}`");
         }
 
         if (dto.IsTruncated)

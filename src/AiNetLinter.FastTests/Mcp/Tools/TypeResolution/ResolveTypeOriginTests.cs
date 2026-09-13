@@ -3,12 +3,14 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.TypeResolution;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
@@ -180,6 +182,61 @@ public sealed class ResolveTypeOriginTests
     }
 
     [Fact]
+    public async Task ResolveTypeOrigin_AssemblyTarget_AcceptsTypeHandoffFromFindImplementations()
+    {
+        using var temp = TestTempDirectory.Create("resolve-type-handoff-assembly-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TypeHandoffProbe",
+            "namespace Probe; public interface IGreeter { } public class EnglishGreeter : IGreeter { }");
+
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.NotNull(leaseResult.Lease);
+        using var lease = leaseResult.Lease!;
+        var implementations = await FindImplementationsTool.ExecuteAsync(
+            lease.Server, "IGreeter", maxResults: 50, ct: CancellationToken.None);
+        var handoffId = ExtractHandoffId(GetText(implementations), "T", "a");
+
+        var result = await ResolveTypeOriginTool.ExecuteAssemblyAsync(lease, handoffId, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("Probe.EnglishGreeter", GetText(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveTypeOrigin_AcceptsTypeHandoffFromFindImplementations()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var server = fixture.CreateServer();
+        var implementations = await FindImplementationsTool.ExecuteAsync(
+            server, "IProcessor", maxResults: 50, ct: CancellationToken.None);
+        var handoffId = ExtractHandoffId(GetText(implementations), "T");
+
+        var result = await ResolveTypeOriginTool.ExecuteProjectAsync(server, handoffId, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("BaseProcessor", GetText(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveTypeOrigin_RejectsMemberHandoffWithTypeNameFieldPath()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var server = fixture.CreateServer();
+        var implementations = await FindImplementationsTool.ExecuteAsync(
+            server, "IProcessor.Execute", maxResults: 50, ct: CancellationToken.None);
+        var handoffId = ExtractHandoffId(GetText(implementations), "M");
+
+        var result = await ResolveTypeOriginTool.ExecuteProjectAsync(server, handoffId, CancellationToken.None);
+
+        var text = GetText(result);
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.typeName", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveTypeOrigin_ResolvesUnqualifiedGenericType()
     {
         var compilation = CreateTestCompilation("public class Worker { }");
@@ -219,5 +276,12 @@ public sealed class ResolveTypeOriginTests
     {
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         return block.Text;
+    }
+
+    private static string ExtractHandoffId(string text, string kind, string origin = "s")
+    {
+        var match = Regex.Match(text, $@"handoffId: `(?<id>{origin}:[^`]+:{kind}:[^`]+)`");
+        Assert.True(match.Success, text);
+        return match.Groups["id"].Value;
     }
 }
