@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **10 Befunde:** 1 Critical, 4 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **9 Befunde:** 0 Critical, 4 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -12,11 +12,9 @@ Der MCP-Server ist **stabil erreichbar** (Daemon-Health, Uptime, Version). Sourc
 
 **Source-Kette CHAIN-01 funktioniert:** `find_symbol` → `get_symbol_body` → `find_references` → `get_impact` (und `get_feature_context`) mit **unveränderter** kanonischer Handoff-ID. Assembly-Direktpfad `inspect_assembly` → `get_symbol_body` ohne `TARGET_MISMATCH`.
 
-**Blocker:** [E-01](gruppe-e-konsistenz-recovery.md) — `get_class_structure` bei Floor-Budget (`maxResponseBytes=512`) liefert `0 von 12` Member und den Erfolgtext „Keine Member gefunden.“ Das ist ein **falscher Erfolgspfad** (`isError=false` bei fachlichem Budgetfehler) und bricht Member-Ketten.
-
 **Querschnittsmuster (höchste Hebelwirkung):**
 
-1. **Budget-Vertrag ist nicht einheitlich.** Tool-spezifische Floors verhindern eine kanonische 500-Byte-Probe (E-03); `get_class_structure` liefert dabei eine leere Hülle (E-01).
+1. **Budget-Vertrag ist nicht einheitlich.** Tool-spezifische Floors verhindern eine kanonische 500-Byte-Probe (E-03).
 Lint-/Metrik-Tools auf `SOURCE-01` sind grundsätzlich nutzbar; Assembly-Lint wird als nicht unterstützt erkannt. Qualitäts-Tools haben weniger Blocker als Discovery/Chaining, aber zwei klare Agentenfallen (`scopeType=production` vs. Testhilfen, stilles `enrichCSharp`).
 
 ---
@@ -27,7 +25,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 
 | Priorität | ID | Tool(s) | Kurzbeschreibung des Befunds | Wirkung auf konsumierende Agenten | Bericht |
 |---|---|---|---|---|---|
-| Critical | E-01 | `get_class_structure` | Floor-Budget 512: leere Member-Hülle als Erfolg (`0 von 12`, „Keine Member gefunden“) | Falscher Envelope; Member-Ketten werden als „klasse leer“ abgebrochen | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | E-03 | `find_symbol`, `get_class_structure`, `inspect_assembly` | `maxResponseBytes=500` trifft Tool-spezifische Floors (512 vs. 2048 vs. akzeptieren) | Kanonischer 500-Byte-Probe nicht ausführbar | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
@@ -40,8 +37,7 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 
 ### Empfohlene Bearbeitungsreihenfolge (Produkt)
 
-1. **E-01** — leere Erfolgs-Hülle von `get_class_structure` (einziger Critical).
-2. **Einheitlicher Budget-Vertrag** — E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
+1. **Einheitlicher Budget-Vertrag** — E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
 ---
 
 ## 3. Positiv bestätigte Eigenschaften
@@ -66,4 +62,4 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 - [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 0 / 0
 - [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 0 / 1
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
-- [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 3 / 2
+- [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 0 / 2 / 2

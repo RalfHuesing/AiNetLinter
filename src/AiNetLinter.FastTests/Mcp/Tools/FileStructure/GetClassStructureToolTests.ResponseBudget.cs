@@ -69,6 +69,38 @@ public sealed partial class GetClassStructureToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MaxResponseBytes_ThatCannotFitOneMember_ReturnsRetryErrorInsteadOfEmptySuccess()
+    {
+        const string source = """
+            namespace BudgetNs;
+            public class MinimumMemberClass
+            {
+                public MinimumMemberClass(string parameterOneWithLongName, string parameterTwoWithLongName, string parameterThreeWithLongName, string parameterFourWithLongName, string parameterFiveWithLongName, string parameterSixWithLongName, string parameterSevenWithLongName, string parameterEightWithLongName, string parameterNineWithLongName, string parameterTenWithLongName, string parameterElevenWithLongName, string parameterTwelveWithLongName) { }
+                public void VeryLongMemberNameForBudgetValidation(string parameterOneWithLongName, string parameterTwoWithLongName, string parameterThreeWithLongName, string parameterFourWithLongName, string parameterFiveWithLongName, string parameterSixWithLongName) { }
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\ClassBudgetMinimumMember.slnx",
+            new ProjectSpec("BudgetProject", [("MinimumMemberClass.cs", source)])));
+        var response = await GetClassStructureTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetClassStructureArgs("MinimumMemberClass", MaxResponseBytes: 512),
+            CancellationToken.None);
+        var visibleText = Assert.IsType<TextContentBlock>(Assert.Single(response.Content)).Text;
+
+        Assert.Contains("Member Count: 1 von 2", visibleText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Member gefunden.", visibleText, StringComparison.Ordinal);
+
+        var budgeted = McpToolResults.WithNavigation(
+            response,
+            maxResponseBytes: 512,
+            postNavigationResponseBudget: GetClassStructureResponseBudget.ApplyFinalResponseBudget);
+        var errorText = Assert.IsType<TextContentBlock>(Assert.Single(budgeted.Content)).Text;
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", errorText, StringComparison.Ordinal);
+        Assert.Contains("minimumResponseBytes", errorText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MaxResponseBytes_DoesNotMarkCompleteResponseAsBudgetTruncated()
     {
         const string source = """

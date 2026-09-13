@@ -10,35 +10,11 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 1 Critical, 2 Major, 2 Minor
+- **Gefundene Befunde:** 0 Critical, 2 Major, 2 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Critical] E-01: `get_class_structure` liefert bei Floor-Budget eine leere Member-Hülle als Erfolg
-
-- **Betroffener Querschnittsbereich**: Response-Budget / leere Hülle / Envelope (`isError=false` bei fachlichem Budgetfehler)
-- **Betroffenes Tool / Schema**: `get_class_structure` (Parameter: `maxResponseBytes`, `symbolIdentifier`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_class_structure(targetPath=SOURCE-01, symbolIdentifier=<Handoff einer 12-Member-Klasse>, maxResponseBytes=512)`
-- **Beobachtung / Ist-Verhalten**:
-  - CallDynamicTool-Ergebnis ohne `[ERROR]` (Erfolgspfad).
-  - `Member Count: 0 von 12` plus Fließtext „Keine Member gefunden.“
-  - Kein `RESPONSE_BUDGET_TOO_SMALL`, kein `minimumResponseBytes`, kein Hinweis auf Budgetkürzung.
-  - Kontrollaufruf ohne `maxResponseBytes`: `Member Count: 12 von 12` mit vollständiger Member-Tabelle.
-  - Kontrollaufruf mit `maxResponseBytes=512` auf `find_symbol` (gleicher Floor): korrekt `[ERROR] RESPONSE_BUDGET_TOO_SMALL` inkl. `minimumResponseBytes` und `operation=error`.
-  - Bei `maxResponseBytes=1024` dieselbe Klasse: `2 von 12` plus Hinweis „maxResponseBytes erhöhen“ — der Floor 512 fällt hinter dieses Kürzungssignal zurück.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Unter dem dokumentierten Source-Floor (512) ist die fachliche Mindestprojektion nicht darstellbar. Vertrag: `RESPONSE_BUDGET_TOO_SMALL` mit deterministischem Retry, nicht ein erfolgreicher Envelope, der die Klasse als member-los verkauft.
-  - Ein Agent liest „Keine Member gefunden“ als Wahrheit und bricht Member-Ketten (`get_symbol_body`, `find_references`) ab.
-- **Empfehlung**:
-  - Wenn nicht mindestens ein vollständiger Member-Eintrag plus Envelope in `maxResponseBytes` passt: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes` (wie `find_symbol` bei 512).
-  - Den Erfolgspfad „Keine Member gefunden“ nur verwenden, wenn die Klasse tatsächlich 0 Member hat.
-
-- **Empfehlung**:
-  - Extensions-Inventar und Warnblock in das Wire-Budget einrechnen.
-  - Passt die Mindestprojektion nicht: `RESPONSE_BUDGET_TOO_SMALL` plus maschinenlesbares `minimumResponseBytes` (nicht nur WARN-Prosa).
 
 ### [Major] E-03: `maxResponseBytes=500` trifft Tool-spezifische Floors statt des Budget-Retry-Vertrags
 

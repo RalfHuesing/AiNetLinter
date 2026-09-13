@@ -168,6 +168,7 @@ internal static partial class GetClassStructureTool
         }
 
         var members = payload.Members.ToList();
+        var minimumMember = members.FirstOrDefault();
         var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
         while (members.Count > 0)
         {
@@ -179,6 +180,14 @@ internal static partial class GetClassStructureTool
             members.RemoveAt(members.Count - 1);
             if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
         }
+
+        // A type with members must never become a successful "Keine Member gefunden" response.
+        // Keep one whole member unit so the post-navigation budget gate can return its exact retry size.
+        if (minimumMember is not null)
+        {
+            return CreateBudgetCandidate(payload, [minimumMember], truncatedBy);
+        }
+
         return CreateBudgetCandidate(payload, members, truncatedBy, forceTruncated: truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal));
     }
 
