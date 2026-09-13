@@ -12,6 +12,7 @@
 - [X] 10. Öffentlichen Handoff-Vertrag vollständig vereinheitlichen
 - [X] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
 - [X] 12. MCP-Toolbeschreibungen für direkte Handle-Übergabe verdichten
+- [X] 13. Exponierte MCP-Toolverträge und Beschreibungen konsistent machen
 
 ## Durchführungsprotokoll
 
@@ -86,3 +87,9 @@
 - Alle Handle-Consumer nennen direkte Übergabe bevorzugt; Listen, Einzelwerte und Pflichtfelder bleiben präzise.
 - Producer weisen knapp auf direkt nutzbare Handles hin; derselbe `targetPath` bleibt Teil jedes Folgeaufrufs.
 - Frisches `tools/list`, reale Ketten, Build, `verify(changes)` sowie 14 Vertrags-/Doku-/E2E-Tests grün.
+
+### 13. Exponierte MCP-Toolverträge und Beschreibungen konsistent machen
+
+- Öffentlicher Referenzaufruf ist ohne internes Zusatzfeld per MCP-Prozesskette abgesichert.
+- Assembly-Kontext startet ohne unpassenden Metrikabschnitt; Beschreibungen sind zentral entdoppelt.
+- Build, `verify(changes)` sowie gezielte Vertrags-, Prozess- und Doku-Tests grün.

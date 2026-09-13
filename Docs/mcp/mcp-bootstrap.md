@@ -111,6 +111,8 @@ Für den Folgeaufruf bleibt `targetPath` derselbe absolute Zielpfad; das Handle
 kommt direkt in den passenden Symbolparameter. `symbolIdentifiers` ist dabei
 ein Array, die übrigen Symbolparameter nehmen einen Einzelwert. Doc-ID, Name
 oder Position sind nur der Fallback ohne verfügbares Handle.
+Der Request-Kontext des MCP-Transports ist nie ein Toolargument; nur die in
+`tools/list` veröffentlichten Parameter senden.
 Nach einem Host-Neustart liefert ein alter Handle `HANDOFF_UNKNOWN`; das Symbol
 anhand der sichtbaren Informationen erneut mit einem passenden Producer (etwa
 `find_symbol` oder `get_file_skeleton`) ermitteln. Bei Assembly-Tools trennt

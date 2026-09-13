@@ -77,7 +77,7 @@ public sealed class WiringToolCollectionContractTests
     }
 
     [Fact]
-    public async Task ToolCollection_AdvertisesCompleteProjectAssemblyCapabilityMatrix()
+    public async Task ToolCollection_KeepsTargetContractCentralAndToolDescriptionsSpecific()
     {
         await using var composition = AssemblyAnalysisHostComposition.Create();
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
@@ -89,36 +89,12 @@ public sealed class WiringToolCollectionContractTests
                 assemblyRegistry: composition.Sessions)
             .ToDictionary(tool => tool.ProtocolTool.Name, tool => tool.ProtocolTool);
 
-        var projectAndAssembly = new[]
-        {
-            "dependency_graph", "find_references", "find_symbol", "get_call_tree",
-            "get_class_structure", "get_file_skeleton", "get_impact", "get_namespace_tree", "get_symbol_body",
-            "get_type_hierarchy", "metrics_lookup", "metrics_tree", "get_file_tree",
-        };
-        var projectOnly = new[]
-        {
-            "find_duplicates", "get_feature_context", "get_hotspots", "get_index_scope", "get_test_context",
-            "pattern_detect", "reload_config", "search_pattern", "verify",
-        };
+        Assert.Contains("targetPath: absoluter .sln/.slnx-Pfad fuer Source oder .dll/.exe fuer Assembly", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("mit demselben targetPath weitergeben", ServerInstructions.Text, StringComparison.Ordinal);
 
-        foreach (var name in projectAndAssembly)
+        foreach (var tool in tools.Values.Where(tool => tool.Name != "get_server_health"))
         {
-            var description = tools[name].Description;
-            Assert.Contains("Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly)", description, StringComparison.Ordinal);
-        }
-
-        foreach (var name in projectOnly)
-        {
-            var description = tools[name].Description;
-            Assert.Contains("Ziel: absolute .sln/.slnx (Source)", description, StringComparison.Ordinal);
-        }
-
-        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" })
-        {
-            var description = tools[name].Description;
-            Assert.Contains("Ziel: absolute .dll/.exe", description, StringComparison.Ordinal);
-            Assert.Contains(".dll", description, StringComparison.Ordinal);
-            Assert.Contains(".exe", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("Ziel: absolute", tool.Description, StringComparison.Ordinal);
         }
 
         Assert.Contains("Projekt", tools["get_server_health"].Description, StringComparison.Ordinal);

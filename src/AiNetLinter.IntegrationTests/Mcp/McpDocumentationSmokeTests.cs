@@ -89,6 +89,7 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("\"targetPath\": \"C:\\\\Projects\\\\MyApp\\\\MyApp.slnx\"", docText, StringComparison.Ordinal);
         Assert.Contains("bodyAvailability", docText, StringComparison.Ordinal);
         Assert.Contains("contentMode", docText, StringComparison.Ordinal);
+        Assert.Contains("`includeMetrics?` (Default `false`; für dekompilierte Assembly-Symbole nicht verfügbar)", docText, StringComparison.Ordinal);
         Assert.Contains("minLinePercentage", docText, StringComparison.Ordinal);
         Assert.Contains("Progressive Disclosure", docText, StringComparison.Ordinal);
         Assert.Contains("`includeSessions` ist kein öffentlicher Input", docText, StringComparison.Ordinal);
@@ -107,6 +108,10 @@ public sealed class McpDocumentationSmokeTests
         Assert.DoesNotContain("Additive Handoff-Payloads", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("Clients, die nur den Text konsumieren", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("additiv, ohne den Text-Vertrag", docText, StringComparison.Ordinal);
+
+        var bootstrapPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "mcp", "mcp-bootstrap.md");
+        var bootstrapText = File.ReadAllText(bootstrapPath);
+        Assert.Contains("Der Request-Kontext des MCP-Transports ist nie ein Toolargument", bootstrapText, StringComparison.Ordinal);
 
         var normalizedDocText = docText.Replace("\r\n", "\n", StringComparison.Ordinal);
         var matrixStart = normalizedDocText.IndexOf("| Tool | Input | Output |", StringComparison.Ordinal);

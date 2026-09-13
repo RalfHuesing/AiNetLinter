@@ -259,7 +259,7 @@ internal static class AssemblyAnalysisToolRegistrations
             (RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? symbolIdentifier = null,
-                bool includeMetrics = true,
+                bool includeMetrics = false,
                 bool includeReferences = false,
                 bool includeCallers = false,
                 bool includeImpact = false,
@@ -359,6 +359,7 @@ internal static class AssemblyAnalysisToolRegistrations
     private static readonly string GetAssemblyContextDescription =
         "Composite-Einstieg fuer lokale .NET-Assemblies (.dll/.exe): Identitaet, Scope, optional Metriken, Referenzen, Caller/Impact, Body und Klassenstruktur. " +
         "symbolIdentifier: Einzelwert; bevorzugt h:… aus vorheriger Toolantwort unverändert, alternativ Doc-ID, Position oder Typname. " +
+        "includeMetrics: false (Default; dekompilierte Assembly-Metriken nicht verfügbar). " +
         "includeReferences (Default false): Referenz-Closure einbeziehen. " +
         "Flags: includeMetrics, includeReferences, includeCallers, includeImpact, includeBody, includeClassStructure. " +
         $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +

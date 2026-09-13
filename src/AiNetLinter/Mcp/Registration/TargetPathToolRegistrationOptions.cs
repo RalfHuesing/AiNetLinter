@@ -16,15 +16,6 @@ namespace AiNetLinter.Mcp.Registration;
 /// </summary>
 internal static class TargetPathToolRegistrationOptions
 {
-    private const string SourceTargetContract =
-        " Ziel: absolute .sln/.slnx (Source); Folgeaufrufe nutzen denselben targetPath.";
-
-    private const string ProjectAssemblyTargetContract =
-        " Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly); Folgeaufrufe nutzen denselben targetPath.";
-
-    private const string AssemblyTargetContract =
-        " Ziel: absolute .dll/.exe; Folgeaufrufe nutzen denselben targetPath.";
-
     private static readonly AnnotationValues ReadOnlyValues = new(
         ReadOnly: true,
         Destructive: false,
@@ -38,16 +29,16 @@ internal static class TargetPathToolRegistrationOptions
         OpenWorld: false);
 
     internal static McpServerToolCreateOptions SourceReadOnlyTool(string name, string description) =>
-        Create(name, description + SourceTargetContract, ReadOnlyValues);
+        Create(name, description, ReadOnlyValues);
 
     internal static McpServerToolCreateOptions TargetPathReadOnlyTool(string name, string description) =>
-        Create(name, description + ProjectAssemblyTargetContract, ReadOnlyValues);
+        Create(name, description, ReadOnlyValues);
 
     internal static McpServerToolCreateOptions AssemblyTool(string name, string description) =>
-        Create(name, description + AssemblyTargetContract, ReadOnlyValues);
+        Create(name, description, ReadOnlyValues);
 
     internal static McpServerToolCreateOptions ReloadConfigTool(string name, string description) =>
-        Create(name, description + SourceTargetContract, ReloadConfigValues);
+        Create(name, description, ReloadConfigValues);
 
     internal static McpServerToolCreateOptions ServerHealthTool(string name, string description) =>
         Create(name, description, ReadOnlyValues);

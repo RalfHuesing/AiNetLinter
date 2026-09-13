@@ -17,6 +17,6 @@ internal static class ServerInstructions
     internal const string Text =
         "Zielgebundene Aufrufe brauchen targetPath: absoluter .sln/.slnx-Pfad fuer Source oder .dll/.exe fuer Assembly; die Endung bestimmt die Route. get_server_health darf ohne Ziel laufen.\n\n" +
         "C#-Symbole, Referenzen und Graphen mit den semantischen Tools abfragen; fuer Text und Nicht-C# search_pattern verwenden. Schemas, Defaults und Toolgrenzen stehen in tools/list.\n\n" +
-        "Der Content enthält Status, Vollständigkeit und Handoff-IDs. Qualitätsprüfung: verify(targetPath); Abschluss: verify(targetPath, scope: solution), pass nur bei 10.0 und 0.\n\n" +
+        "Der Content enthält Status, Vollständigkeit und Handoff-IDs. h:… unverändert im passenden Symbolparameter und mit demselben targetPath weitergeben. Qualitätsprüfung: verify(targetPath); Abschluss: verify(targetPath, scope: solution), pass nur bei 10.0 und 0.\n\n" +
         "Den Integrationsleitfaden nur bei ausdruecklichem Auftrag unter ainetlinter://agent-guide lesen; die Agent-API-Resource ergaenzt Discovery-Details.";
 }

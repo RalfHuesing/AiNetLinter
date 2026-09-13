@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Daemon;
 using ModelContextProtocol.Client;
@@ -66,6 +67,18 @@ public sealed class DaemonHostMcpProcessContractTests
                 Assert.IsType<TextContentBlock>(Assert.Single(inspect.Content)).Text,
                 StringComparison.Ordinal);
 
+            var discovery = await client.CallToolAsync(
+                "find_symbol",
+                new Dictionary<string, object?>
+                {
+                    ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                    ["namePatterns"] = new[] { nameof(McpCodeGraphServer) },
+                    ["kind"] = "class",
+                    ["maxResults"] = 1,
+                },
+                cancellationToken: cancellation.Token);
+            var handoff = McpHandoffTestHelper.Extract(discovery);
+
             var extensions = await client.CallToolAsync(
                 "find_assembly_extensions",
                 new Dictionary<string, object?>
@@ -85,17 +98,19 @@ public sealed class DaemonHostMcpProcessContractTests
                 new Dictionary<string, object?>
                 {
                     ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                    ["symbolIdentifier"] = handoff,
                     ["maxResults"] = 1,
-                    ["includeMetrics"] = false,
                 },
                 cancellationToken: cancellation.Token);
             Assert.NotEqual(true, context.IsError);
             var contextText = Assert.IsType<TextContentBlock>(Assert.Single(context.Content)).Text;
             Assert.Contains("[ASSEMBLY]", contextText, StringComparison.Ordinal);
+            Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", contextText, StringComparison.Ordinal);
         }
 
         var result = await daemon.WaitForExitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
         Assert.False(result.TimedOut, result.Error);
         Assert.True(result.ExitCode == 0, result.Error);
     }
+
 }

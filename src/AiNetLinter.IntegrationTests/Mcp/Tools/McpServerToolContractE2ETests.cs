@@ -82,7 +82,7 @@ public sealed class McpServerToolContractE2ETests
                 ["kind"] = "method",
                 ["maxResults"] = 1,
             });
-        var handle = ExtractHandoff(discovery);
+        var handle = McpHandoffTestHelper.Extract(discovery);
 
         var result = await _fixture.Client.CallToolAsync(
             "find_duplicates",
@@ -99,13 +99,32 @@ public sealed class McpServerToolContractE2ETests
         Assert.DoesNotContain("STALE_SNAPSHOT", text, StringComparison.Ordinal);
     }
 
-    private static string ExtractHandoff(CallToolResult result)
+    [Fact]
+    public async Task FindSymbolHandle_PassesUnchangedToFindReferencesWithoutInternalContext()
     {
+        var discovery = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new[] { "Greet" },
+                ["kind"] = "method",
+                ["maxResults"] = 1,
+            });
+        var handle = McpHandoffTestHelper.Extract(discovery);
+
+        var result = await _fixture.Client.CallToolAsync(
+            "find_references",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = handle,
+            });
+
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        var match = Regex.Match(text, @"handoffId: `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant);
-        return match.Success
-            ? match.Groups["id"].Value
-            : throw new InvalidOperationException("find_symbol muss ein opaques Handoff ausgeben.");
+        Assert.NotEqual(true, result.IsError);
+        Assert.DoesNotContain("Invalid parameters", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("context", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("HANDOFF_UNKNOWN", text, StringComparison.Ordinal);
     }
+
 }
 
