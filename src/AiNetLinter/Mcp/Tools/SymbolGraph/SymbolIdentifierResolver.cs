@@ -188,25 +188,66 @@ internal static class SymbolIdentifierResolver
         var matches = new List<ISymbol>();
         foreach (var project in solution.Projects)
         {
-            var declared = await SymbolFinder.FindSourceDeclarationsAsync(
-                project, name => true, SymbolFilter.TypeAndMember, ct);
-            foreach (var symbol in declared)
+            matches.AddRange(await FindProjectExactStableIdsAsync(
+                project, stableId, normalizedStableId, assemblyCandidates, ct).ConfigureAwait(false));
+            if (assemblyCandidates is not null)
             {
-                var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
-                if (declarationId is not null)
-                {
-                    if (declarationId == stableId || NormalizeDocCommentId(declarationId) == normalizedStableId)
-                    {
-                        matches.Add(symbol);
-                        continue;
-                    }
-                }
-
-                if (assemblyCandidates is not null) assemblyCandidates.Add(symbol);
+                await CollectProjectAssemblyCandidatesAsync(project, assemblyCandidates, ct).ConfigureAwait(false);
             }
         }
 
         return matches.Distinct(SymbolEqualityComparer.Default).ToArray();
+    }
+
+    private static async Task<IReadOnlyList<ISymbol>> FindProjectExactStableIdsAsync(
+        Project project,
+        string stableId,
+        string normalizedStableId,
+        ICollection<ISymbol>? assemblyCandidates,
+        CancellationToken ct)
+    {
+        var declared = await SymbolFinder.FindSourceDeclarationsAsync(
+            project, name => true, SymbolFilter.TypeAndMember, ct).ConfigureAwait(false);
+        var matches = new List<ISymbol>();
+        foreach (var symbol in declared)
+        {
+            var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
+            if (declarationId == stableId || NormalizeDocCommentId(declarationId ?? string.Empty) == normalizedStableId)
+            {
+                matches.Add(symbol);
+            }
+            else if (assemblyCandidates is not null)
+            {
+                assemblyCandidates.Add(symbol);
+            }
+        }
+
+        return matches;
+    }
+
+    private static async Task CollectProjectAssemblyCandidatesAsync(
+        Project project,
+        ICollection<ISymbol> candidates,
+        CancellationToken ct)
+    {
+        var compilation = await project.GetCompilationAsync(ct).ConfigureAwait(false);
+        if (compilation is not null) CollectAssemblyCandidates(compilation.Assembly.GlobalNamespace, candidates, ct);
+    }
+
+    private static void CollectAssemblyCandidates(
+        INamespaceOrTypeSymbol container,
+        ICollection<ISymbol> candidates,
+        CancellationToken ct)
+    {
+        foreach (var member in container.GetMembers())
+        {
+            ct.ThrowIfCancellationRequested();
+            candidates.Add(member);
+            if (member is INamespaceOrTypeSymbol nested)
+            {
+                CollectAssemblyCandidates(nested, candidates, ct);
+            }
+        }
     }
 
     private static IEnumerable<string> FormatStableIdCandidates(IEnumerable<ISymbol> symbols) =>

@@ -14,6 +14,7 @@
 - [X] 12. MCP-Toolbeschreibungen für direkte Handle-Übergabe verdichten
 - [X] 13. Exponierte MCP-Toolverträge und Beschreibungen konsistent machen
 - [X] 14. Call-Tree-Transportvertrag ohne internes Request-Kontextfeld absichern
+- [X] 15. Assembly-Member-Handoffs per MCP-Transport vollständig auflösbar machen
 
 ## Durchführungsprotokoll
 
@@ -100,3 +101,9 @@
 - `context` als internes SDK-RequestContext identifiziert; kein öffentlicher Parameter und kein dokumentationswürdiger Eingabewert.
 - Prozesskette `find_symbol → get_call_tree` ohne Kontext sowie raw `tools/list` gegen fehlendes Schemafeld abgesichert.
 - Kein Produktionsfix: der aktuelle Wire-Vertrag war bereits korrekt; gezielte Integrationstests grün.
+
+### 15. Assembly-Member-Handoffs per MCP-Transport vollständig auflösbar machen
+
+- Rot-Test: `inspect_assembly`-Member-Handle lieferte bei `get_symbol_body` `SYMBOL_NOT_FOUND`.
+- Resolver durchsucht bei Assembly-Handoffs zusätzlich den kompilierten Assembly-Symbolbaum; Prozessvertrag prüft alle ausgegebenen Member gegen Body und Context.
+- Build, beide Verify-Scopes, 2.636 FastTests und 240 non-Stress-IntegrationTests grün.
