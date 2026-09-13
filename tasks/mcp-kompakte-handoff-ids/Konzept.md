@@ -145,6 +145,35 @@ Das ist speicherseitig vertretbar, weil die Registry nur zwei Strings je Mapping
 
 Nach einem Daemon- oder stdio-Host-Neustart sind alte Handles bewusst nicht mehr auflösbar. Da die persistierte High-Water-Mark eine erneute Vergabe verhindert, liefern sie immer `HANDOFF_UNKNOWN` und können niemals auf ein neues Symbol zeigen. Der Agent ermittelt das Symbol anhand des weiterhin sichtbaren Namens, der Signatur und des Fundorts erneut.
 
+### 3.6 Bereits implementierte Grundlagen (Namespace `AiNetLinter.Mcp.Handoffs`)
+
+Die folgenden Bausteine sind vollständig implementiert und durch Unit-Tests abgesichert:
+
+1. **`HandoffCounterAlphabet`** (`src/AiNetLinter/Mcp/Handoffs/HandoffCounterAlphabet.cs`):
+   - Reines Base-62-Zähl- und Validierungsmodul (`a..z`, `0..9`, `A..Z`).
+   - Startwert `"a"` (`h:a`), inkrementiert von rechts mit Übertrag nach links (`z -> 0`, `9 -> A`, `Z -> aa`, `aaZaZ -> aaZba`).
+   - Validierungsmethoden `IsValidCounter`, `IsValidHandle` und `IsWindowsDrivePath` (schließt `h:\...` als Pfad aus).
+
+2. **`HandoffCounterStore`** (`src/AiNetLinter/Mcp/Handoffs/HandoffCounterStore.cs`):
+   - Atomare High-Water-Mark-Persistierung unter `LocalApplicationData/RalfHuesing/AiNetLinter/handoff-counter.json`.
+   - Prozessübergreifende Serialisierung über Lock-Datei `handoff-counter.json.lock` (`FileShare.None`).
+   - **Interner Prefetch-Puffer (DefaultBatchSize = 1000)**: Reserviert bei leerem Puffer 1.000 IDs auf einen Schlag mit genau einem atomaren Disk-Write. Folgende `Next()`-Aufrufe werden mit ~15 ns direkt aus dem RAM bedient.
+   - Meldet bei beschädigter Datei `HANDOFF_COUNTER_UNAVAILABLE` und setzt niemals still auf `"a"` zurück.
+
+3. **`HandoffHandleRegistry`** (`src/AiNetLinter/Mcp/Handoffs/HandoffHandleRegistry.cs`):
+   - `HandoffHandleRegistry.Default` als Singleton pro Hostlauf.
+   - `GetOrCreateOpaqueHandleForOutput(string internalHandoffId)`: Liefert `Result<string>` mit `h:...`.
+   - `RestoreInternalHandoffForInput(string externalHandleOrSemanticInput)`: Zentrale Weiche für Eingaben (`h:...` restaurieren, `s:`/`a:` ablehnen, semantische Eingaben und Windows-Pfade unverändert durchreichen).
+
+4. **`Result<T>` & `ResultError`** (`src/AiNetLinter/Mcp/Handoffs/Result.cs`):
+   - Unveränderliche Ergebnistypen für typsichere Fehlerbehandlung ohne Exceptions.
+
+5. **`LinterErrorCodes`** (`src/AiNetLinter/Output/LinterErrorCodes.cs`):
+   - `INVALID_HANDOFF`, `UNSUPPORTED_HANDOFF_FORMAT`, `HANDOFF_UNKNOWN`, `HANDOFF_COUNTER_UNAVAILABLE`.
+
+6. **FastTests** (`src/AiNetLinter.FastTests/Mcp/Handoffs/`):
+   - `HandoffCounterAlphabetTests.cs`, `HandoffCounterStoreTests.cs`, `HandoffHandleRegistryTests.cs`.
+
 ## 4. Öffentlicher Vertrag
 
 ### 4.1 Ausgabe
@@ -264,6 +293,37 @@ Ohne heutigen Symbol-Handoff-Vertrag bleiben unverändert:
 
 Falls die Codeinventur dort doch eine öffentliche `s:`-/`a:`-ID findet, gehört diese konkrete Stelle wieder in Producer oder Consumer.
 
+### 5.4 Audit- und Rot-Test-Werkzeuge für Folge-Agenten
+
+Um die vollständige Umstellung aller Einbaustellen deterministisch abzusichern und Regressionen auszuschließen, stehen zwei Werkzeuge zur Verfügung:
+
+#### 1. Automatisches Audit-Skript (Rot-Test)
+```powershell
+pwsh -File scripts/audit-handoff-wiring.ps1
+```
+- **Zweck:** Durchsucht alle 17 Producer-Dateien nach fehlendem `GetOrCreateOpaqueHandleForOutput` und alle 10 Consumer-Dateien nach fehlendem `RestoreInternalHandoffForInput`.
+- **Verhalten:**
+  - Solange unmigrierte Stellen vorhanden sind, listet das Skript jede betroffene Datei auf und bricht mit **Exit-Code 1** ab (**Rot-Test**).
+  - Sobald alle Stellen angebunden sind, meldet es Erfolg und beendet mit **Exit-Code 0** (**Grün-Test**).
+- **Start-Baseline:** Stand zu Beginn von Phase 2 sind genau 27 offene Stellen (17 Producer, 10 Consumer).
+
+#### 2. Ripgrep (`rg`)-Suchmuster für manuelle Verifikation
+- **Producer-Ausgaben finden:**
+  ```bash
+  rg "handoffId:\s*`" src/AiNetLinter/
+  rg "(identity|assemblyIdentity|HandoffIdentity)\.Format\(" src/AiNetLinter/Mcp/
+  ```
+- **Alte Drahtformate im Content aufspüren (Wire-Rot-Test):**
+  ```bash
+  rg "\b[sa]:[a-zA-Z0-9_-]{22}:[a-zA-Z0-9_-]{22}:"
+  ```
+  Darf in keiner MCP-Antwort mehr Treffer liefern!
+- **Consumer-Eingangsparameter finden:**
+  ```bash
+  rg "\b(symbolIdentifier|symbolIdentifiers|helperSymbol|typeName)\b" src/AiNetLinter/Mcp/Tools/
+  ```
+
+
 ## 6. Fehlervertrag
 
 Die Registry erzeugt nur mapperbezogene Fehler. Target-, Snapshot-, Symbolart- und Auflösungsfehler bleiben beim bestehenden internen Resolver.
@@ -366,19 +426,19 @@ Auf dem festgeschriebenen Baseline-Datensatz:
 
 ## 10. Umsetzung und Release-Gate
 
-- [ ] Vollständige Producer-/Consumer-Inventur erstellen.
-- [ ] `HandoffHandleRegistry` mit zentralem Lebenszyklus und Parallelitätstests implementieren.
-- [ ] alphabetischen Zähler und atomaren High-Water-Mark-Store im bestehenden per-user Daemon-State-Verzeichnis implementieren.
+- [x] Vollständige Producer-/Consumer-Inventur erstellen (in Abschnitt 5 & `scripts/audit-handoff-wiring.ps1`).
+- [x] `HandoffHandleRegistry` mit zentralem Lebenszyklus und Parallelitätstests implementieren.
+- [x] alphabetischen Zähler und atomaren High-Water-Mark-Store mit internem Batch-Prefetch im bestehenden per-user Daemon-State-Verzeichnis implementieren.
 - [ ] alle Ausgaben unmittelbar vor dem Rendern externalisieren.
 - [ ] alle Symbolparameter unmittelbar nach der Argumentvalidierung restaurieren.
 - [ ] direkte semantische Eingaben unverändert durchreichen.
 - [ ] öffentliche Altformat-Annahme und -Ausgabe entfernen, interne Resolver erhalten.
 - [ ] semantischen Begleittext jeder Ausgabestelle prüfen.
-- [ ] FastTests für Mapping, Format, Parallelität und Renderer ergänzen.
+- [ ] FastTests für Mapping, Format, Parallelität und Renderer ergänzen (Mapping/Format/Store-Tests fertig; Renderer-Tests folgen in Phase 2).
 - [ ] Integrationstests für MCP-Wire, Toolketten, TTL, Neustart, Persistierungsfehler und mögliche parallele Hostprozesse ergänzen.
 - [ ] MCP-Dokumentation, Agent-Guide und Beispiele auf `h:…` aktualisieren; Lebensdauer, Neustartfehler, Counter-State-Pfad und Wiederermittlung ausdrücklich dokumentieren.
 - [ ] vollständige Non-Stress-Testgates, `dotnet build` und MCP-`verify(scope: solution)` erfolgreich ausführen.
-- [ ] Code-/Textsuche bestätigt: keine öffentliche interne ID und keine unverdrahtete Handoff-Stelle.
+- [ ] Code-/Textsuche bestätigt: keine öffentliche interne ID und keine unverdrahtete Handoff-Stelle (Audit-Skript Exit-Code 0).
 - [ ] Baseline-Messung bestätigt Tokenersparnis ohne Informationsverlust.
 
 Freigabestatus:
