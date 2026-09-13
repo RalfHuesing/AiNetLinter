@@ -10,4 +10,4 @@ alwaysApply: false
 - Integrationstests belegen ausschließlich reale Grenzen oder Zusammensetzung: MCP-/CLI-Transport, Prozess- oder Serverlebenszyklus, Dateisystem, Roslyn-Laden und Konfigurationsbindung.
 - Einen fachlichen Fall nicht zusätzlich über vollständigen Serverstart testen. Pro Boundary genügen repräsentative Vertragstests; Varianten und Edge-Cases gehören in FastTests.
 - Die Behauptung eines Tests bestimmt seine Ebene, nicht der Ordner des Produktionscodes. Ein echter End-to-End-Vertrag bleibt ein Integrationstest.
-- Während der Entwicklung den kleinsten passenden Testlauf ausführen; die vollständigen Non-Stress-Gates aus `AGENTS.md` bleiben Abschlussnachweis.
+- Nach jedem kohärenten Coding-Slice mindestens den passenden FastTests-Lauf ausführen; die vollständigen Non-Stress-Läufe aus `AGENTS.md` bleiben Abschlussnachweis. Vor der ersten Änderung ist kein Testlauf erforderlich.

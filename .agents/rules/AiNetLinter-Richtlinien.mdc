@@ -42,7 +42,7 @@ Nutzeranweisungen haben Vorrang.
 - MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-Testinfrastruktur (keine Ad-hoc-Skripte committen).
 - Keine Compilerwarnungen einführen (`TreatWarningsAsErrors`). Tests niemals abschwächen oder auskommentieren; stets Ursache beheben.
 - Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
-- **MCP-Quality-Gate**: Während C#-Änderungen `verify(targetPath)` verwenden; vor Abschluss `verify(targetPath, scope: "solution")`. Nur `verdict=pass`, `score=10.0` und `violationCount=0` erfüllen das Gate. Advisory-Kandidaten bei `changes` erfordern Agentenurteil, beeinflussen das Verdict nicht und sind keine sichere Lösch- oder Änderungsanweisung.
+- **MCP-Quality-Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge `dotnet build`, `verify(targetPath)` und der passende FastTests-Lauf. Vor dem Abschluss in derselben Reihenfolge `dotnet build`, `verify(targetPath, scope: "solution")`, vollständige FastTests und vollständige IntegrationTests, jeweils ohne `Stress`. Nur `verdict=pass`, `score=10.0` und `violationCount=0` erfüllen das Verify-Gate. Schlägt ein Schritt fehl, Ursache beheben und das jeweilige Gate vollständig wiederholen. Advisory-Kandidaten bei `changes` erfordern Agentenurteil, beeinflussen das Verdict nicht und sind keine sichere Lösch- oder Änderungsanweisung.
 - Kommentare erklären nur nicht offensichtliches „Why“; keine Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 
 ## Git und parallele Agenten
