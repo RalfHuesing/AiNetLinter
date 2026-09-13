@@ -34,7 +34,8 @@ Nutzeranweisungen haben Vorrang.
 
 - **C#-Coding-Prinzipien**: Konkrete Klassen standardmäßig `sealed` deklarieren; `#nullable enable` am Dateianfang; Methoden flach halten und ab 4 Parametern Parameter-Records nutzen; kein `async void`, keine blockierenden Task-Aufrufe (`.Result`, `.Wait()`), keine leeren `catch`-Blöcke.
 - Keine Compilerwarnungen einführen (`TreatWarningsAsErrors`). Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
-- **Test-Design & Authoring**: Für Testebenen, Testgestaltung, Red-Test-First und Testumgebung gilt `.agents/rules/AiNetLinter-TestRichtlinien.mdc`. Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis bis zur nächsten Code- oder Konfigurationsänderung; nicht blind wiederholen.
+- **Red-Test-First bei Bugs**: Bei Fehlern oder unerwartetem Verhalten zuerst einen isolierten fehlschlagenden xUnit-v3-Test schreiben; erst danach beheben (dauerhafter Regressionsschutz).
+- **Test-Design & Authoring**: Für Testebenen, Testgestaltung und Testumgebung gilt `.agents/rules/AiNetLinter-TestRichtlinien.mdc`. Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis bis zur nächsten Code- oder Konfigurationsänderung; nicht blind wiederholen.
 - **Workflow- und MCP-Quality-Gates**:
   - **Taskbeginn**: Saubere Codebasis voraussetzen; vor der ersten Änderung kein Build, Verify oder Test.
   - **Incremental Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge: `dotnet build`, `verify(targetPath)`, passender FastTests-Lauf (standardmäßig `pwsh scripts/test-fast.ps1 -Filter Category=Unit`). Kein bekannter roter Stand bleibt als Zwischen- oder Übergabestand bestehen.
