@@ -8,7 +8,7 @@
     2. Synchronisiert mit origin/main und laedt ausstehende lokale Commits vorab hoch
     3. Liest die Version aus src/AiNetLinter/AiNetLinter.csproj
     4. Erhoeht die Patch-Version um 1 (z. B. 1.0.5 -> 1.0.6)
-    5. Fuehrt dotnet build/test aus
+    5. Fuehrt Build, FastTests und IntegrationTests aus
     6. Committet die Versionsaenderung, pusht main und den Tag vX.Y.Z
     7. Der GitHub-Workflow .github/workflows/release.yml erstellt das Release
 
@@ -21,22 +21,11 @@
 .PARAMETER DryRun
     Zeigt geplante Schritte ohne Aenderungen, Commit, Push oder Tag.
 
-.PARAMETER SkipTests
-    Ueberspringt die Testausfuehrung vor dem Release.
-
-.PARAMETER FullTests
-    Fuehrt die vollstaendige Test-Suite inkl. Integrationstests (Category!=Stress) aus.
-
-.PARAMETER TestFilter
-    Benutzerdefinierter xUnit-Filter fuer dotnet test (Standard: Category=Unit).
 #>
 [CmdletBinding()]
 param(
     [string]$Branch = 'main',
-    [switch]$DryRun,
-    [switch]$SkipTests,
-    [switch]$FullTests,
-    [string]$TestFilter = 'Category=Unit'
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
@@ -150,13 +139,16 @@ function Invoke-DotNetValidation {
             throw 'dotnet build fehlgeschlagen.'
         }
 
-        if (-not $SkipTests) {
-            $effectiveFilter = if ($FullTests) { 'Category!=Stress' } else { $TestFilter }
-            Write-Host "[INFO] dotnet test (Filter: $effectiveFilter)..." -ForegroundColor Cyan
-            dotnet test --nologo -v q --no-build --filter $effectiveFilter
-            if ($LASTEXITCODE -ne 0) {
-                throw 'dotnet test fehlgeschlagen.'
-            }
+        Write-Host '[INFO] FastTests...' -ForegroundColor Cyan
+        & pwsh -NoProfile -File (Join-Path $RepoRoot 'scripts/test-fast.ps1')
+        if ($LASTEXITCODE -ne 0) {
+            throw 'FastTests fehlgeschlagen.'
+        }
+
+        Write-Host '[INFO] IntegrationTests...' -ForegroundColor Cyan
+        & pwsh -NoProfile -File (Join-Path $RepoRoot 'scripts/test-integration.ps1')
+        if ($LASTEXITCODE -ne 0) {
+            throw 'IntegrationTests fehlgeschlagen.'
         }
     }
     finally {
