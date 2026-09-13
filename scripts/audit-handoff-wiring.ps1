@@ -16,9 +16,11 @@ Write-Host "=== AiNetLinter Handoff-Audit & Rot-Test ===" -ForegroundColor Cyan
 
 $ProducerFiles = @(
     "Tools/SymbolGraph/FindSymbolTool.cs",
+    "Tools/GetSymbolBodyTool.cs",
     "Tools/SymbolGraph/CallGraph/TransitiveCallGraphFormatter.cs",
     "Tools/SymbolGraph/GetTypeHierarchyFormatter.cs",
     "Tools/FileStructure/GetClassStructureTool.cs",
+    "Tools/TypeHierarchy/FindImplementationsTool.cs",
     "../Maps/Skeleton/SkeletonMarkdownRenderer.cs",
     "Tools/CallTree/CallGraphTextRenderer.cs",
     "Tools/MetricsLookup/MetricsLookupTool.cs",
