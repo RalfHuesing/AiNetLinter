@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -293,7 +294,7 @@ internal static class GetNamespaceTreeResponseBudget
         AppendDepthText(sb, payload);
         foreach (var type in payload.Types!)
         {
-            sb.AppendLine($"- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}");
+            sb.AppendLine($"- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}{FormatHandoffSuffix(type.HandoffId)}");
         }
     }
 
@@ -352,13 +353,18 @@ internal static class GetNamespaceTreeResponseBudget
         sb.AppendLine($"{new string(' ', indent * 2)}- {node.Namespace} ({node.TypeCount} Typen)");
         foreach (var type in node.Types ?? Array.Empty<TypeNodeEntry>())
         {
-            sb.AppendLine($"{new string(' ', (indent + 1) * 2)}- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}");
+            sb.AppendLine($"{new string(' ', (indent + 1) * 2)}- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}{FormatHandoffSuffix(type.HandoffId)}");
         }
         foreach (var child in node.SubNamespaces ?? Array.Empty<NamespaceTreeNode>())
         {
             AppendNamespaceText(sb, child, indent + 1);
         }
     }
+
+    private static string FormatHandoffSuffix(string? internalHandoffId) =>
+        string.IsNullOrWhiteSpace(internalHandoffId)
+            ? string.Empty
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalHandoffId)}`";
 
     private static void AppendDepthText(StringBuilder sb, NamespaceTreePayload payload)
     {

@@ -23,7 +23,8 @@ public sealed record TypeNodeEntry(
     string Kind,
     string FilePath,
     int Line,
-    string Visibility);
+    string Visibility,
+    string? HandoffId);
 
 /// <summary>
 /// Ein Knoten im hierarchischen Namespace-Baum für Stufe 2 von <c>get_namespace_tree</c>.
@@ -47,14 +48,24 @@ public sealed record GetNamespaceTreeInput(
     int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
     bool DeferResponseBudgetToNavigation = false);
 
-public sealed record NamespaceTreeScanParameters(
+internal sealed record NamespaceTreeScanParameters(
     Project Project,
     string? NamespacePrefix,
     int Depth,
     bool IncludeTypes,
     string? KindFilter,
     int MaxResults,
-    string SolutionDir);
+    string SolutionDir,
+    AnalysisSymbolIdentity? HandoffIdentity = null);
+
+internal sealed record NamespaceTreeExecutionContext(
+    Solution Solution,
+    GetNamespaceTreeInput Input,
+    int ClampedDepth,
+    int ClampedMaxResults,
+    string SolutionDir,
+    AnalysisSymbolIdentity? HandoffIdentity,
+    bool IsAssemblyTarget);
 
 public sealed record NamespaceTreePayload(
     string? SolutionName,

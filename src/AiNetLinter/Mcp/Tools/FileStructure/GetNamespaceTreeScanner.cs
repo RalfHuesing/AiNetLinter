@@ -145,7 +145,7 @@ internal static partial class GetNamespaceTreeScanner
         var truncated = totalCount > parameters.MaxResults;
 
         var typeEntries = shownTypes
-            .Select(t => ToTypeEntry(t, parameters.SolutionDir, projectTrees))
+            .Select(t => ToTypeEntry(t, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity))
             .ToList();
 
         var sb = new StringBuilder();
@@ -159,7 +159,7 @@ internal static partial class GetNamespaceTreeScanner
         {
             foreach (var t in typeEntries)
             {
-                sb.AppendLine($"- {t.Name} ({t.Kind}) — {t.FilePath}:{t.Line}");
+                sb.AppendLine($"- {t.Name} ({t.Kind}) — {t.FilePath}:{t.Line}{FormatHandoffSuffix(t.HandoffId)}");
             }
         }
 

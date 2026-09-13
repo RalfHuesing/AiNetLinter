@@ -53,36 +53,18 @@ internal static class GetNamespaceTreeTool
         var clampedDepth = Math.Clamp(input.Depth < 1 ? DefaultDepth : input.Depth, 1, MaxDepthCap);
         var clampedMaxResults = Math.Clamp(input.MaxResults < 1 ? DefaultMaxResults : input.MaxResults, 1, MaxResultsCap);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var execution = new NamespaceTreeExecutionContext(
+            solution,
+            input,
+            clampedDepth,
+            clampedMaxResults,
+            solutionDir,
+            state.HandoffSymbolIdentity,
+            state.AssemblySymbolIdentity is not null);
 
         try
         {
-            if (string.IsNullOrWhiteSpace(input.Project))
-            {
-                if (string.IsNullOrWhiteSpace(input.NamespacePrefix))
-                {
-                    return AddAssemblyOverviewHeader(
-                        state,
-                        solution,
-                        await ExecuteSolutionOverviewAsync(solution, input, clampedDepth, ct), input.MaxResponseBytes);
-                }
-
-                return AddAssemblyOverviewHeader(
-                    state,
-                    solution,
-                    await ExecuteAutoProjectDrilldownAsync(
-                        solution,
-                        input,
-                        clampedDepth,
-                        clampedMaxResults,
-                        solutionDir,
-                        state.AssemblySymbolIdentity is not null,
-                        ct), input.MaxResponseBytes);
-            }
-
-            return AddAssemblyOverviewHeader(
-                state,
-                solution,
-                await ExecuteProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct), input.MaxResponseBytes);
+            return await ExecuteTreeAsync(state, execution, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -90,6 +72,23 @@ internal static class GetNamespaceTreeTool
                 $"Unerwarteter Fehler in get_namespace_tree: {ex.Message}",
                 context: input.Project);
         }
+    }
+
+    private static async Task<CallToolResult> ExecuteTreeAsync(
+        ISolutionStateProvider state,
+        NamespaceTreeExecutionContext execution,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(execution.Input.Project))
+        {
+            var result = string.IsNullOrWhiteSpace(execution.Input.NamespacePrefix)
+                ? await ExecuteSolutionOverviewAsync(execution, ct)
+                : await ExecuteAutoProjectDrilldownAsync(execution, ct);
+            return AddAssemblyOverviewHeader(state, execution.Solution, result, execution.Input.MaxResponseBytes);
+        }
+
+        var drilldown = await ExecuteProjectDrilldownAsync(execution, ct);
+        return AddAssemblyOverviewHeader(state, execution.Solution, drilldown, execution.Input.MaxResponseBytes);
     }
 
     private static CallToolResult AddAssemblyOverviewHeader(
@@ -136,42 +135,38 @@ internal static class GetNamespaceTreeTool
     }
 
     private static async Task<CallToolResult> ExecuteSolutionOverviewAsync(
-        Solution solution, GetNamespaceTreeInput input, int effectiveDepth, CancellationToken ct)
+        NamespaceTreeExecutionContext execution,
+        CancellationToken ct)
     {
-        var (overviewText, overviewPayload) = await GetNamespaceTreeScanner.ScanSolutionProjectsAsync(solution, ct);
+        var (overviewText, overviewPayload) = await GetNamespaceTreeScanner.ScanSolutionProjectsAsync(execution.Solution, ct);
         overviewPayload = overviewPayload with
         {
-            RequestedDepth = input.Depth,
-            EffectiveDepth = effectiveDepth,
-            DepthWasClamped = input.Depth != effectiveDepth,
+            RequestedDepth = execution.Input.Depth,
+            EffectiveDepth = execution.ClampedDepth,
+            DepthWasClamped = execution.Input.Depth != execution.ClampedDepth,
         };
         return ApplyResponseBudget(
-            AppendDepthEvidence(overviewText, input.Depth, effectiveDepth),
+            AppendDepthEvidence(overviewText, execution.Input.Depth, execution.ClampedDepth),
             overviewPayload,
-            input.MaxResponseBytes,
-            input.DeferResponseBudgetToNavigation);
+            execution.Input.MaxResponseBytes,
+            execution.Input.DeferResponseBudgetToNavigation);
     }
 
     private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(
-        Solution solution,
-        GetNamespaceTreeInput input,
-        int clampedDepth,
-        int clampedMaxResults,
-        string solutionDir,
-        bool isAssemblyTarget,
+        NamespaceTreeExecutionContext execution,
         CancellationToken ct)
     {
         var matchingProjects = new List<Project>();
 
-        foreach (var project in solution.Projects)
+        foreach (var project in execution.Solution.Projects)
         {
             var compilation = await project.GetCompilationAsync(ct);
             if (compilation is null) continue;
 
-            var startNs = GetNamespaceTreeScanner.FindNamespace(compilation.GlobalNamespace, input.NamespacePrefix);
+            var startNs = GetNamespaceTreeScanner.FindNamespace(compilation.GlobalNamespace, execution.Input.NamespacePrefix);
             if (startNs is null) continue;
 
-            var projectTrees = await GetNamespaceTreeScanner.GetProjectSyntaxTreesAsync(project, solutionDir, ct);
+            var projectTrees = await GetNamespaceTreeScanner.GetProjectSyntaxTreesAsync(project, execution.SolutionDir, ct);
             if (GetNamespaceTreeScanner.HasAnySourceTypesInHierarchy(startNs, projectTrees))
             {
                 matchingProjects.Add(project);
@@ -180,18 +175,18 @@ internal static class GetNamespaceTreeTool
 
         if (matchingProjects.Count == 0)
         {
-            if (isAssemblyTarget)
+            if (execution.IsAssemblyTarget)
             {
                 return McpToolResults.Recoverable(
                     LinterErrorCodes.InvalidArgument,
-                    $"Namespace '{input.NamespacePrefix}' wurde im Assembly-Snapshot nicht gefunden.",
+                    $"Namespace '{execution.Input.NamespacePrefix}' wurde im Assembly-Snapshot nicht gefunden.",
                     hint: "namespacePrefix pruefen oder get_namespace_tree ohne namespacePrefix fuer den Assembly-Ueberblick aufrufen.");
             }
 
-            var available = string.Join(", ", solution.Projects.Select(p => p.Name));
+            var available = string.Join(", ", execution.Solution.Projects.Select(p => p.Name));
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                $"Namespace '{input.NamespacePrefix}' wurde in keinem Projekt der Solution gefunden.",
+                $"Namespace '{execution.Input.NamespacePrefix}' wurde in keinem Projekt der Solution gefunden.",
                 hint: $"Verfuegbare Projekte: {available}");
         }
 
@@ -200,31 +195,23 @@ internal static class GetNamespaceTreeTool
             var candidates = matchingProjects.Select(p => $"- {p.Name} ({p.FilePath})");
             return McpToolResults.Recoverable(
                 LinterErrorCodes.AmbiguousSymbol,
-                $"Namespace '{input.NamespacePrefix}' existiert in mehreren Projekten — Zielprojekt bitte explizit angeben.",
+                $"Namespace '{execution.Input.NamespacePrefix}' existiert in mehreren Projekten — Zielprojekt bitte explizit angeben.",
                 context: string.Join("\n", candidates),
                 hint: "Parameter 'project' mit einem der oben genannten Projektnamen uebergeben.");
         }
 
         return await ExecuteProjectDrilldownInternalAsync(
-            solution,
+            execution,
             matchingProjects[0],
-            input,
-            clampedDepth,
-            clampedMaxResults,
-            solutionDir,
             ct);
     }
 
     private static async Task<CallToolResult> ExecuteProjectDrilldownAsync(
-        Solution solution,
-        GetNamespaceTreeInput input,
-        int clampedDepth,
-        int clampedMaxResults,
-        string solutionDir,
+        NamespaceTreeExecutionContext execution,
         CancellationToken ct)
     {
-        var exactMatch = solution.Projects
-            .FirstOrDefault(p => p.Name.Equals(input.Project, StringComparison.OrdinalIgnoreCase));
+        var exactMatch = execution.Solution.Projects
+            .FirstOrDefault(p => p.Name.Equals(execution.Input.Project, StringComparison.OrdinalIgnoreCase));
 
         Project targetProject;
         if (exactMatch is not null)
@@ -233,16 +220,16 @@ internal static class GetNamespaceTreeTool
         }
         else
         {
-            var matchingProjects = solution.Projects
-                .Where(p => p.Name.Contains(input.Project!, StringComparison.OrdinalIgnoreCase))
+            var matchingProjects = execution.Solution.Projects
+                .Where(p => p.Name.Contains(execution.Input.Project!, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (matchingProjects.Count == 0)
             {
-                var available = string.Join(", ", solution.Projects.Select(p => p.Name));
+                var available = string.Join(", ", execution.Solution.Projects.Select(p => p.Name));
                 return McpToolResults.Recoverable(
                     LinterErrorCodes.InvalidArgument,
-                    $"Projekt '{input.Project}' wurde in der Solution nicht gefunden.",
+                    $"Projekt '{execution.Input.Project}' wurde in der Solution nicht gefunden.",
                     hint: $"Verfuegbare Projekte: {available}");
             }
 
@@ -251,7 +238,7 @@ internal static class GetNamespaceTreeTool
                 var candidates = matchingProjects.Select(p => $"- {p.Name} ({p.FilePath})");
                 return McpToolResults.Recoverable(
                     LinterErrorCodes.AmbiguousSymbol,
-                    $"Projektname '{input.Project}' ist mehrdeutig — mehrere Projekte gefunden.",
+                    $"Projektname '{execution.Input.Project}' ist mehrdeutig — mehrere Projekte gefunden.",
                     context: string.Join("\n", candidates),
                     hint: "Projektnamen praezisieren (vollstaendigen Projektnamen uebergeben).");
             }
@@ -260,42 +247,35 @@ internal static class GetNamespaceTreeTool
         }
 
         return await ExecuteProjectDrilldownInternalAsync(
-            solution,
+            execution,
             targetProject,
-            input,
-            clampedDepth,
-            clampedMaxResults,
-            solutionDir,
             ct);
     }
 
     private static async Task<CallToolResult> ExecuteProjectDrilldownInternalAsync(
-        Solution solution,
+        NamespaceTreeExecutionContext execution,
         Project targetProject,
-        GetNamespaceTreeInput input,
-        int clampedDepth,
-        int clampedMaxResults,
-        string solutionDir,
         CancellationToken ct)
     {
         var scanParams = new NamespaceTreeScanParameters(
             Project: targetProject,
-            NamespacePrefix: input.NamespacePrefix,
-            Depth: clampedDepth,
-            IncludeTypes: input.IncludeTypes,
-            KindFilter: input.Kind,
-            MaxResults: clampedMaxResults,
-            SolutionDir: solutionDir);
+            NamespacePrefix: execution.Input.NamespacePrefix,
+            Depth: execution.ClampedDepth,
+            IncludeTypes: execution.Input.IncludeTypes,
+            KindFilter: execution.Input.Kind,
+            MaxResults: execution.ClampedMaxResults,
+            SolutionDir: execution.SolutionDir,
+            HandoffIdentity: execution.HandoffIdentity);
 
         var (treeText, treePayload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(scanParams, ct);
         treePayload = treePayload with
         {
-            RequestedDepth = input.Depth,
-            EffectiveDepth = clampedDepth,
-            DepthWasClamped = input.Depth != clampedDepth,
+            RequestedDepth = execution.Input.Depth,
+            EffectiveDepth = execution.ClampedDepth,
+            DepthWasClamped = execution.Input.Depth != execution.ClampedDepth,
         };
-        var finalText = AppendDepthEvidence(treeText, input.Depth, clampedDepth);
-        return ApplyResponseBudget(finalText, treePayload, input.MaxResponseBytes, input.DeferResponseBudgetToNavigation);
+        var finalText = AppendDepthEvidence(treeText, execution.Input.Depth, execution.ClampedDepth);
+        return ApplyResponseBudget(finalText, treePayload, execution.Input.MaxResponseBytes, execution.Input.DeferResponseBudgetToNavigation);
     }
 
     private static CallToolResult ApplyResponseBudget(
