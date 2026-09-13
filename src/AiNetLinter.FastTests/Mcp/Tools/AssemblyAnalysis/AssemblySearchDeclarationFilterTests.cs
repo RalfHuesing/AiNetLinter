@@ -8,6 +8,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -164,6 +165,36 @@ public sealed class AssemblySearchDeclarationFilterTests
         var body = await GetSymbolBodyTool.ExecuteAsync(lease, [handoffId], 80, CancellationToken.None);
         Assert.NotEqual(true, body.IsError);
         Assert.Contains(expectedBodyContent, AssemblyAnalysisTestSupport.TextOf(body), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AssemblySearchHandle_FeedsAssemblyCallTree()
+    {
+        using var temp = TestTempDirectory.Create("assembly-call-tree-handoff-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "CallTreeHandoffProbe", """
+            namespace Probe;
+            public sealed class SearchProbe { public void Run() { } }
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
+
+        var search = await AssemblySearchTool.ExecuteAsync(
+            lease,
+            new AssemblySearchArguments("Run", false, "text", 10, 0, 0, 0, null, null, null, true, "method"),
+            CancellationToken.None);
+        var handle = Regex.Match(AssemblyAnalysisTestSupport.TextOf(search), @"handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
+        Assert.NotEmpty(handle);
+
+        var callTree = await AssemblyGetCallTreeTool.ExecuteAsync(
+            lease,
+            new AssemblyGetCallTreeRequest(
+                new GetCallTreeInput(handle, 1, "ascii", 10, "incoming"),
+                IncludeReferences: false),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, callTree.IsError);
+        Assert.Contains("SearchProbe.Run", AssemblyAnalysisTestSupport.TextOf(callTree), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -105,7 +105,7 @@ internal sealed class HandoffHandleRegistry
             return Result<string>.Success(externalHandleOrSemanticInput);
         }
 
-        if (externalHandleOrSemanticInput.StartsWith(HandoffCounterAlphabet.HandlePrefix, StringComparison.Ordinal))
+        if (externalHandleOrSemanticInput.StartsWith(HandoffCounterAlphabet.HandlePrefix, StringComparison.OrdinalIgnoreCase))
         {
             if (!HandoffCounterAlphabet.IsValidHandle(externalHandleOrSemanticInput))
             {

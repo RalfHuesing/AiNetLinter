@@ -38,13 +38,15 @@ $ConsumerFiles = @(
     "Tools/GetSymbolBodyTool.cs",
     "Tools/FileStructure/GetClassStructureTool.cs",
     "Tools/CallTree/GetCallTreeTool.cs",
+    "Tools/CallTree/AssemblyGetCallTreeTool.cs",
     "Tools/SymbolGraph/GetImpactTool.cs",
     "Tools/DependencyGraph/DependencyGraphTool.cs",
     "Tools/FeatureContext/GetFeatureContextTool.cs",
     "Tools/TestContext/GetTestContextTool.cs",
     "Tools/MetricsLookup/MetricsLookupTool.cs",
     "Tools/DuplicateDetection/DuplicateDetectionTool.cs",
-    "Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs"
+    "Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs",
+    "Tools/SymbolGraph/AssemblyFindReferencesTool.cs"
 )
 
 $UnmigratedProducers = [System.Collections.Generic.List[string]]::new()
@@ -57,8 +59,8 @@ foreach ($relPath in $ProducerFiles) {
         continue
     }
     $content = Get-Content -Raw $fullPath
-    if ($content -notmatch "GetOrCreateOpaqueHandleForOutput|GetOpaqueHandleOrDefault") {
-        $UnmigratedProducers.Add("$relPath (fehlt GetOrCreateOpaqueHandleForOutput / GetOpaqueHandleOrDefault)")
+    if ($content -notmatch "GetOrCreateOpaqueHandleForOutput|GetOpaqueHandleForOutputOrThrow|GetOpaqueHandleOrDefault") {
+        $UnmigratedProducers.Add("$relPath (fehlt GetOrCreateOpaqueHandleForOutput / GetOpaqueHandleForOutputOrThrow / GetOpaqueHandleOrDefault)")
     }
 }
 

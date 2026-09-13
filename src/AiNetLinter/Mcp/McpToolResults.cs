@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Handoffs;
@@ -28,6 +29,9 @@ namespace AiNetLinter.Mcp;
 internal static partial class McpToolResults
 {
     private static readonly AgentContentRenderer ContentRenderer = new();
+    private static readonly Regex InternalHandoffInContent = new(
+        @"(?<prefix>handoffId:\s*(?:`|\w+\s*=\s*))(?<id>[sa]:[^`\s\r\n]+)(?<suffix>`?)",
+        RegexOptions.CultureInvariant);
 
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
@@ -362,11 +366,21 @@ internal static partial class McpToolResults
 
     private static List<ContentBlock> CreateTextContent(string text)
     {
+        text = ExternalizeInternalHandoffs(text);
         var rendered = ContentRenderer.Render(new AgentContentRenderRequest(
             IsError: false,
             Evidence: [new AgentContentEvidence(text, IsRequired: true)]));
         return [new TextContentBlock { Text = rendered.Text }];
     }
+
+    internal static string ExternalizeInternalHandoffs(string text) =>
+        InternalHandoffInContent.Replace(text, match =>
+        {
+            var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(match.Groups["id"].Value);
+            return handle.IsSuccess
+                ? match.Groups["prefix"].Value + handle.Value + match.Groups["suffix"].Value
+                : "handoffId: [nicht verfügbar]";
+        });
 
     /// <summary>
     /// Ergaenzt eine zielgebundene Antwort um einen kompakten Navigationshinweis im Text.

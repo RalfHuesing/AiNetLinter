@@ -97,6 +97,8 @@ public sealed class HandoffHandleRegistryTests
     [InlineData("h:a b")]
     [InlineData("h:a-b")]
     [InlineData("h:ä")]
+    [InlineData("H:a")]
+    [InlineData("h:a:extended")]
     public void RestoreInternalHandoffForInput_MalformedHandle_ReturnsInvalidHandoff(string malformedHandle)
     {
         using var temp = TestTempDirectory.Create("registry-");
@@ -107,6 +109,20 @@ public sealed class HandoffHandleRegistryTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(LinterErrorCodes.InvalidHandoff, result.Error!.Value.Code);
+    }
+
+    [Fact]
+    public void GetOpaqueHandleForOutputOrThrow_CounterFailure_DoesNotLeakInternalId()
+    {
+        var registry = new HandoffHandleRegistry(new FailingCounterStore());
+        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => registry.GetOpaqueHandleForOutputOrThrow(internalId));
+
+        Assert.Contains(LinterErrorCodes.HandoffCounterUnavailable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(internalId, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("s:target-token", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]

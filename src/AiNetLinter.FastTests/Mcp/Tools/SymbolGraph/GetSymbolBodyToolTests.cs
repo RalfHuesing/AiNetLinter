@@ -399,6 +399,7 @@ public sealed class GetSymbolBodyToolTests
         var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(original, 512);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
         Assert.True(text.Contains("handoffId:", StringComparison.Ordinal) || text.Contains("RESPONSE_BUDGET_TOO_SMALL", StringComparison.Ordinal));
+        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
     }
 }
 

@@ -35,6 +35,16 @@ internal static class AssemblyGetCallTreeTool
     {
         var validationError = ValidateInput(input);
         if (validationError is not null) return validationError;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(
+                input.SymbolIdentifier,
+                "$.symbolIdentifier",
+                out var symbolIdentifier,
+                out var restoreError))
+        {
+            return restoreError;
+        }
+
+        input = input with { SymbolIdentifier = symbolIdentifier };
 
         try
         {

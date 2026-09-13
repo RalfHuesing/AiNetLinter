@@ -39,6 +39,7 @@ internal static class McpToolResponsePipeline
         {
             filtered = filter(filtered);
         }
+        filtered = McpToolResults.ExternalizeInternalHandoffs(filtered);
 
         return ReferenceEquals(filtered, text)
             ? block

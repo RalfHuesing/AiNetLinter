@@ -39,6 +39,34 @@ public sealed class McpToolResultsContentTests
     }
 
     [Fact]
+    public void Text_ExternalizesInternalHandoffBeforeItReachesContent()
+    {
+        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+
+        var text = TextOf(McpToolResults.Text($"handoffId: `{internalId}`"));
+
+        Assert.Matches(@"handoffId: `h:[a-zA-Z0-9]+`", text);
+        Assert.DoesNotContain(internalId, text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResponsePipeline_ExternalizesInternalHandoffsFromDirectRenderers()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = "handoffId: `a:target:snapshot:T:Namespace.Type`\n%% handoffId: n1 = s:target:snapshot:M:Namespace.Type.Member" }],
+        };
+
+        var text = TextOf(McpToolResponsePipeline.Apply(result));
+
+        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: n1 = s:", text, StringComparison.Ordinal);
+        Assert.Matches(@"handoffId: `h:[a-zA-Z0-9]+`", text);
+        Assert.Matches(@"handoffId: n1 = h:[a-zA-Z0-9]+", text);
+    }
+
+    [Fact]
     public void Error_RendersCodeMessageAndContextInOneTextBlock()
     {
         var result = McpToolResults.Error("TEST_CODE", "Testnachricht", context: "Demo.cs");

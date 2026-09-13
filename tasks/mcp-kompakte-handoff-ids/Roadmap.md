@@ -3,7 +3,7 @@
 - [X] 1. Ist-Stand, vollständige Verdrahtungsinventur und offene Scope-Lücken auditieren
 - [X] 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
 - [X] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
-- [ ] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
+- [X] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 - [ ] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 - [ ] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 
@@ -29,7 +29,9 @@
 
 ### 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 
-- Ausstehend.
+- Ungültige Groß-/Kleinschreibungs- und erweiterte Handles werden zentral abgewiesen.
+- Finale Content-Pipeline verhindert interne-ID-Austritte; Assembly-Call-Tree-Kette ergänzt.
+- Audit 12/12 Producer, 17/17 Consumer; Build, `verify(changes)` und 1.844 Unit-FastTests grün.
 
 ### 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 
