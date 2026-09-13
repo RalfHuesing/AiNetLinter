@@ -318,7 +318,17 @@ internal static class GetTypeHierarchyFormatter
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        var handoff = string.IsNullOrEmpty(entry.Id) ? string.Empty : $"; handoffId: `{entry.Id}`";
+        string handoff;
+        if (string.IsNullOrEmpty(entry.Id))
+        {
+            handoff = string.Empty;
+        }
+        else
+        {
+            var result = AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(entry.Id);
+            var externalId = result.IsSuccess ? result.Value : entry.Id;
+            handoff = $"; handoffId: `{externalId}`";
+        }
         return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{handoff}";
     }
 

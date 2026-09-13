@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -21,13 +22,10 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// Parameter fuer <see cref="GetClassStructureTool.ExecuteAsync(ISolutionStateProvider, GetClassStructureArgs, CancellationToken)"/>.
 /// </summary>
 internal sealed record GetClassStructureArgs(
-    string? SymbolIdentifier,
-    string? SortBy = "lines",
+    string? SymbolIdentifier, string? SortBy = "lines",
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
-    string? KindFilter = null,
-    string? NameFilter = null,
-    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
-    McpScopeInput Scope = default)
+    string? KindFilter = null, string? NameFilter = null,
+    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes, McpScopeInput Scope = default)
 {
     internal string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
@@ -48,12 +46,10 @@ internal static partial class GetClassStructureTool
     /// <summary>Harter Cap — Antwort bleibt damit immer unter ~50 KB.</summary>
     internal const int MaxMembersCap = 200;
 
-    internal static Task<CallToolResult> ExecuteAsync(
-        ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
+    internal static Task<CallToolResult> ExecuteAsync(ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
         ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy), ct);
 
-    internal static Task<CallToolResult> ExecuteAsync(
-        ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct) =>
+    internal static Task<CallToolResult> ExecuteAsync(ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct) =>
         ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
@@ -69,15 +65,18 @@ internal static partial class GetClassStructureTool
         var validationError = ValidateArguments(args, effectiveIdentifier);
         if (validationError is not null) return validationError;
 
+        if (!TryRestoreIdentifier(effectiveIdentifier, out var symbolIdentifier, out var restoreError))
+            return restoreError!;
+
         try
         {
             var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                effectiveIdentifier!,
+                symbolIdentifier,
                 ct,
                 state.HandoffSymbolIdentity);
             if (error is not null) return error;
-            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(effectiveIdentifier!);
+            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
 
             if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
             {
@@ -96,6 +95,26 @@ internal static partial class GetClassStructureTool
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
         }
+    }
+
+    private static bool TryRestoreIdentifier(string? raw, out string symbolIdentifier, out CallToolResult? error)
+    {
+        error = null;
+        if (!HandoffCounterAlphabet.IsValidHandle(raw) && (raw is null || !raw.StartsWith("h:", StringComparison.OrdinalIgnoreCase)))
+        {
+            symbolIdentifier = raw ?? string.Empty;
+            return true;
+        }
+
+        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(raw!);
+        if (!restored.IsSuccess)
+        {
+            symbolIdentifier = string.Empty;
+            error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
+            return false;
+        }
+        symbolIdentifier = restored.Value!;
+        return true;
     }
 
     private static CallToolResult? ValidateArguments(GetClassStructureArgs args, string? effectiveIdentifier)
@@ -343,7 +362,7 @@ internal static partial class GetClassStructureTool
         }
 
         var signature = m is IFieldSymbol { HasConstantValue: true } field
-            ? $"{m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} = {CSharpLiteralFormatter.Format(field.ConstantValue)}"
+            ? $"{m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} = {FormatLiteral(field.ConstantValue)}"
             : m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         return new ClassStructureMemberEntry(
             Kind: ResolveMemberKind(m),
@@ -357,10 +376,15 @@ internal static partial class GetClassStructureTool
             HandoffId: FormatMemberHandoff(m, handoffIdentity));
     }
 
-    private static string? FormatMemberHandoff(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity) =>
-        handoffIdentity is not null && !symbol.IsImplicitlyDeclared && symbol.Locations.Any(location => location.IsInSource)
-            ? handoffIdentity.FormatHandoff(symbol)
-            : null;
+    private static string? FormatMemberHandoff(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity)
+    {
+        if (handoffIdentity is null || symbol.IsImplicitlyDeclared || !symbol.Locations.Any(location => location.IsInSource))
+            return null;
+        var internalId = handoffIdentity.FormatHandoff(symbol);
+        if (string.IsNullOrWhiteSpace(internalId)) return null;
+        var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(internalId);
+        return result.IsSuccess ? result.Value : internalId;
+    }
 
     private static string ResolveMemberKind(ISymbol m)
     {
@@ -461,15 +485,13 @@ internal static partial class GetClassStructureTool
         table.AppendTo(sb);
     }
 
-    private static string FormatHandoffId(string? handoffId) =>
-        string.IsNullOrWhiteSpace(handoffId) ? "-" : $"handoffId: `{handoffId}`";
-}
-
-internal static class CSharpLiteralFormatter
-{
-    internal static string Format(object? value) => value is null
-        ? "null"
-        : Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)
-            ?? Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)
-            ?? string.Empty;
+    private static string FormatHandoffId(string? handoffId)
+    {
+        if (string.IsNullOrWhiteSpace(handoffId)) return "-";
+        var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(handoffId);
+        return $"handoffId: `{(result.IsSuccess ? result.Value : handoffId)}`";
+    }
+    private static string FormatLiteral(object? value) => value is null ? "null"
+        : (Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)
+            ?? Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
 }

@@ -280,7 +280,11 @@ public sealed class ResolveTypeOriginTests
 
     private static string ExtractHandoffId(string text, string kind, string origin = "s")
     {
-        var match = Regex.Match(text, $@"handoffId: `(?<id>{origin}:[^`]+:{kind}:[^`]+)`");
+        var match = Regex.Match(text, @"handoffId: `(?<id>h:[^`]+)`");
+        if (!match.Success)
+        {
+            match = Regex.Match(text, $@"handoffId: `(?<id>{origin}:[^`]+:{kind}:[^`]+)`");
+        }
         Assert.True(match.Success, text);
         return match.Groups["id"].Value;
     }

@@ -114,7 +114,7 @@ public sealed partial class GetClassStructureToolTests
         var state = _fixture.CreateServer();
         var structure = await GetClassStructureTool.ExecuteAsync(state, "Greeter", "lines", CancellationToken.None);
         var structureText = TextOf(structure);
-        var handoffId = Regex.Match(structureText, @"handoffId: `(?<id>s:[^`]+:M:[^`]+)`").Groups["id"].Value;
+        var handoffId = Regex.Match(structureText, @"handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
 
         Assert.NotEmpty(handoffId);
         var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);

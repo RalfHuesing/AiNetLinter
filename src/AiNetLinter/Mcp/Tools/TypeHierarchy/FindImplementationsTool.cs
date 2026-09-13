@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Mcp.Tools.Common;
@@ -66,8 +67,11 @@ internal static class FindImplementationsTool
                 hint: "symbolIdentifier angeben: z. B. \"IProcessor\", \"IProcessor.Execute\" oder \"BaseClass.Run\".");
         }
 
+        if (!TryRestoreSymbolIdentifier(symbolIdentifier, out var effectiveSymbolIdentifier, out var restoreError))
+            return restoreError!;
+
         var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, symbolIdentifier, ct, state.HandoffSymbolIdentity);
+            solution, effectiveSymbolIdentifier, ct, state.HandoffSymbolIdentity);
         if (error is not null) return error;
 
         var (rawSymbols, errorMessage) = await FindRawImplementationsAsync(resolvedSymbol!, solution, ct);
@@ -91,6 +95,26 @@ internal static class FindImplementationsTool
                 new McpScopeClassifier()),
             ct).ConfigureAwait(false);
         return ApplyResponseBudget(resultDto, request.MaxResponseBytes);
+    }
+
+    private static bool TryRestoreSymbolIdentifier(string raw, out string effectiveSymbolIdentifier, out CallToolResult? error)
+    {
+        error = null;
+        if (HandoffCounterAlphabet.IsValidHandle(raw) || raw.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(raw);
+            if (!restored.IsSuccess)
+            {
+                effectiveSymbolIdentifier = string.Empty;
+                error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
+                return false;
+            }
+            effectiveSymbolIdentifier = restored.Value!;
+            return true;
+        }
+
+        effectiveSymbolIdentifier = raw;
+        return true;
     }
 
     private static async Task<(IReadOnlyList<ISymbol>? Symbols, string? ErrorMessage)> FindRawImplementationsAsync(
@@ -390,7 +414,12 @@ internal static class FindImplementationsTool
                 : $"{item.TypeName}.{item.MemberName}";
             sb.AppendLine($"- [{item.Status}] {symbolLabel} ({item.Kind})");
             sb.AppendLine($"  {item.DisplayLocation}");
-            if (!string.IsNullOrWhiteSpace(item.Id)) sb.AppendLine($"  handoffId: `{item.Id}`");
+            if (!string.IsNullOrWhiteSpace(item.Id))
+            {
+                var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(item.Id);
+                var externalId = result.IsSuccess ? result.Value : item.Id;
+                sb.AppendLine($"  handoffId: `{externalId}`");
+            }
         }
 
         if (dto.IsTruncated)

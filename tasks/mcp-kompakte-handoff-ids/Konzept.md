@@ -230,15 +230,15 @@ Die Umstellung muss vollständig sein. Vor der Implementierung wird per Codeinve
 ### 5.1 Producer
 
 - [x] `find_symbol` (Gruppe 1 migriert)
-- [ ] `get_file_skeleton`
+- [x] `get_file_skeleton` (Gruppe 2 migriert)
 - [x] `get_symbol_body` (Gruppe 1 migriert)
 - [x] `find_references` (Gruppe 1 migriert, CallGraph-Knoten)
 - [ ] `get_call_tree`
 - [ ] `get_impact`
-- [ ] `get_type_hierarchy`
-- [ ] `find_implementations`
+- [x] `get_type_hierarchy` (Gruppe 2 migriert)
+- [x] `find_implementations` (Gruppe 2 migriert)
 - [ ] `dependency_graph`
-- [ ] `get_class_structure`
+- [x] `get_class_structure` (Gruppe 2 migriert)
 - [ ] `metrics_lookup`
 - [ ] `get_feature_context`
 - [ ] `get_test_context`
@@ -263,14 +263,14 @@ Für jeden gefundenen Producer:
 - [ ] `get_call_tree.symbolIdentifier`
 - [ ] `get_impact.symbolIdentifier`
 - [ ] `get_type_hierarchy.symbolIdentifier`
-- [ ] `find_implementations.symbolIdentifier`
+- [x] `find_implementations.symbolIdentifier` (Gruppe 2 migriert)
 - [ ] `dependency_graph.symbolIdentifier`
-- [ ] `get_class_structure.symbolIdentifier`
+- [x] `get_class_structure.symbolIdentifier` (Gruppe 2 migriert)
 - [ ] `get_feature_context.symbolIdentifier`
 - [ ] `get_test_context.symbolIdentifier`
 - [ ] `get_assembly_context.symbolIdentifier`
 - [ ] `find_duplicates.helperSymbol`
-- [ ] `resolve_type_origin.typeName`
+- [x] `resolve_type_origin.typeName` (Gruppe 2 migriert)
 - [ ] alle weiteren öffentlichen Symbol-Eingabefelder
 
 Für jeden gefundenen Consumer:
@@ -393,12 +393,12 @@ Fehlertexte geben keine vollständige interne ID aus. `HANDOFF_UNKNOWN` erklärt
 
 - [x] `find_symbol -> get_symbol_body` (Gruppe 1 Unit & E2E getestet)
 - [x] `find_symbol -> find_references` (Gruppe 1 Unit & Integration getestet)
-- [ ] `find_symbol -> get_type_hierarchy`
+- [x] `find_symbol -> get_type_hierarchy` (Gruppe 2 Unit & Integration getestet)
 - [ ] `find_symbol -> metrics_lookup`
-- [ ] `get_file_skeleton -> get_symbol_body`
+- [x] `get_file_skeleton -> get_symbol_body` (Gruppe 2 Unit & Integration getestet)
 - [ ] `find_references -> get_symbol_body`
 - [ ] Source-Producer -> `find_duplicates.helperSymbol`
-- [ ] Type-Producer -> `resolve_type_origin.typeName`
+- [x] Type-Producer -> `resolve_type_origin.typeName` (Gruppe 2 Unit & Integration getestet)
 - [ ] `inspect_assembly -> get_assembly_context`
 - [ ] Assembly-Referenz-Handoff -> passender Assembly-Consumer
 - [ ] alle fachlich passenden Kombinationen der fertigen Producer-/Consumer-Matrix

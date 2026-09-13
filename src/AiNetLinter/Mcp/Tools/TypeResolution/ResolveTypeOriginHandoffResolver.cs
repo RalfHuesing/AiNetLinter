@@ -23,6 +23,16 @@ internal static class ResolveTypeOriginHandoffResolver
         CancellationToken ct)
     {
         var identifier = McpInputNormalizer.StripEnclosingQuotesAndBackticks(typeName);
+        if (HandoffCounterAlphabet.IsValidHandle(identifier) || identifier.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(identifier);
+            if (!restored.IsSuccess)
+            {
+                return (null, McpToolResults.HandoffError(restored.Error, "$.typeName"));
+            }
+            identifier = restored.Value!;
+        }
+
         if (!SymbolHandoffIdentifier.HasWirePrefix(identifier)) return (null, null);
         if (!SymbolHandoffIdentifier.TryParse(identifier, out var handoff)) return (null, InvalidHandoff());
         if (!handoff.DocumentationCommentId.StartsWith("T:", StringComparison.Ordinal)) return (null, InvalidTypeHandoff());

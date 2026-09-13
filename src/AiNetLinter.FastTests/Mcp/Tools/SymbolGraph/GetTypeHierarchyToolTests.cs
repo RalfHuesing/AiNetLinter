@@ -139,7 +139,7 @@ public sealed class GetTypeHierarchyToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("IGreeting", text, StringComparison.Ordinal);
         Assert.Contains("SpecialGreeting", text, StringComparison.Ordinal);
-        Assert.StartsWith("s:", ExtractHandoffId(text), StringComparison.Ordinal);
+        Assert.StartsWith("h:", ExtractHandoffId(text), StringComparison.Ordinal);
         Assert.DoesNotContain("targetPath", text, StringComparison.Ordinal);
     }
 
@@ -166,7 +166,7 @@ public sealed class GetTypeHierarchyToolTests
 
     private static string ExtractHandoffId(string text)
     {
-        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>s:[^`]+)`", RegexOptions.CultureInvariant);
+        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant);
         return match.Success
             ? match.Groups["id"].Value
             : throw new System.InvalidOperationException("Der Content muss eine kopierbare Typ-Handoff-ID enthalten.");

@@ -38,7 +38,7 @@ public sealed class GetClassStructureAssemblyHandoffTests
         Assert.DoesNotContain("M:Probe.Api.#ctor", structureText, StringComparison.Ordinal);
         var handoffId = Regex.Match(
             structureText,
-            @"\| Method \| Execute \| [^\r\n]*handoffId: `(?<id>a:[^`]+:M:[^`]+)`").Groups["id"].Value;
+            @"\| Method \| Execute \| [^\r\n]*handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
 
         Assert.NotEmpty(handoffId);
         var body = await GetSymbolBodyTool.ExecuteAsync(lease, [handoffId], 80, CancellationToken.None);
