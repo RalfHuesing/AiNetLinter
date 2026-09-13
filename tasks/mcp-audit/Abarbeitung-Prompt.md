@@ -13,6 +13,7 @@ Schätze ein wie komplex die jeweilige Anforderung ist und insbesondere ob es ei
 
 Wenn ich mein Okay gebe startest du einen Subagenten der das Finding umsetzt.
 Idealerweise mit einem initialen Rot-Test.
+Du übergibst dem SubAgenten direkt allen relevanten content den du bereits gesammelt hast damit der subagent nicht nochmal alles raussuchen muss.
 
 Du und auch die SubAgenten beachten .agents\rules\*.mdc.
 
