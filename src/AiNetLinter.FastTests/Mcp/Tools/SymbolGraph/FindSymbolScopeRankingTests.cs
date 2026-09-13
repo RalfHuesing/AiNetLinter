@@ -20,6 +20,21 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 public sealed class FindSymbolScopeRankingTests
 {
     [Fact]
+    public void AssemblyOriginRank_PrefersRootAssemblyBeforeReferences()
+    {
+        var root = new SymbolLocationEntry(
+            "Root.cs", 1, "class", "Target",
+            Origin: new AssemblyNavigationOrigin("decompiled", "root.dll", "root", "Root.cs", "high"));
+        var reference = new SymbolLocationEntry(
+            "Reference.cs", 1, "class", "Target",
+            Origin: new AssemblyNavigationOrigin("decompiled", "reference.dll", "reference", "Reference.cs", "high"));
+
+        Assert.True(
+            AssemblySymbolSearch.GetOriginRank(root, "root.dll")
+            < AssemblySymbolSearch.GetOriginRank(reference, "root.dll"));
+    }
+
+    [Fact]
     public void ValidateScopeType_UnknownValuePointsToScopeField()
     {
         var result = FindSymbolTool.ValidateScopeType("mixed").Error;

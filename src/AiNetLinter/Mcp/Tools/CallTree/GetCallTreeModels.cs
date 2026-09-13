@@ -41,6 +41,7 @@ internal sealed record GetCallTreeInput(
     bool IncludeBcl = false,
     string ScopeType = "all",
     bool IncludeGenerated = false,
+    bool IncludeDiagnostics = false,
     int MaxResponseBytes = GetCallTreeTool.DefaultMaxResponseBytes)
 ;
 

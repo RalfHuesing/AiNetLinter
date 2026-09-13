@@ -141,7 +141,7 @@ internal static class TransitiveCallGraphFormatter
         {
             metadata.Add(request.TreeTruncationMessage);
         }
-        AppendDiagnosticMetadata(metadata, projection);
+        AppendDiagnosticMetadata(metadata, projection, request.IncludeDiagnostics, assemblyContract: true);
         var finalBody = metadata.Count > 0
             ? request.Body + "\n\n" + string.Join("\n", metadata)
             : request.Body;
@@ -200,7 +200,7 @@ internal static class TransitiveCallGraphFormatter
             metadata.Add(
                 $"[Graph trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht]");
         }
-        AppendDiagnosticMetadata(metadata, projection);
+        AppendDiagnosticMetadata(metadata, projection, request.IncludeDiagnostics, assemblyContract: true);
         if (metadata.Count == 0) return result;
 
         var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
@@ -287,16 +287,29 @@ internal static class TransitiveCallGraphFormatter
 
     private static void AppendDiagnosticMetadata(
         List<string> lines,
-        DiagnosticProjection projection)
+        DiagnosticProjection projection,
+        bool includeSamples = true,
+        bool assemblyContract = false)
     {
-        lines.AddRange(projection.Samples.Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}"));
-        if (projection.TotalCount == 0) return;
+        if (includeSamples)
+        {
+            lines.AddRange(projection.Samples.Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}"));
+        }
 
         var truncatedBy = projection.TruncatedBy.Count == 0
             ? "keine"
             : string.Join(", ", projection.TruncatedBy);
-        lines.Add($"[{projection.TotalCount} Diagnosen gesamt, " +
-            $"{projection.Samples.Count} Samples gezeigt — gekürzt: {truncatedBy}]");
+        if (!assemblyContract)
+        {
+            if (projection.TotalCount == 0) return;
+            lines.Add($"[{projection.TotalCount} Diagnosen gesamt, " +
+                $"{projection.Samples.Count} Samples gezeigt — gekürzt: {truncatedBy}]");
+            return;
+        }
+
+        var shown = includeSamples ? projection.Samples.Count : 0;
+        lines.Add($"[diagnosticsCount={projection.TotalCount}; diagnosticsSamplesShown={shown}; " +
+            $"diagnosticsTruncated={projection.Truncated.ToString().ToLowerInvariant()}; truncatedBy={truncatedBy}]");
     }
 
     private static string CreateMaxResultsMessage(TraversalCompleteness completeness)
@@ -329,7 +342,8 @@ internal sealed record AssemblyCallTreeResponseRequest(
     string? TreeTruncationMessage,
     int RequestedDepth = 1,
     int EffectiveDepth = 1,
-    bool DepthWasClamped = false);
+    bool DepthWasClamped = false,
+    bool IncludeDiagnostics = false);
 
 internal sealed record AssemblyCallGraphResponseRequest(
     CallGraphPayload Graph,
@@ -344,7 +358,8 @@ internal sealed record AssemblyCallGraphResponseRequest(
     int TopN,
     McpScopeType ScopeType,
     bool IncludeGenerated,
-    int MaxResponseBytes);
+    int MaxResponseBytes,
+    bool IncludeDiagnostics = false);
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,

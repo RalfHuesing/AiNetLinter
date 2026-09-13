@@ -50,7 +50,8 @@ internal static class AssemblySymbolSearch
 
         var distinct = entries
             .DistinctBy(EntryKey, StringComparer.Ordinal)
-            .OrderBy(entry => GetMatchRank(entry, request.NamePattern))
+            .OrderBy(entry => GetOriginRank(entry, request.Root.CanonicalPath))
+            .ThenBy(entry => GetMatchRank(entry, request.NamePattern))
             .ThenBy(entry => entry.Origin?.CanonicalPath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Line)
@@ -153,6 +154,11 @@ internal static class AssemblySymbolSearch
 
     private static string EntryKey(SymbolLocationEntry entry) =>
         $"{entry.Origin?.ContentHash}|{entry.FilePath}|{entry.Line}|{entry.Kind}|{entry.Name}";
+
+    internal static int GetOriginRank(SymbolLocationEntry entry, string rootCanonicalPath) =>
+        string.Equals(entry.Origin?.CanonicalPath, rootCanonicalPath, StringComparison.OrdinalIgnoreCase)
+            ? 0
+            : 1;
 
     private static int GetMatchRank(SymbolLocationEntry entry, string pattern)
     {

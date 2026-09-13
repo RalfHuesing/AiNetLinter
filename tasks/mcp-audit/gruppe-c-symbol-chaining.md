@@ -16,67 +16,11 @@
   - CHAIN-03 (`LOCAL-01`): Hierarchie-Basis ohne konsumierbare `h:…` — **Bruch**
   - CHAIN-04 (`LOCAL-01`): `inspect_assembly` → `search_assembly` → `get_symbol_body` — **Bruch** (Direktpfad `inspect_assembly`-`h:…` → `get_symbol_body` funktioniert)
 - **FALSE-01:** recoverable `INVALID_ASSEMBLY`, kein Crash
-- **Gefundene Befunde:** 0 Critical, 5 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 2 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-06: `includeReferences=true` verdrängt das Assembly-Target durch Referenztreffer
-
-- **Betroffenes Tool / Schema**: `find_symbol` (Parameter: `includeReferences`, `maxResults`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `find_symbol(targetPath=<LOCAL-01>, pattern=<Prefix>, maxResults=8, includeReferences=true|false)`
-- **Beobachtung / Ist-Verhalten**:
-  - Ohne Flag: Snapshot-Banner, Treffer im Target, `Assembly-Scope: requestedIncludeReferences=false; effectiveSearchMode=root_only; leaseStatus=complete` — Scope klar.
-  - Mit Flag: `effectiveSearchMode=bounded_reference_closure; assembliesSearched=16; resultsTruncated=true; scopeCompleteness=partial`. Die **ersten** `maxResults` Treffer stammen durchweg aus Referenz-/BCL-Assemblies, **kein** Target-Treffer in der sichtbaren Seite.
-  - Scope-Felder sind vorhanden (TC-C02 teilweise erfüllt), das Ranking macht den effektiven Suchmodus für den Agenten trotzdem unbrauchbar.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Target-Treffer zuerst oder separates `targetHits`/`referenceHits`. Sonst wirkt `includeReferences` wie „Target verschwunden“.
-- **Empfehlung**:
-  - Target-first-Ranking, Quota-Split, oder Pflichtfeld `originAssembly` plus Filterdefault „root then references“.
-
-### [Major] C-07: Widersprüchliche Completeness-Signale im Assembly-Modus
-
-- **Betroffenes Tool / Schema**: Assembly-Envelope / `Assembly-Scope` (sichtbar u. a. in `find_symbol`, `get_symbol_body`, `find_references`, `get_call_tree`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: semantische Tools mit `targetPath=<LOCAL-01>`
-- **Beobachtung / Ist-Verhalten**:
-  - Kopfzeile: `snapshotStatus=partial; snapshotCompleteness=partial; bodyAvailability=available`.
-  - Fußblock oft parallel: `leaseStatus=complete; scopeCompleteness=complete` (oder `partial` bei Call-Tree/Referenzsuche).
-  - Ein Agent kann nicht maschinell entscheiden, ob der Snapshot vertrauenswürdig vollständig ist.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Eine kanonische Completeness-Achse (Snapshot vs. Lease vs. Suchscope) mit klarer Semantik. Widerspruch ist irreführend, kein Target-Qualitätsurteil.
-- **Empfehlung**:
-  - Ein Feld `completeness` plus getrennte, gleich benannte Teildimensionen; `partial` nur wenn die **aktuelle** Operation unvollständig ist.
-
-### [Major] C-08: Assembly-Hierarchie kennzeichnet Basistypen als `error:` ohne Handoff
-
-- **Betroffenes Tool / Schema**: `get_type_hierarchy` → `resolve_type_origin` (Parameter: `typeName`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf / Kette**: `get_type_hierarchy(targetPath=<LOCAL-01>, symbolIdentifier=<h:Klasse>)` → Basis an `resolve_type_origin(typeName=…)`
-- **Beobachtung / Ist-Verhalten**:
-  - Basisklasse erscheint als `error: MyNamespace.MyBase (extern, keine Datei im Repo)` **ohne** `h:…`.
-  - Unveränderte Übergabe dieses Anzeigetextes: `SYMBOL_NOT_FOUND` für `error: MyNamespace.MyBase`.
-  - Auch der gestrippte Kurzname ist nicht auflösbar (fehlende Referenzassembly — das Fehlen selbst ist **kein** Befund).
-  - Dieselbe Kette auf `SOURCE-01` mit Interface-`h:…` funktioniert; `Namespace.Type` bleibt konsistent.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - CHAIN-03 verlangt durchreichbare Qualifikation. Das `error:`-Präfix erzwingt String-Manipulation und ist keine recoverable Typ-Diagnose mit `h:…` oder `origin=external`.
-- **Empfehlung**:
-  - Externe Basistypen als `origin=external` mit `h:…` oder stabilem FQ-Namen **ohne** Fehlerpräfix; `resolve_type_origin` soll denselben Identifier akzeptieren und `unresolved` strukturiert melden.
-
-### [Minor] C-10: Assembly-Call-Tree mischt nutzbaren Graph mit Diagnose-Rauschen
-
-- **Betroffenes Tool / Schema**: `get_call_tree` (Assembly-Modus)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `get_call_tree(targetPath=<LOCAL-01>, symbolIdentifier=<h:Methode>, direction=incoming)`
-- **Beobachtung / Ist-Verhalten**:
-  - Graph und Knoten-`h:…` sind hierarchisch und kettenfähig (TC-C08 fachlich ok).
-  - Anschließend Dutzende Decompiler-/Referenz-Diagnosen (u. a. fehlende Fremdnamespaces), obwohl `resultsTruncated=false` und der Graph klein ist.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Diagnosen gehören hinter ein Flag oder in `get_server_health(includeDiagnostics)`. Default-Antwort sollte den Graphen nicht mit Target-fremden Compilerfehlern überdecken.
-- **Empfehlung**:
-  - Default: Graph + `diagnosticsCount`; Samples nur bei `includeDiagnostics=true`.
 
 ---
 

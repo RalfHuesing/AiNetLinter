@@ -176,7 +176,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = GetCallTreeTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, string scopeType = "all", bool includeGenerated = false, bool includeDiagnostics = false, int maxResponseBytes = GetCallTreeTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -187,11 +187,11 @@ internal static class SymbolGraphToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, MaxResponseBytes: maxResponseBytes), ct),
+                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, IncludeDiagnostics: includeDiagnostics, MaxResponseBytes: maxResponseBytes), ct),
                             AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                                 lease,
                                 new AssemblyGetCallTreeRequest(
-                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, MaxResponseBytes: maxResponseBytes),
+                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, IncludeDiagnostics: includeDiagnostics, MaxResponseBytes: maxResponseBytes),
                                     includeReferences),
                                 ct),
                             MaxResponseBytes: maxResponseBytes,
@@ -212,6 +212,7 @@ internal static class SymbolGraphToolRegistrations
         "Jeder navigierbare Graph-Knoten enthält h:… für direkte Folgeparameter; incoming zeigt nur echte Aufrufe, keine Override-Deklarationen. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "includeBcl: Framework-Symbole bei outgoing (Default false). " +
+        "includeDiagnostics: Assembly-Diagnosesamples ausgeben (Default false; diagnosticsCount bleibt sichtbar). " +
         "includeReferences (Default false): bei Assemblies Referenzen einbeziehen. " +
         "maxResponseBytes (Default 32768, Maximum 65536).";
 

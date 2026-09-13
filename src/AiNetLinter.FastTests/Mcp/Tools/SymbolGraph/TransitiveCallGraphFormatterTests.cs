@@ -107,7 +107,7 @@ public sealed class TransitiveCallGraphFormatterTests
     }
 
     [Fact]
-    public void FormatAssemblyCallTreeResponse_RendersProjectedNavigationMetadata()
+    public void FormatAssemblyCallTreeResponse_HidesSamplesByDefaultButKeepsDiagnosticCount()
     {
         var diagnostics = new[]
         {
@@ -131,8 +131,22 @@ public sealed class TransitiveCallGraphFormatterTests
                 TreeTruncationMessage: null));
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("[Assembly-Diagnostic] diagnostic-5", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("diagnostic-6", text, StringComparison.Ordinal);
-        Assert.Contains("[6 Diagnosen gesamt, 5 Samples gezeigt — gekürzt: maxDiagnostics]", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[Assembly-Diagnostic]", text, StringComparison.Ordinal);
+        Assert.Contains("diagnosticsCount=6; diagnosticsSamplesShown=0; diagnosticsTruncated=true; truncatedBy=maxDiagnostics", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatAssemblyCallTreeResponse_EmitsBoundedSamplesWhenRequested()
+    {
+        var result = TransitiveCallGraphFormatter.FormatAssemblyCallTreeResponse(
+            new AssemblyCallTreeResponseRequest(
+                new MetricsTreeNode("Root", string.Empty, 0, 0, "Root", []),
+                "Root — Root",
+                new AssemblyNavigationSummary(true, 1, 1, false, "partial", ["diagnostic-1"]),
+                ["diagnostic-1"], false, false, null, IncludeDiagnostics: true));
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("[Assembly-Diagnostic] diagnostic-1", text, StringComparison.Ordinal);
+        Assert.Contains("diagnosticsCount=1; diagnosticsSamplesShown=1", text, StringComparison.Ordinal);
     }
 }

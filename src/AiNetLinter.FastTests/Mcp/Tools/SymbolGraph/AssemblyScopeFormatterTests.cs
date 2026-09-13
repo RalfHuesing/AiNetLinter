@@ -37,9 +37,10 @@ public sealed class AssemblyScopeFormatterTests
 
         Assert.Contains("requestedIncludeReferences=true", text, StringComparison.Ordinal);
         Assert.Contains("effectiveSearchMode=bounded_reference_closure", text, StringComparison.Ordinal);
-        Assert.Contains("leaseStatus=partial", text, StringComparison.Ordinal);
+        Assert.Contains("completeness=partial", text, StringComparison.Ordinal);
+        Assert.Contains("leaseCompleteness=partial", text, StringComparison.Ordinal);
         Assert.Contains("assembliesSearched=1; assembliesTotal=2; assembliesTruncated=true", text, StringComparison.Ordinal);
-        Assert.Contains("scopeCompleteness=partial; resultsTruncated=true; diagnostics=1/4; diagnosticsTruncated=true", text, StringComparison.Ordinal);
+        Assert.Contains("operationCompleteness=partial; resultsTruncated=true; diagnostics=1/4; diagnosticsTruncated=true", text, StringComparison.Ordinal);
         Assert.Contains("assemblyName=Target.dll; targetToken=target-token; contentToken=content-token", text, StringComparison.Ordinal);
         Assert.DoesNotContain("C:\\", text, StringComparison.Ordinal);
     }
@@ -62,5 +63,18 @@ public sealed class AssemblyScopeFormatterTests
         Assert.Contains("Assembly-Scope:", text, StringComparison.Ordinal);
         Assert.Contains("requestedIncludeReferences=false", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Assembly-Suche:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Append_UsesPartialCanonicalCompletenessWhenSnapshotIsPartial()
+    {
+        var result = AssemblyScopeFormatter.Append(
+            McpToolResults.Text("[ASSEMBLY] snapshotCompleteness=partial\n\nbody"),
+            new AssemblyNavigationSummary(false, 1, 1, false, "complete", []));
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("completeness=partial", text, StringComparison.Ordinal);
+        Assert.Contains("operationCompleteness=complete", text, StringComparison.Ordinal);
+        Assert.Contains("leaseCompleteness=complete", text, StringComparison.Ordinal);
     }
 }

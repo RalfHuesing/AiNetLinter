@@ -143,6 +143,7 @@ internal static class AssemblyGetCallTreeTool
                 input.TopN < 1 ? 1 : input.TopN,
                 FindSymbolTool.ValidateScopeType(input.ScopeType).ScopeType,
                 input.IncludeGenerated,
-                input.MaxResponseBytes));
+                input.MaxResponseBytes,
+                input.IncludeDiagnostics));
     }
 }

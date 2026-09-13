@@ -99,6 +99,26 @@ public sealed class SymbolGraphToolRegistrationsTests
     }
 
     [Fact]
+    public void GetCallTreeSchema_AdvertisesOptionalDiagnosticsSamples()
+    {
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
+
+        var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == "get_call_tree").ProtocolTool;
+        var properties = tool.InputSchema.GetProperty("properties");
+
+        Assert.True(properties.TryGetProperty("includeDiagnostics", out var includeDiagnostics));
+        Assert.Equal("boolean", includeDiagnostics.GetProperty("type").GetString());
+        Assert.Contains("includeDiagnostics", tool.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolDescriptions_FindReferencesAndGetImpact_MentionNodeHardCap()
     {
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();
