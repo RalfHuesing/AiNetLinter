@@ -69,7 +69,7 @@ internal static class AssemblyAnalysisToolSupport
                     StringComparison.Ordinal)
                 ? McpToolResults.InvalidAssembly(message, fullPath)
                 : McpToolResults.RecoverableWorkspaceDiagnostic(message, context: fullPath);
-            return new(fullPath, null, result);
+            return new(fullPath, null, AssemblyPublicContract.Project(result));
         }
 
         return new(fullPath, context, null);

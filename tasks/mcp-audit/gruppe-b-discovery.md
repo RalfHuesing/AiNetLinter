@@ -10,26 +10,11 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 5 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 4 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] B-02: Assembly-Antworten leaken volle Systempfade
-
-- **Betroffenes Tool / Schema**: `inspect_assembly` (Felder: Envelope-`targetPath`, `Pfad`, Referenzpfade); gleiches Envelope auch bei `get_file_tree`, `get_namespace_tree`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`; Fehlerfeld `context` bei `inspect_assembly` auf `FALSE-01`
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly); Stichprobe `LOCAL-03`; Negativfall `FALSE-01`
-- **Konkreter Aufruf**: `inspect_assembly(targetPath="<LOCAL-01>", detailLevel="compact", publicOnly=true)` / `inspect_assembly(targetPath="<FALSE-01>")`
-- **Beobachtung / Ist-Verhalten**:
-  - Assembly-Präfix enthält den ungekürzten absoluten `targetPath`.
-  - `inspect_assembly` wiederholt denselben Installationspfad als `Pfad:` und listet aufgelöste Referenzassemblies mit vollen Dateisystempfaden (Zielordner und Runtime-Ordner).
-  - `find_assembly_extensions` spiegelt Diagnosen mit vollen Prüfpfaden, obwohl die Treffermenge `0 von 0` ist.
-  - `FALSE-01`: strukturiertes `INVALID_ASSEMBLY`, aber `context` trägt den vollen Systempfad der Datei.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Datensparsamkeit: Agenten und Logs dürfen keine Installations- oder Runtime-Pfade Dritter persistieren. Labels bzw. Dateiname ohne Verzeichnis reichen zur Identifikation.
-- **Empfehlung**:
-  - Envelope auf Dateiname/Label kürzen; Referenzzeilen nur Assembly-Identität + Auflösungsstatus; Fehler-`context` ohne Verzeichniskette.
 
 ### [Major] B-03: `inspect_assembly` meldet Budget-Untergrenze als `INVALID_ARGUMENT`
 

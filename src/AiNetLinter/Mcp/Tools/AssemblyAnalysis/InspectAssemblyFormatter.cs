@@ -46,7 +46,7 @@ internal static class InspectAssemblyFormatter
     private static void AppendHeader(StringBuilder builder, InspectAssemblyPayload payload)
     {
         builder.AppendLine($"Assembly: `{payload.Identity?.Name ?? "unbekannt"}`");
-        builder.AppendLine($"Pfad: `{payload.AssemblyPath}`");
+        AppendDecompileRoot(builder, payload.DecompiledSourceRoot);
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         if (payload.Origin is { } origin)
         {
@@ -70,6 +70,14 @@ internal static class InspectAssemblyFormatter
         foreach (var namespaceName in namespaces) builder.AppendLine($"- `{namespaceName}`");
     }
 
+    private static void AppendDecompileRoot(StringBuilder builder, string? decompiledSourceRoot)
+    {
+        if (!string.IsNullOrWhiteSpace(decompiledSourceRoot))
+        {
+            builder.AppendLine($"decompileRoot: `{decompiledSourceRoot}` (lokal lesbar; generiert; sessiongebunden)");
+        }
+    }
+
     private static void AppendReferences(
         StringBuilder builder,
         IReadOnlyList<AssemblyReferenceDto> references,
@@ -85,9 +93,8 @@ internal static class InspectAssemblyFormatter
         }
         foreach (var reference in references)
         {
-            var path = reference.ResolvedPath is null ? string.Empty : $", Pfad `{reference.ResolvedPath}`";
             var diagnostic = string.IsNullOrWhiteSpace(reference.Diagnostic) ? string.Empty : $": {reference.Diagnostic}";
-            builder.AppendLine($"- {reference.Name}, Version {reference.Version} (Tiefe {reference.Depth}, Zustand {reference.ResolutionState}, {(reference.Resolved ? "aufgelöst" : "nicht aufgelöst")}{path}{diagnostic})");
+            builder.AppendLine($"- {reference.Name}, Version {reference.Version} (Tiefe {reference.Depth}, Zustand {reference.ResolutionState}, {(reference.Resolved ? "aufgelöst" : "nicht aufgelöst")}{diagnostic})");
         }
 
         builder.AppendLine();
@@ -113,7 +120,7 @@ internal static class InspectAssemblyFormatter
                 ? string.Empty
                 : $": {string.Join(" | ", session.Diagnostics)}";
             builder.AppendLine(
-                $"- {identity} (Tiefe {session.Reference.Depth}, Zustand {session.Reference.ResolutionState}, Session {session.SessionStatus}, Vollständigkeit {session.Completeness}, Pfad `{session.AssemblyPath}`{diagnostic})");
+                $"- {identity} (Tiefe {session.Reference.Depth}, Zustand {session.Reference.ResolutionState}, Session {session.SessionStatus}, Vollständigkeit {session.Completeness}{diagnostic})");
         }
 
         builder.AppendLine();

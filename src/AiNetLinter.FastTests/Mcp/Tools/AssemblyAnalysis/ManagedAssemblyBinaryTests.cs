@@ -60,6 +60,8 @@ public sealed class ManagedAssemblyBinaryTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains(LinterErrorCodes.InvalidAssembly, text, StringComparison.Ordinal);
         Assert.Contains(".dll oder .exe mit IL", text, StringComparison.Ordinal);
+        Assert.Contains(Path.GetFileName(nativeAssemblyPath), text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Path.GetDirectoryName(nativeAssemblyPath)!, text, StringComparison.OrdinalIgnoreCase);
     }
 
 }

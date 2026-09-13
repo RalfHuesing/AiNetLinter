@@ -12,6 +12,24 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 public sealed class AssemblySearchDeclarationFilterTests
 {
     [Fact]
+    public void Scan_NestedFile_UsesCompletePathRelativeToRoot()
+    {
+        using var temp = TestTempDirectory.Create("assembly-search-relative-path-");
+        var nestedDirectory = Path.Combine(temp.DirectoryPath, "Api", "Contracts");
+        Directory.CreateDirectory(nestedDirectory);
+        File.WriteAllText(Path.Combine(nestedDirectory, "Order.cs"), "public sealed class OrderContract { }");
+
+        var payload = AssemblySearchTool.Scan(
+            temp.DirectoryPath,
+            new AssemblySearchArguments("OrderContract", false, "text", 50, 10, 0, 0, null, null),
+            CancellationToken.None);
+
+        var match = Assert.Single(payload.Results);
+        Assert.Equal("Api/Contracts/Order.cs", match.FilePath);
+        Assert.True(File.Exists(Path.Combine(temp.DirectoryPath, match.FilePath)));
+    }
+
+    [Fact]
     public void DeclarationOnly_ExcludesCommentsDocStringsAndCalls()
     {
         using var temp = TestTempDirectory.Create("decl-filter-");

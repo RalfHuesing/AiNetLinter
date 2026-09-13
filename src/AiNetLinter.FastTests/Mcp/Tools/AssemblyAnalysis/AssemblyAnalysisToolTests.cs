@@ -243,7 +243,9 @@ public sealed partial class AssemblyAnalysisToolTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
         Assert.Contains("ConsumerDependency", text, StringComparison.Ordinal);
-        Assert.Contains($"Pfad `{Path.GetFullPath(dependencyPath)}`", text, StringComparison.Ordinal);
+        Assert.Contains("decompileRoot: `", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(Path.GetFullPath(assemblyPath), text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Path.GetFullPath(dependencyPath), text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

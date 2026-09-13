@@ -65,7 +65,6 @@ internal static partial class AssemblyAnalysisResponse
                 .Concat(lease.ReferenceExpansionDiagnostics)
                 .ToArray());
         var metadata = new AssemblyResponseMetadata(
-            lease.CanonicalPath,
             origin.OriginKind,
             origin.ContentHash,
             origin.Confidence,
@@ -111,13 +110,12 @@ internal static partial class AssemblyAnalysisResponse
     }
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
-        $"[ASSEMBLY] targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
+        $"[ASSEMBLY] origin={metadata.Origin}; " +
         $"confidence={metadata.Confidence}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
         $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
 
     private sealed record AssemblyResponseMetadata(
-        string TargetPath,
         string Origin,
         string AssemblyHash,
         string Confidence,

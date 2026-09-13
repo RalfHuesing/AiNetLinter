@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AiNetLinter.Mcp;
@@ -14,6 +15,9 @@ internal static partial class AssemblyPublicContract
 {
     [GeneratedRegex("(?i)(?<=— `)(?:[A-Z]:[\\\\/]|\\\\\\\\|/)[^`]+(?=`)")]
     private static partial Regex BodyLocationPathRegex();
+
+    [GeneratedRegex("(?i)(?:[A-Z]:[\\\\/]|\\\\\\\\|/)(?:[^\\\\/\\s`]+[\\\\/])+[^\\\\/\\s`]+")]
+    private static partial Regex AbsolutePathRegex();
 
     internal static CallToolResult Project(CallToolResult result)
     {
@@ -37,10 +41,17 @@ internal static partial class AssemblyPublicContract
             .Where(line => !line.Contains("Pfade: decompiledProject", StringComparison.OrdinalIgnoreCase))
             .Where(line => !line.TrimStart().StartsWith("- Generation:", StringComparison.OrdinalIgnoreCase))
             .Where(line => !line.TrimStart().StartsWith("- GeneratedPath:", StringComparison.OrdinalIgnoreCase))
-            .Select(line => line
+            .Select(line => SanitizeLine(line
                 .Replace("generatedPath=", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace("generation=", string.Empty, StringComparison.OrdinalIgnoreCase));
-        return BodyLocationPathRegex().Replace(string.Join('\n', lines), "<decompiled-source>");
+                .Replace("generation=", string.Empty, StringComparison.OrdinalIgnoreCase)));
+        return string.Join('\n', lines);
+    }
+
+    private static string SanitizeLine(string line)
+    {
+        if (line.TrimStart().StartsWith("decompileRoot:", StringComparison.Ordinal)) return line;
+        var withoutBodyLocation = BodyLocationPathRegex().Replace(line, "<decompiled-source>");
+        return AbsolutePathRegex().Replace(withoutBodyLocation, match => Path.GetFileName(match.Value));
     }
 
 }

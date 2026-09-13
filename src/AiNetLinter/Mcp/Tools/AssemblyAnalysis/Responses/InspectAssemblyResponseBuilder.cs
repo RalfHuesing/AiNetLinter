@@ -17,8 +17,8 @@ internal static class InspectAssemblyResponseBuilder
     {
         var payload = BuildPayload(request);
         payload = ApplyResponseBudget(payload, request);
-        return McpToolResults.Text(
-            InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly));
+        return AssemblyPublicContract.Project(McpToolResults.Text(
+            InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly)));
     }
 
     /// <summary>

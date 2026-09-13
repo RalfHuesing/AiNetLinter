@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **22 Befunde:** 1 Critical, 16 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **21 Befunde:** 1 Critical, 15 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -40,7 +40,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Major | C-05 | `get_call_tree` | Keine Node-Handoffs; Incoming vermischt Overrides als Calls | Baum nicht kettenfähig, semantisch irreführend | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-04 | `get_impact` | Keine Risiko-Stufe; Projektliste unvollständig (Host fehlt) | Unterschätzung der Produktionswirkung | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-06 | `find_symbol`, `find_references`, `get_symbol_body` | Assembly: `partial` vs. Body-`complete`; `includeReferences` ohne Scope-Objekt | Lease/„keine Treffer“/Cap nicht unterscheidbar | [C](gruppe-c-symbol-chaining.md) |
-| Major | B-02 | `inspect_assembly` u. a. | Volle Systempfade in Envelope, Referenzen, Fehler-`context` | IP-/Pfadleak in Agent-Logs | [B](gruppe-b-discovery.md) |
 | Major | B-04 | `get_assembly_context` | Übersicht ohne Identität, TFM, Verweise (`48 von 48` leer) | Composite-Einstieg unbrauchbar | [B](gruppe-b-discovery.md) |
 | Major | B-05 | `get_assembly_context` | `includeMetrics` → Solution-`NOT_CONFIGURED` | Irreführender Rules-Hint am Assembly-Target | [B](gruppe-b-discovery.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
@@ -57,7 +56,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 1. **E-01** — leere Erfolgs-Hülle von `get_class_structure` (einziger Critical).
 2. **Einheitlicher Budget-Vertrag** — B-03/E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
 3. **Handoff schließen** — C-01, C-03/B-06, C-02/E-04 (Member-, Search- und Origin-IDs).
-4. **Pfad-Redaktion** — B-02.
 
 ---
 
@@ -81,7 +79,7 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 ## 4. Referenzierte Teilberichte der Subagenten
 
 - [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 0 / 0
-- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 5 / 0
+- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 4 / 0
 - [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 6 / 1
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
 - [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 3 / 2
