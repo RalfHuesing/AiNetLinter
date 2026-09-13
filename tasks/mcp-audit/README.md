@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **9 Befunde:** 0 Critical, 4 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **11 Befunde:** 0 Critical, 5 Major, 6 Minor. Kein Server-Crash.
 
 ---
 
@@ -26,10 +26,12 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Priorität | ID | Tool(s) | Kurzbeschreibung des Befunds | Wirkung auf konsumierende Agenten | Bericht |
 |---|---|---|---|---|---|
 | Major | E-03 | `find_symbol`, `get_class_structure`, `inspect_assembly` | `maxResponseBytes=500` trifft Tool-spezifische Floors (512 vs. 2048 vs. akzeptieren) | Kanonischer 500-Byte-Probe nicht ausführbar | [E](gruppe-e-konsistenz-recovery.md) |
+| Major | C-06 | `find_symbol` | `Assembly-Scope` meldet 100/100 Diagnosen, zeigt aber nur 5 | Agent hält gekürzte Diagnosen fälschlich für vollständig | [C](gruppe-c-symbol-chaining.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | E-05 | `find_dead_code` | Ungültiges `kind`/`accessibility` ohne Werteliste | Agent muss Enum raten | [E](gruppe-e-konsistenz-recovery.md) |
 | Minor | C-07 | `find_references`, `get_feature_context`, `get_test_context` | Call-Sites/Tests ohne eigene Handoff-IDs; 0/29 Evidenzzeilen | Vertiefen in Caller braucht Parsing | [C](gruppe-c-symbol-chaining.md) |
+| Minor | C-08 | `find_symbol`, `find_references` | Reference-Closure listet Framework-Identitäten vor Suchergebnis | Relevante Evidenz geht im Antwortbudget unter | [C](gruppe-c-symbol-chaining.md) |
 | Minor | D-03 | `metrics_lookup`, `dependency_graph`, `search_pattern` | Schema-`required` nur `targetPath`, Runtime verlangt weitere Felder | Extra-Roundtrip nach Schema-first | [D](gruppe-d-qualitaet-metriken.md) |
 | Minor | D-04 | `pattern_detect` | Vollständiger Lauf als `partiell` wegen `not_configured`; kein Schema-`enum` | Agent erhöht Limits statt Regeln zu setzen | [D](gruppe-d-qualitaet-metriken.md) |
 | Minor | E-06 | mehrere | `scope` / `scopeDir` / `scopeFilter` / `root` und `includeTests` vs. `scopeType` undokumentiert | Copy-Paste-Parameter scheitern | [E](gruppe-e-konsistenz-recovery.md) |
@@ -38,6 +40,7 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 ### Empfohlene Bearbeitungsreihenfolge (Produkt)
 
 1. **Einheitlicher Budget-Vertrag** — E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
+2. **Konsistente Scope-Projektion** — C-06 (sichtbare und gemeldete Diagnosemenge müssen übereinstimmen).
 ---
 
 ## 3. Positiv bestätigte Eigenschaften
@@ -60,6 +63,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 
 - [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 0 / 0
 - [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 0 / 0
-- [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 0 / 1
+- [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 1 / 2
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
 - [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 0 / 2 / 2
