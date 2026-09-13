@@ -119,7 +119,7 @@ internal static partial class AssemblyAnalysisResponse
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
         $"[ASSEMBLY] origin={metadata.Origin}; " +
         $"confidence={metadata.Confidence}; " +
-        $"status={metadata.Status}; completeness={metadata.Completeness}; " +
+        $"snapshotStatus={metadata.Status}; snapshotCompleteness={metadata.Completeness}; " +
         $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
 
     private sealed record AssemblyResponseMetadata(

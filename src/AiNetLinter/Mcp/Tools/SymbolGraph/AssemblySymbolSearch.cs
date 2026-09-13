@@ -64,12 +64,10 @@ internal static class AssemblySymbolSearch
 
         return new(
             shown,
-            AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
-                leaseSet.TotalAssemblyCount,
-                searched,
-                leaseSet.AssembliesTruncated,
-                diagnostics,
-                ResultsTruncated: distinct.Count > shown.Count)),
+            AssemblySearchRouting.CreateSummary(
+                leaseSet,
+                AssemblySearchPlan.Create(null, includeReferences: true),
+                new(searched, diagnostics, ResultsTruncated: distinct.Count > shown.Count)),
             distinct.Count,
             shown.Count,
             distinct.Count > shown.Count,

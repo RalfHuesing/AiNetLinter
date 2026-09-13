@@ -3,8 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Handoffs;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -48,6 +50,21 @@ internal static class AssemblyNavigationSupport
             EffectiveSearchMode: request.EffectiveSearchMode);
     }
 
+    internal static IReadOnlyList<AssemblyScopeIdentity> CreateScopeIdentities(
+        IReadOnlyList<AssemblyAnalysisLease> leases) =>
+        leases
+            .Select(AssemblyNavigationLeaseAccess.CreateView)
+            .Select(view => new AssemblyScopeIdentity(
+                Path.GetFileName(view.CanonicalPath),
+                SymbolHandoffToken.TryCreateTarget(view.Identity.CanonicalPath, out var targetToken)
+                    ? targetToken
+                    : null,
+                SymbolHandoffToken.TryCreateContent(view.Identity.ContentHash, out var contentToken)
+                    ? contentToken
+                    : null))
+            .Distinct()
+            .ToList();
+
     internal static AssemblyNavigationSummary MergeSummaries(
         AssemblyNavigationSummary first,
         AssemblyNavigationSummary second)
@@ -60,20 +77,31 @@ internal static class AssemblyNavigationSupport
             Math.Max(first.TotalAssemblyCount, second.TotalAssemblyCount),
             Math.Max(first.SearchedAssemblyCount, second.SearchedAssemblyCount),
             assembliesTruncated,
-            !assembliesTruncated
-                && !resultsTruncated
-                && string.Equals(first.Completeness, "complete", StringComparison.Ordinal)
-                && string.Equals(second.Completeness, "complete", StringComparison.Ordinal)
-                && diagnostics.Count == 0
-                ? "complete"
-                : "partial",
+            IsComplete(first, second, assembliesTruncated, resultsTruncated, diagnostics)
+                ? "complete" : "partial",
             diagnostics,
             ResultsTruncated: resultsTruncated,
             RequestedIncludeReferences: first.RequestedIncludeReferences || second.RequestedIncludeReferences,
             EffectiveSearchMode: first.EffectiveSearchMode == second.EffectiveSearchMode
                 ? first.EffectiveSearchMode
-                : "bounded_reference_closure");
+                : "bounded_reference_closure",
+            ScopeIdentities: (first.ScopeIdentities ?? [])
+                .Concat(second.ScopeIdentities ?? [])
+                .Distinct()
+                .ToList());
     }
+
+    private static bool IsComplete(
+        AssemblyNavigationSummary first,
+        AssemblyNavigationSummary second,
+        bool assembliesTruncated,
+        bool resultsTruncated,
+        IReadOnlyList<string> diagnostics) =>
+        !assembliesTruncated
+        && !resultsTruncated
+        && string.Equals(first.Completeness, "complete", StringComparison.Ordinal)
+        && string.Equals(second.Completeness, "complete", StringComparison.Ordinal)
+        && diagnostics.Count == 0;
 
     internal static IReadOnlyList<string> DistinctDiagnostics(IEnumerable<string> diagnostics) =>
         diagnostics

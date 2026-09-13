@@ -12,10 +12,10 @@
 
 - [x] **Gruppe A: Health, Handshake & Runtime-Config** (Tools 1–3) -> Bericht: [gruppe-a-health-handshake.md](gruppe-a-health-handshake.md) — 0 Critical, 0 Major, 0 Minor; TC-A04 ohne Befund
 - [x] **Gruppe B: Discovery, Scope & Assembly-Inspektion** (Tools 4–10) -> Bericht: [gruppe-b-discovery.md](gruppe-b-discovery.md) — 0 Critical, 0 Major, 0 Minor
-- [x] **Gruppe C: Semantische Symbol-Tools & Chaining-Ketten** (Tools 11–22) -> Bericht: [gruppe-c-symbol-chaining.md](gruppe-c-symbol-chaining.md) — 0 Critical, 1 Major, 1 Minor (C-06–C-07); CHAIN-01 bis CHAIN-04 durchgängig
+- [x] **Gruppe C: Semantische Symbol-Tools & Chaining-Ketten** (Tools 11–22) -> Bericht: [gruppe-c-symbol-chaining.md](gruppe-c-symbol-chaining.md) — 0 Critical, 0 Major, 1 Minor (C-07); CHAIN-01 bis CHAIN-04 durchgängig
 - [x] **Gruppe D: Codequalität, Linter, Metriken & Safeguard** (Tools 23–33) -> Bericht: [gruppe-d-qualitaet-metriken.md](gruppe-d-qualitaet-metriken.md) — 0 Critical, 2 Major, 2 Minor (D-01–D-04)
 - [x] **Gruppe E: Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery** (Querschnitt) -> Bericht: [gruppe-e-konsistenz-recovery.md](gruppe-e-konsistenz-recovery.md) — 1 Critical, 2 Major, 2 Minor (E-01, E-03, E-05–E-07); Blocker E-01
-- [x] **Abschlussbericht & Priorisierung** -> Bericht: [README.md](README.md) — 1 Critical, 5 Major, 5 Minor; Blocker E-01
+- [x] **Abschlussbericht & Priorisierung** -> Bericht: [README.md](README.md) — 1 Critical, 4 Major, 5 Minor; Blocker E-01
 
 ---
 

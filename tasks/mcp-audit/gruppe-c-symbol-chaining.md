@@ -14,27 +14,13 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 1 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 0 Major, 1 Minor
 
 CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und CHAIN-04 sind durchgängig möglich.
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-06: Assembly-Modus: Status/Lease unklar, Completeness widersprüchlich (TC-C02, TC-C07)
-
-- **Betroffenes Tool / Schema**: `find_symbol`, `find_references`, `get_symbol_body` (Assembly-Header)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `find_symbol(targetPath=LOCAL-01, includeReferences=false|true)`; `find_references(targetPath=LOCAL-01, includeReferences=false|true)`; `get_symbol_body` auf `LOCAL-01`
-- **Beobachtung / Ist-Verhalten**:
-  - Fast alle Assembly-Antworten: `status=partial; completeness=partial; confidence=medium`. `get_symbol_body` ergänzt gleichzeitig Footer `Assembly-Suche: 1/1; Vollständigkeit: complete` — widersprüchlich.
-  - `includeReferences=true` bei `find_symbol`: Prosatext „Assemblies: 14 von 14“, **keine** `navigation` mit effektiven Assembly-Identitäten; Treffermenge gegenüber `false` unverändert; Diagnosen (Decompiler/CS*) statt Scope-Objekt.
-  - `find_references` ohne `includeReferences`: „Keine Aufrufstellen“ ohne Lease-/Snapshot-Erklärung. Mit `includeReferences=true`: Treffer, aber Handoff zeigt das **angefragte** Symbol, Call-Sites nur als Text; dazu Diagnose-Samples statt klarer Scope-/Lease-Aussage.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Agent kann nicht unterscheiden: Snapshot unvollständig vs. wirklich keine Treffer vs. Referenz-Cap. TC-C02/C07 verlangen Scope in `navigation` und klare Lease-Aussage.
-- **Empfehlung**:
-  - Ein maschinenlesbares Scope-Objekt (Assemblies, Lease, `includeReferences`-Wirkung). Header-`completeness` an den Fachstatus angleichen. Decompiler-Rauschen nicht als Ersatz für Scope.
 
 ### [Minor] C-07: Call-Sites und Tests ohne Folgetool-Handoffs (TC-C07, TC-C13)
 
@@ -51,6 +37,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und 
 
 ---
 
-Gruppe C: 0 Critical, 1 Major, 1 Minor
-IDs: C-06, C-07
+Gruppe C: 0 Critical, 0 Major, 1 Minor
+IDs: C-07
 Blocker: none

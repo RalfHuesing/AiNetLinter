@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -23,20 +24,32 @@ internal sealed record AssemblyFindSymbolRequest(
 
 internal static class AssemblyFindSymbolTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(
+    internal static async Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         AssemblyFindSymbolRequest request,
-        CancellationToken cancellationToken) =>
-        request.IncludeReferences
-            ? ExecuteWithReferencesAsync(lease, request, cancellationToken)
-            : FindSymbolTool.ExecuteAsync(new FindSymbolRequest(
+        CancellationToken cancellationToken)
+    {
+        if (request.IncludeReferences)
+        {
+            return await ExecuteWithReferencesAsync(lease, request, cancellationToken).ConfigureAwait(false);
+        }
+
+        var result = await FindSymbolTool.ExecuteAsync(new FindSymbolRequest(
                 lease.Server,
                 request.NamePatterns,
                 request.Kind,
                 request.MaxResults,
                 cancellationToken,
                 ScopeType: request.ScopeType,
-                IncludeGenerated: request.IncludeGenerated));
+                IncludeGenerated: request.IncludeGenerated)).ConfigureAwait(false);
+        var plan = AssemblySearchPlan.Create(null, includeReferences: false);
+        var summary = AssemblySearchRouting.CreateSummary(
+            AssemblySearchRouting.GetScopeLeases(lease, lease, plan),
+            plan,
+            new(1, AssemblyNavigationSupport.CreateExpansionDiagnostics(
+                AssemblyNavigationLeaseAccess.CreateView(lease))));
+        return AssemblyScopeFormatter.Append(result, summary);
+    }
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
         AssemblyAnalysisLease lease,
@@ -108,8 +121,11 @@ internal static class AssemblyFindSymbolTool
             AppendPatternMarkdown(markdown, pattern, search);
         }
 
-        var summary = navigation ?? new AssemblyNavigationSummary(true, 1, 0, false, "partial", []);
-        AppendSummary(markdown, summary);
+        var summary = navigation ?? AssemblySearchRouting.CreateSummary(
+            AssemblySearchRouting.GetScopeLeases(lease, lease, plan),
+            plan,
+            new(0, Array.Empty<string>()));
+        markdown.Line(AssemblyScopeFormatter.Format(summary));
         AppendDiagnostics(markdown, summary.Diagnostics);
         return McpToolResults.Text(markdown.Build().TrimEnd());
     }
@@ -140,15 +156,6 @@ internal static class AssemblyFindSymbolTool
         markdown.Line(search.Entries.Count == 0
             ? $"Keine Treffer fuer '{pattern}' in Root- oder Referenz-Assemblies"
             : string.Join("\n", search.Entries.Select(FindSymbolTool.FormatEntry)));
-    }
-
-    private static void AppendSummary(MarkdownBuilder markdown, AssemblyNavigationSummary summary)
-    {
-        markdown.Heading(3, "Assembly-Referenzsuche").BlankLine();
-        markdown.Line(
-            $"includeReferences=true; Assemblies: {summary.SearchedAssemblyCount} von {summary.TotalAssemblyCount}; " +
-            $"Vollständigkeit: {summary.Completeness}; " +
-            $"Ergebnisse gekürzt: {summary.ResultsTruncated}");
     }
 
     private static void AppendDiagnostics(MarkdownBuilder markdown, IReadOnlyList<string> sourceDiagnostics)

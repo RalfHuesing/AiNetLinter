@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **11 Befunde:** 1 Critical, 5 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **10 Befunde:** 1 Critical, 4 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -29,7 +29,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 |---|---|---|---|---|---|
 | Critical | E-01 | `get_class_structure` | Floor-Budget 512: leere Member-Hülle als Erfolg (`0 von 12`, „Keine Member gefunden“) | Falscher Envelope; Member-Ketten werden als „klasse leer“ abgebrochen | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | E-03 | `find_symbol`, `get_class_structure`, `inspect_assembly` | `maxResponseBytes=500` trifft Tool-spezifische Floors (512 vs. 2048 vs. akzeptieren) | Kanonischer 500-Byte-Probe nicht ausführbar | [E](gruppe-e-konsistenz-recovery.md) |
-| Major | C-06 | `find_symbol`, `find_references`, `get_symbol_body` | Assembly: `partial` vs. Body-`complete`; `includeReferences` ohne Scope-Objekt | Lease/„keine Treffer“/Cap nicht unterscheidbar | [C](gruppe-c-symbol-chaining.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | E-05 | `find_dead_code` | Ungültiges `kind`/`accessibility` ohne Werteliste | Agent muss Enum raten | [E](gruppe-e-konsistenz-recovery.md) |
@@ -65,6 +64,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 
 - [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 0 / 0
 - [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 0 / 0
-- [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 1 / 1
+- [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 0 / 1
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
 - [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 3 / 2

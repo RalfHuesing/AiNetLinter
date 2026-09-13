@@ -74,7 +74,7 @@ internal static class AssemblyFindReferencesTool
                 traversal.Completeness.TotalCallSiteCount == 0
                     ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                     : null);
-            return McpToolResults.Text(formatted.Text);
+            return FormatResult(formatted);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -83,4 +83,11 @@ internal static class AssemblyFindReferencesTool
                 context: $"{request.SymbolIdentifier}; includeReferences=true");
         }
     }
+
+    internal static CallToolResult FormatResult(TransitiveCallGraphFormatResult formatted) =>
+        formatted.Traversal.Navigation is null
+            ? McpToolResults.Text(formatted.Text)
+            : AssemblyScopeFormatter.Append(
+                McpToolResults.Text(formatted.Text),
+                formatted.Traversal.Navigation);
 }

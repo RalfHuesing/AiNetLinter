@@ -115,5 +115,8 @@ internal static class AssemblySearchRouting
             outcome.Diagnostics,
             outcome.ResultsTruncated,
             plan.RequestedIncludeReferences,
-            plan.ToWireValue()));
+            plan.ToWireValue())) with
+        {
+            ScopeIdentities = AssemblyNavigationSupport.CreateScopeIdentities(leaseSet.Leases),
+        };
 }

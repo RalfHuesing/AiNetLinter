@@ -11,6 +11,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Handoffs;
@@ -85,12 +86,6 @@ internal static partial class GetSymbolBodyTool
     {
         ArgumentNullException.ThrowIfNull(lease);
         var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
-        if (!identifiers.Any(identifier =>
-                AssemblySearchPlan.Create(identifier, includeReferences: false).Mode == AssemblySearchMode.SymbolOwnerOnly))
-        {
-            return await ExecuteAsync((IAssemblyBodyContext)lease, request, ct).ConfigureAwait(false);
-        }
-
         if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes)) return InvalidResponseBudget();
         if (identifiers.Count == 0)
         {
@@ -113,6 +108,14 @@ internal static partial class GetSymbolBodyTool
                 targetLease = resolved.Target!.Lease;
                 navigations.Add(resolved.Navigation);
             }
+            else
+            {
+                navigations.Add(AssemblySearchRouting.CreateSummary(
+                    AssemblySearchRouting.GetScopeLeases(lease, lease, plan),
+                    plan,
+                    new(1, AssemblyNavigationSupport.CreateExpansionDiagnostics(
+                        AssemblyNavigationLeaseAccess.CreateView(lease)))));
+            }
 
             var solution = targetLease.Server.GetCurrentSolution();
             if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -128,12 +131,9 @@ internal static partial class GetSymbolBodyTool
         }
 
         var result = await RenderSymbolBodiesAsync(requests, request.MaxResponseBytes, ct).ConfigureAwait(false);
-        if (navigations.Count > 0)
-        {
-            result = AddAssemblyNavigation(
-                result,
-                navigations.Aggregate(AssemblyNavigationSupport.MergeSummaries));
-        }
+        result = AddAssemblyNavigation(
+            result,
+            navigations.Aggregate(AssemblyNavigationSupport.MergeSummaries));
 
         return AssemblyPublicContract.Project(result);
     }
@@ -173,14 +173,9 @@ internal static partial class GetSymbolBodyTool
         CancellationToken ct) =>
         ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
 
-    private static CallToolResult AddAssemblyNavigation(
+    internal static CallToolResult AddAssemblyNavigation(
         CallToolResult result,
-        AssemblyNavigationSummary navigation) =>
-        McpToolResults.ReplaceText(
-            result,
-            result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text +
-            $"\n\nAssembly-Suche: {navigation.SearchedAssemblyCount}/{navigation.TotalAssemblyCount}; " +
-            $"Vollständigkeit: {navigation.Completeness}");
+        AssemblyNavigationSummary navigation) => AssemblyScopeFormatter.Append(result, navigation);
 
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(

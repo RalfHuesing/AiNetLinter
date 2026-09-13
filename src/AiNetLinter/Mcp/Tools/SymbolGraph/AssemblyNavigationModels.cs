@@ -47,6 +47,11 @@ internal sealed record AssemblyNavigationOrigin(
     string GeneratedDocumentPath,
     string Confidence);
 
+internal sealed record AssemblyScopeIdentity(
+    string AssemblyName,
+    string? TargetToken,
+    string? ContentToken);
+
 internal sealed record AssemblyNavigationSummary(
     bool IncludeReferences,
     int TotalAssemblyCount,
@@ -60,7 +65,8 @@ internal sealed record AssemblyNavigationSummary(
     IReadOnlyList<string>? DiagnosticsTruncatedBy = null,
     bool ResultsTruncated = false,
     bool RequestedIncludeReferences = false,
-    string EffectiveSearchMode = "root_only");
+    string EffectiveSearchMode = "root_only",
+    IReadOnlyList<AssemblyScopeIdentity>? ScopeIdentities = null);
 
 internal sealed record AssemblyCallTreeResult(
     MetricsTreeNode Root,

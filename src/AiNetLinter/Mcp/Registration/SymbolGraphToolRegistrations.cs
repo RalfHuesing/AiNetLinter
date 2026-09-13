@@ -113,7 +113,7 @@ internal static class SymbolGraphToolRegistrations
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "maxResults: Trefferbegrenzung (Default 50). " +
         "maxResponseBytes: Default 16 KiB, Cap 64 KiB. " +
-        "includeReferences (Default false): bei Assemblies auch Referenzen durchsuchen.";
+        "includeReferences (Default false): bei Assemblies auch Referenzen durchsuchen; Assembly-Scope nennt den effektiven Suchmodus.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -167,7 +167,7 @@ internal static class SymbolGraphToolRegistrations
         "depth: Traversierungstiefe (Default 1, Cap 3, max. 200 Knoten). " +
         "maxResults: Trefferbegrenzung (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
-        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen.";
+        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen; Assembly-Scope nennt den effektiven Suchmodus.";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

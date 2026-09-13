@@ -10,6 +10,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Tools.SymbolGraph.Navigation;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -211,10 +212,7 @@ internal static class TransitiveCallGraphFormatter
         CallToolResult result,
         AssemblyNavigationSummary navigation)
     {
-        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
-        return McpToolResults.ReplaceText(
-            result,
-            text + $"\n\nAssembly-Suche: {navigation.SearchedAssemblyCount}/{navigation.TotalAssemblyCount}; Vollständigkeit: {navigation.Completeness}");
+        return AssemblyScopeFormatter.Append(result, navigation);
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)

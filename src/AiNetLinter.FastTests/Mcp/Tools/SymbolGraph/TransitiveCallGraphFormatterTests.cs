@@ -99,6 +99,11 @@ public sealed class TransitiveCallGraphFormatterTests
         Assert.Contains("[Assembly-Diagnostic] diagnostic-5", formatted.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("diagnostic-6", formatted.Text, StringComparison.Ordinal);
         Assert.Contains("[6 Diagnosen gesamt, 5 Samples gezeigt — gekürzt: maxDiagnostics]", formatted.Text, StringComparison.Ordinal);
+        var assemblyText = Assert.IsType<TextContentBlock>(Assert.Single(
+            AssemblyFindReferencesTool.FormatResult(formatted).Content)).Text;
+        Assert.Contains("Assembly-Scope:", assemblyText, StringComparison.Ordinal);
+        Assert.Contains("requestedIncludeReferences=true", assemblyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assembly-Suche:", assemblyText, StringComparison.Ordinal);
     }
 
     [Fact]
