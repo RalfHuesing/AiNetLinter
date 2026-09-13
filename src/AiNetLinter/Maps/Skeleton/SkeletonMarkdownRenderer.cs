@@ -117,8 +117,7 @@ internal static class SkeletonMarkdownRenderer
     private static string BuildHandoffSuffix(string? id)
     {
         if (string.IsNullOrWhiteSpace(id)) return "";
-        var result = AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(id);
-        var externalId = result.IsSuccess ? result.Value : id;
+        var externalId = AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(id);
         return $" // handoffId: `{externalId}`";
     }
 }

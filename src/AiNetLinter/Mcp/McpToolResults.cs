@@ -259,6 +259,76 @@ internal static partial class McpToolResults
     }
 
     /// <summary>
+    /// Versucht einen Eingabeparameter über die zentrale HandoffHandleRegistry zu restaurieren.
+    /// Reicht semantische Eingaben unverändert durch und liefert bei Handoff-Fehlern
+    /// ein strukturiertes MCP-Fehlerergebnis.
+    /// </summary>
+    internal static bool TryRestoreSymbolIdentifier(
+        string? rawInput,
+        string fieldPath,
+        out string effectiveIdentifier,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out CallToolResult? errorResult)
+    {
+        errorResult = null;
+        if (string.IsNullOrEmpty(rawInput))
+        {
+            effectiveIdentifier = rawInput ?? string.Empty;
+            return true;
+        }
+
+        if (HandoffCounterAlphabet.IsValidHandle(rawInput) || rawInput.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(rawInput);
+            if (!restored.IsSuccess)
+            {
+                effectiveIdentifier = string.Empty;
+                errorResult = HandoffError(restored.Error, fieldPath);
+                return false;
+            }
+
+            effectiveIdentifier = restored.Value!;
+            return true;
+        }
+
+        effectiveIdentifier = rawInput;
+        return true;
+    }
+
+    /// <summary>
+    /// Versucht eine Liste von Symbol-Identifikatoren über die zentrale HandoffHandleRegistry zu restaurieren.
+    /// </summary>
+    internal static bool TryRestoreSymbolIdentifiers(
+        IReadOnlyList<string>? rawInputs,
+        string fieldPathPrefix,
+        out IReadOnlyList<string> effectiveIdentifiers,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out CallToolResult? errorResult)
+    {
+        errorResult = null;
+        if (rawInputs is null || rawInputs.Count == 0)
+        {
+            effectiveIdentifiers = rawInputs ?? [];
+            return true;
+        }
+
+        var resultList = new List<string>(rawInputs.Count);
+        for (var i = 0; i < rawInputs.Count; i++)
+        {
+            var raw = rawInputs[i];
+            var fieldPath = $"{fieldPathPrefix}[{i}]";
+            if (!TryRestoreSymbolIdentifier(raw, fieldPath, out var effective, out var singleError))
+            {
+                effectiveIdentifiers = [];
+                errorResult = singleError!;
+                return false;
+            }
+            resultList.Add(effective);
+        }
+
+        effectiveIdentifiers = resultList;
+        return true;
+    }
+
+    /// <summary>
     /// Kurzform fuer den Fall, dass ein per Dateipfad angegebenes Tool-Argument (z. B.
     /// <c>get_file_skeleton</c>s <c>filePaths</c>-Array) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
     /// in der Solution aufloest. IsError=false (recoverable) — Pfad korrigieren oder find_symbol

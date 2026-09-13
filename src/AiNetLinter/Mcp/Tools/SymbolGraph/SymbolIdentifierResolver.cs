@@ -238,15 +238,7 @@ internal static class SymbolIdentifierResolver
             return true;
         }
 
-        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(value);
-        if (!restored.IsSuccess)
-        {
-            error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
-            return false;
-        }
-
-        restoredValue = restored.Value!;
-        return true;
+        return McpToolResults.TryRestoreSymbolIdentifier(value, "$.symbolIdentifier", out restoredValue, out error);
     }
 
     private static bool TryNormalizeHandoffId(

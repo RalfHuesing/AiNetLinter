@@ -427,22 +427,10 @@ internal static partial class GetSymbolBodyTool
             return false;
         }
 
-        var restoredList = new List<string>(normalized.Count);
-        for (var i = 0; i < normalized.Count; i++)
+        if (!McpToolResults.TryRestoreSymbolIdentifiers(normalized, "$.symbolIdentifiers", out var restoredList, out error))
         {
-            var id = normalized[i];
-            if (HandoffCounterAlphabet.IsValidHandle(id) || id.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
-            {
-                var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(id);
-                if (!restored.IsSuccess)
-                {
-                    identifiers = null;
-                    error = McpToolResults.HandoffError(restored.Error, $"$.symbolIdentifiers[{i}]");
-                    return false;
-                }
-                id = restored.Value!;
-            }
-            restoredList.Add(id);
+            identifiers = null;
+            return false;
         }
 
         identifiers = restoredList;

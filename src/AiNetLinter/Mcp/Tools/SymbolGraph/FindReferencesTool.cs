@@ -84,19 +84,9 @@ internal static partial class FindReferencesTool
             return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.", hint: McpToolResults.SymbolIdentifierHint);
         }
 
-        if (HandoffCounterAlphabet.IsValidHandle(rawIdentifier) || rawIdentifier.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        if (!McpToolResults.TryRestoreSymbolIdentifier(rawIdentifier, "$.symbolIdentifier", out symbolIdentifier, out var handoffError))
         {
-            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(rawIdentifier);
-            if (!restored.IsSuccess)
-            {
-                return McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
-            }
-
-            symbolIdentifier = restored.Value!;
-        }
-        else
-        {
-            symbolIdentifier = rawIdentifier;
+            return handoffError;
         }
 
         return null;

@@ -243,9 +243,7 @@ internal static class TransitiveCallGraphFormatter
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
         var handoff = string.IsNullOrEmpty(entry.Id)
             ? string.Empty
-            : HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(entry.Id) is { IsSuccess: true } handle
-                ? $"; handoffId: `{handle.Value}`"
-                : string.Empty;
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(entry.Id)}`";
         return $"{text}{origin}{handoff}";
     }
 

@@ -57,8 +57,8 @@ foreach ($relPath in $ProducerFiles) {
         continue
     }
     $content = Get-Content -Raw $fullPath
-    if ($content -notmatch "GetOrCreateOpaqueHandleForOutput") {
-        $UnmigratedProducers.Add("$relPath (fehlt GetOrCreateOpaqueHandleForOutput)")
+    if ($content -notmatch "GetOrCreateOpaqueHandleForOutput|GetOpaqueHandleOrDefault") {
+        $UnmigratedProducers.Add("$relPath (fehlt GetOrCreateOpaqueHandleForOutput / GetOpaqueHandleOrDefault)")
     }
 }
 
@@ -69,8 +69,8 @@ foreach ($relPath in $ConsumerFiles) {
         continue
     }
     $content = Get-Content -Raw $fullPath
-    if ($content -notmatch "RestoreInternalHandoffForInput") {
-        $UnmigratedConsumers.Add("$relPath (fehlt RestoreInternalHandoffForInput)")
+    if ($content -notmatch "RestoreInternalHandoffForInput|TryRestoreSymbolIdentifier") {
+        $UnmigratedConsumers.Add("$relPath (fehlt RestoreInternalHandoffForInput / TryRestoreSymbolIdentifier)")
     }
 }
 

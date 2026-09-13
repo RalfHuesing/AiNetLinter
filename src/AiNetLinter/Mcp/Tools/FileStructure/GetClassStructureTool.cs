@@ -65,7 +65,7 @@ internal static partial class GetClassStructureTool
         var validationError = ValidateArguments(args, effectiveIdentifier);
         if (validationError is not null) return validationError;
 
-        if (!TryRestoreIdentifier(effectiveIdentifier, out var symbolIdentifier, out var restoreError))
+        if (!McpToolResults.TryRestoreSymbolIdentifier(effectiveIdentifier, "$.symbolIdentifier", out var symbolIdentifier, out var restoreError))
             return restoreError!;
 
         try
@@ -95,26 +95,6 @@ internal static partial class GetClassStructureTool
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
         }
-    }
-
-    private static bool TryRestoreIdentifier(string? raw, out string symbolIdentifier, out CallToolResult? error)
-    {
-        error = null;
-        if (!HandoffCounterAlphabet.IsValidHandle(raw) && (raw is null || !raw.StartsWith("h:", StringComparison.OrdinalIgnoreCase)))
-        {
-            symbolIdentifier = raw ?? string.Empty;
-            return true;
-        }
-
-        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(raw!);
-        if (!restored.IsSuccess)
-        {
-            symbolIdentifier = string.Empty;
-            error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
-            return false;
-        }
-        symbolIdentifier = restored.Value!;
-        return true;
     }
 
     private static CallToolResult? ValidateArguments(GetClassStructureArgs args, string? effectiveIdentifier)
@@ -488,8 +468,7 @@ internal static partial class GetClassStructureTool
     private static string FormatHandoffId(string? handoffId)
     {
         if (string.IsNullOrWhiteSpace(handoffId)) return "-";
-        var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(handoffId);
-        return $"handoffId: `{(result.IsSuccess ? result.Value : handoffId)}`";
+        return $"handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(handoffId)}`";
     }
     private static string FormatLiteral(object? value) => value is null ? "null"
         : (Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)

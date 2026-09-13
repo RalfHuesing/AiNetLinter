@@ -67,7 +67,7 @@ internal static class FindImplementationsTool
                 hint: "symbolIdentifier angeben: z. B. \"IProcessor\", \"IProcessor.Execute\" oder \"BaseClass.Run\".");
         }
 
-        if (!TryRestoreSymbolIdentifier(symbolIdentifier, out var effectiveSymbolIdentifier, out var restoreError))
+        if (!McpToolResults.TryRestoreSymbolIdentifier(symbolIdentifier, "$.symbolIdentifier", out var effectiveSymbolIdentifier, out var restoreError))
             return restoreError!;
 
         var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
@@ -95,26 +95,6 @@ internal static class FindImplementationsTool
                 new McpScopeClassifier()),
             ct).ConfigureAwait(false);
         return ApplyResponseBudget(resultDto, request.MaxResponseBytes);
-    }
-
-    private static bool TryRestoreSymbolIdentifier(string raw, out string effectiveSymbolIdentifier, out CallToolResult? error)
-    {
-        error = null;
-        if (HandoffCounterAlphabet.IsValidHandle(raw) || raw.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
-        {
-            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(raw);
-            if (!restored.IsSuccess)
-            {
-                effectiveSymbolIdentifier = string.Empty;
-                error = McpToolResults.HandoffError(restored.Error, "$.symbolIdentifier");
-                return false;
-            }
-            effectiveSymbolIdentifier = restored.Value!;
-            return true;
-        }
-
-        effectiveSymbolIdentifier = raw;
-        return true;
     }
 
     private static async Task<(IReadOnlyList<ISymbol>? Symbols, string? ErrorMessage)> FindRawImplementationsAsync(

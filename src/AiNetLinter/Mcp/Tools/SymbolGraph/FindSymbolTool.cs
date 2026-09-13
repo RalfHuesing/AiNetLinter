@@ -350,9 +350,7 @@ internal static class FindSymbolTool
             : string.Empty;
         var handoff = string.IsNullOrWhiteSpace(entry.Id)
             ? string.Empty
-            : HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(entry.Id) is { IsSuccess: true } handle
-                ? $"; handoffId: `{handle.Value}`"
-                : string.Empty;
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(entry.Id)}`";
         return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{locations}{handoff}";
     }
 

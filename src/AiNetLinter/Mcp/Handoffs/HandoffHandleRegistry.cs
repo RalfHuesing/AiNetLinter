@@ -76,6 +76,18 @@ internal sealed class HandoffHandleRegistry
     }
 
     /// <summary>
+    /// Liefert das externe opaque Handle ("h:...") für eine interne Handoff-ID oder bei einem Fehler den Standardwert (Fallback).
+    /// </summary>
+    /// <param name="internalHandoffId">Die interne Handoff-ID.</param>
+    /// <param name="fallback">Der Rückgabewert im Fehlerfall (Standard: internalHandoffId).</param>
+    /// <returns>Das externe Handle "h:..." oder der Fallback.</returns>
+    internal string GetOpaqueHandleOrDefault(string internalHandoffId, string? fallback = null)
+    {
+        var result = GetOrCreateOpaqueHandleForOutput(internalHandoffId);
+        return result.IsSuccess ? result.Value! : (fallback ?? internalHandoffId);
+    }
+
+    /// <summary>
     /// Restauriert ein externes Handoff-Handle zu einer internen Handoff-ID oder reicht semantische Eingaben unverändert durch.
     /// </summary>
     /// <param name="externalHandleOrSemanticInput">Die Benutzereingabe (z. B. "h:a", "M:Foo.Bar", "src/File.cs:10:5").</param>
