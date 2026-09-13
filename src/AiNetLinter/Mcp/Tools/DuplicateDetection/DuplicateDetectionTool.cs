@@ -66,7 +66,8 @@ internal static class DuplicateDetectionTool
         {
             return mode.Value switch
             {
-                DuplicateDetectionMode.RefactoringDrift => await ExecuteRefactoringDriftAsync(solution, config, input, ct),
+                DuplicateDetectionMode.RefactoringDrift => await ExecuteRefactoringDriftAsync(
+                    new RefactoringDriftToolRequest(solution, config, input, state.HandoffSymbolIdentity), ct),
                 _ => await ExecuteClusterScanAsync(new ClusterScanRequest(solution, config, input, mode.Value), ct),
             };
         }
@@ -81,6 +82,12 @@ internal static class DuplicateDetectionTool
         Configuration.GlobalConfig Config,
         DuplicateDetectionInput Input,
         DuplicateDetectionMode Mode);
+
+    private sealed record RefactoringDriftToolRequest(
+        Microsoft.CodeAnalysis.Solution Solution,
+        Configuration.GlobalConfig Config,
+        DuplicateDetectionInput Input,
+        AnalysisSymbolIdentity? HandoffSymbolIdentity);
 
     /// <summary>Gemeinsamer Pfad beider Cluster-Modi (<see cref="DuplicateDetectionMode.Clone"/> und
     /// <see cref="DuplicateDetectionMode.Structural"/>): identischer Threshold-Parse, Scan und
@@ -98,9 +105,9 @@ internal static class DuplicateDetectionTool
     }
 
     private static async Task<CallToolResult> ExecuteRefactoringDriftAsync(
-        Microsoft.CodeAnalysis.Solution solution, Configuration.GlobalConfig config, DuplicateDetectionInput input,
-        CancellationToken ct)
+        RefactoringDriftToolRequest request, CancellationToken ct)
     {
+        var input = request.Input;
         if (string.IsNullOrWhiteSpace(input.HelperSymbol))
         {
             return McpToolResults.InvalidArgument(
@@ -116,10 +123,11 @@ internal static class DuplicateDetectionTool
         }
 
         var (result, error) = await RefactoringDriftScanner.ScanAsync(
-            solution, config, input with { HelperSymbol = helperSymbol }, ct);
+            new RefactoringDriftScanRequest(
+                request.Solution, request.Config, input with { HelperSymbol = helperSymbol }, request.HandoffSymbolIdentity), ct);
         if (error is not null) return error;
 
-        return RefactoringDriftResponseBuilder.Build(solution, result!);
+        return RefactoringDriftResponseBuilder.Build(request.Solution, result!);
     }
 
     /// <summary>Case-insensitiv, leer/<see langword="null"/> = Default <c>fuzzy</c> (niedrigste

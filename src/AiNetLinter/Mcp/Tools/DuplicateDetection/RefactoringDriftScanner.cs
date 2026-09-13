@@ -31,35 +31,40 @@ internal static class RefactoringDriftScanner
 {
     internal static async Task<(RefactoringDriftScanResultForTool? Result, CallToolResult? Error)> ScanAsync(
         Solution solution, GlobalConfig config, DuplicateDetectionInput input, CancellationToken ct)
+        => await ScanAsync(new RefactoringDriftScanRequest(solution, config, input, null), ct);
+
+    internal static async Task<(RefactoringDriftScanResultForTool? Result, CallToolResult? Error)> ScanAsync(
+        RefactoringDriftScanRequest request, CancellationToken ct)
     {
-        var (symbol, resolveError) = await FindReferencesTool.ResolveSymbolAsync(solution, input.HelperSymbol!, ct);
+        var (symbol, resolveError) = await FindReferencesTool.ResolveSymbolAsync(
+            request.Solution, request.Input.HelperSymbol!, ct, request.HandoffSymbolIdentity);
         if (resolveError is not null) return (null, resolveError);
 
         if (symbol is not IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.LocalFunction } helper)
         {
             return (null, McpToolResults.InvalidArgument(
-                $"helperSymbol '{input.HelperSymbol}' muss eine gewoehnliche Methode oder lokale Funktion sein " +
+                $"helperSymbol '{request.Input.HelperSymbol}' muss eine gewoehnliche Methode oder lokale Funktion sein " +
                 $"(aufgeloest zu {DescribeKind(symbol!)}) — die Duplicate-Detection-Engine arbeitet nur auf " +
                 "Method-/Local-Function-Koerpern (Teil A), Konstruktoren/Properties/Felder/Operatoren werden " +
                 "nicht fingerprinted.",
                 hint: "helperSymbol auf eine Methode oder lokale Funktion zeigen lassen."));
         }
 
-        var options = DuplicateDetectionScanner.BuildOptions(config, input);
+        var options = DuplicateDetectionScanner.BuildOptions(request.Config, request.Input);
 
-        var callSites = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(helper, solution);
-        var callers = await ResolveCallerMethodSymbolsAsync(solution, callSites, ct);
+        var callSites = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(helper, request.Solution);
+        var callers = await ResolveCallerMethodSymbolsAsync(request.Solution, callSites, ct);
 
-        var scanResult = await RefactoringDriftDetector.FindSimilarToAsync(solution, helper, callers, options, ct);
+        var scanResult = await RefactoringDriftDetector.FindSimilarToAsync(request.Solution, helper, callers, options, ct);
         if (scanResult is null)
         {
-            var eligibility = await DuplicateMethodCollector.GetEligibilityAsync(solution, helper, options, ct);
+            var eligibility = await DuplicateMethodCollector.GetEligibilityAsync(request.Solution, helper, options, ct);
             return (null, McpToolResults.InvalidArgument(
-                DescribeFingerprintIneligibility(input.HelperSymbol!, options, eligibility),
+                DescribeFingerprintIneligibility(request.Input.HelperSymbol!, options, eligibility),
                 hint: DescribeFingerprintHint(eligibility.Eligibility)));
         }
 
-        var effectiveMax = Math.Max(1, input.MaxResults ?? config.DuplicateCodeMaxResults);
+        var effectiveMax = Math.Max(1, request.Input.MaxResults ?? request.Config.DuplicateCodeMaxResults);
         var candidates = scanResult.Candidates;
         var shown = candidates.Count <= effectiveMax ? candidates : candidates.Take(effectiveMax).ToList();
         var truncated = candidates.Count > effectiveMax;
@@ -170,3 +175,9 @@ internal static class RefactoringDriftScanner
         return null;
     }
 }
+
+internal sealed record RefactoringDriftScanRequest(
+    Solution Solution,
+    GlobalConfig Config,
+    DuplicateDetectionInput Input,
+    AnalysisSymbolIdentity? HandoffSymbolIdentity);

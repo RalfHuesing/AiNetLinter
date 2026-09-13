@@ -6,6 +6,8 @@
 - [X] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 - [X] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 - [X] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
+- [X] 7. Rot-Test vom Marker-Check zum ausführbaren MCP-Handoff-Vertragsaudit erweitern
+- [X] 8. Gefundene Toolketten reparieren und unabhängigen Abschlussaudit durchführen
 
 ## Durchführungsprotokoll
 
@@ -44,3 +46,15 @@
 - Audit korrigierte den Counter-Fehlerpfad und aktualisierte reale Assembly-Toolketten.
 - Audit-Skript PASS (12/12, 17/17); `verify(solution)` pass, 10.0, 0 Violations.
 - Release-Gate grün: Build warnungsfrei, 2.646 FastTests und 235 IntegrationTests (je non-Stress).
+
+### 7. Rot-Test vom Marker-Check zum ausführbaren MCP-Handoff-Vertragsaudit erweitern
+
+- Matrix umfasst 12 Producer, 14 öffentliche Consumer-Felder und 7 Toolketten.
+- Breite `s:`/`a:`-Wire-Suche plus ToolCollection-Schematest ergänzt; der alte Daemon-Befund zu `context` ist nicht reproduzierbar.
+- Audit ist erwartungsgemäß rot: genau `find_symbol → find_duplicates.helperSymbol` liefert `TARGET_MISMATCH`; kein Commit vor der Reparatur.
+
+### 8. Gefundene Toolketten reparieren und unabhängigen Abschlussaudit durchführen
+
+- Ursache behoben: `find_duplicates` reicht die restaurierte Target-Identität bis zum Resolver weiter.
+- Reale MCP-E2E-Kette `find_symbol → find_duplicates` ergänzt; Audit PASS (12/14/7, alle Ketten grün).
+- Release-Gate grün: Build, beide `verify`-Scopes, 2.648 FastTests und IntegrationTests non-Stress.

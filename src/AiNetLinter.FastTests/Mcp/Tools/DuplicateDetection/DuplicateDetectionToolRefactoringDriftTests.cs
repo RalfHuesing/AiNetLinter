@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -158,6 +159,24 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_RefactoringDrift_AcceptsHandleFromFindSymbolWithoutTransformation()
+    {
+        using var context = CreateContext(("Helper.cs", Helper), ("Stubs.cs", StubTypes));
+        var server = context.CreateServer();
+        var discovery = await FindSymbolTool.ExecuteAsync(server, ["BuildDefault"], "method", 10, CancellationToken.None);
+        var handle = ExtractOpaqueHandoff(Assert.IsType<TextContentBlock>(Assert.Single(discovery.Content)).Text);
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            server,
+            new DuplicateDetectionInput(1, "fuzzy", null, null, null, "refactoring-drift", handle),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("TARGET_MISMATCH", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("STALE_SNAPSHOT", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RefactoringDrift_FindsCandidate_TextSaysCandidatesNotViolations()
     {
         using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
@@ -238,5 +257,16 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Duplikat-Kandidatencluster", text, StringComparison.Ordinal);
+    }
+
+    private static string ExtractOpaqueHandoff(string text)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"handoffId: `(?<id>h:[^`]+)`",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return match.Success
+            ? match.Groups["id"].Value
+            : throw new System.InvalidOperationException("find_symbol muss ein opaques Handoff ausgeben.");
     }
 }
