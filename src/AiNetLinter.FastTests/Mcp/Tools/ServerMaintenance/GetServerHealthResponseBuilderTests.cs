@@ -86,6 +86,31 @@ public sealed class GetServerHealthResponseBuilderTests
     }
 
     [Fact]
+    public void Build_HealthSanitizesDiagnosticPathWithSpacesAndQuotedParentheses()
+    {
+        var entry = new AssemblyHealthEntry(
+            "C:\\fixtures\\health.dll",
+            "partial",
+            "decompiled",
+            null,
+            null,
+            null,
+            null,
+            ["Abhängigkeit (\"C:\\Program Files (x86)\\Vendor Suite\\dependency.dll\") konnte nicht geladen werden; Vendor.Component, Version=1.2.3.4, Culture=neutral"]);
+
+        var result = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(IncludeDiagnostics: true));
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("C:\\Program Files (x86)\\Vendor Suite\\dependency.dll", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Files (x86)\\Vendor Suite\\dependency.dll", text, StringComparison.Ordinal);
+        Assert.Contains("Abhängigkeit (\"<path>\") konnte nicht geladen werden", text, StringComparison.Ordinal);
+        Assert.Contains("Vendor.Component, Version=1.2.3.4, Culture=neutral", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Build_TargetAssemblyHealthContainsOnlyTheRequestedTarget()
     {
         var entry = CreateAssemblyEntry("C:\\fixtures\\target-only.dll") with

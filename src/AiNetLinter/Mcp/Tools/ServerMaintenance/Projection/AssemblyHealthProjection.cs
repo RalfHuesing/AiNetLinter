@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 internal static class AssemblyHealthProjection
 {
     private static readonly Regex AbsolutePathPattern = new(
-        @"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/]|/)[^\s""']+",
+        @"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/]|/)(?:[^""'\r\n]+(?=[""'])|[^\s""']+)",
         RegexOptions.CultureInvariant);
 
     internal static AssemblyHealthEntry FromSnapshot(AssemblyAnalysisHealthSnapshot snapshot) =>
