@@ -1,8 +1,7 @@
 ---
 status: draft
-execution_mode: requires_user_decision
-open_questions:
-  - "Soll die erste Umsetzung die projektbezogene ApiSurface-Policy mit optionalen PublicApiNamespaces enthalten, oder zunächst nur die drei Projektstatus ohne Namespace-Ausnahmen?"
+execution_mode: autonomous
+open_questions: []
 ---
 
 # Konzept: Dead Code anhand produktiver Nutzung erkennen
@@ -162,11 +161,7 @@ muss. Ein konzeptioneller Vertrag ist:
   "ProjectOverrides": {
     "PublicSdk": {
       "DeadCode": {
-        "ApiSurface": "external_library",
-        "PublicApiNamespaces": [
-          "PublicSdk.Api",
-          "PublicSdk.Contracts"
-        ]
+        "ApiSurface": "external_library"
       }
     },
     "AiNetLinter": {
@@ -178,24 +173,12 @@ muss. Ein konzeptioneller Vertrag ist:
 }
 ```
 
-Für Projekte mit vollständig externer Oberfläche schützt `external_library`
-ohne `PublicApiNamespaces` alle extern sichtbaren Symbole. Ist die Liste nicht
-leer, schützt sie nur extern sichtbare Symbole im genannten Namespace und in
-seinen Unter-Namespaces; öffentliche Symbole außerhalb der Liste gelten dann
-nicht als Public API und dürfen als Dead-Code-Kandidat erscheinen. Der Match
-erfolgt semantisch am deklarierten Symbolnamespace, nicht über Dateipfade oder
-Textsuche.
-
-Die Namespace-Allowlist ist ein opt-in Präzisionsmodus. Sie reduziert den
-Schutzbereich einer gemischten Bibliothek, erzeugt aber bewusst eine
-Pflegepflicht und kann bei zu groben Namespace-Schnitten mehr API schützen als
-fachlich gewollt. Eine Klassen-Allowlist wird in der ersten Umsetzung nicht
-aufgenommen: Sie wäre präziser, vervielfacht aber die Pflegeeinträge, ist bei
-Refactorings driftanfällig und bietet gegenüber gut geschnittenen Namespaces
-keinen ausreichenden Mehrwert. Die konkreten Property-Namen müssen bei der
-Umsetzung an die bestehende Konfigurationsstruktur und deren
-Namenskonventionen angepasst werden; die Semantik dieses Vertrags bleibt
-verbindlich.
+`external_library` schützt in der ersten Umsetzung alle extern sichtbaren
+Symbole des Projekts. Eine feinere Eingrenzung über Namespaces oder einzelne
+Klassen ist ausdrücklich nicht Bestandteil dieses Scopes. Die konkreten
+Property-Namen müssen bei der Umsetzung an die bestehende
+Konfigurationsstruktur und deren Namenskonventionen angepasst werden; die
+Semantik dieses Vertrags bleibt verbindlich.
 
 ### 3.5 Laufzeit- und externe Nutzung
 
@@ -285,8 +268,6 @@ Referenzen bewertet:
 - `closed_solution` ermöglicht die Prüfung öffentlicher Symbole innerhalb
   einer geschlossenen Solution.
 - `unknown` führt nicht zu einer unsicheren Löschbehauptung.
-- Eine optionale Namespace-Allowlist kann den API-Schutz eines
-  `external_library`-Projekts auf einen Namespace-Baum begrenzen.
 - Ungültige oder nicht auflösbare API-Konfiguration fällt sicher auf
   `unknown` zurück und wird diagnostisch sichtbar.
 - Reflection, DI, Generatoren, `dynamic` und externe Consumer bleiben als
@@ -328,11 +309,7 @@ Referenzen bewertet:
   Klassifizierung anderer Projekte.
 - Der Default ohne API-Konfiguration ist sicher und erzeugt keine
   unbegründeten Public-API-Löschvorschläge.
-- Ein `external_library`-Projekt ohne Namespace-Allowlist schützt alle
-  extern sichtbaren Symbole.
-- Bei gesetzter Namespace-Allowlist werden nur die genannten Namespaces und
-  deren Unter-Namespaces geschützt; extern sichtbare Symbole außerhalb davon
-  werden nicht als Public API behandelt.
+- Ein `external_library`-Projekt schützt alle extern sichtbaren Symbole.
 - Eine identische Konfiguration lässt sich über einen Projekt-Override
   automatisch für jedes betroffene Projekt verwenden, ohne CLI- oder
   MCP-Aufrufparameter.
@@ -390,14 +367,12 @@ dass ein Produktionsmember als sicher tot gemeldet wird. Die Klassifizierung
 |---|---|---|---|
 | Globales `PublicApi: true/false` | Sehr wenig Konfiguration | Kein sicherer `unknown`-Zustand; schützt in Bibliotheken zu viel oder lässt in geschlossenen Solutions zu viel offen | Nicht empfohlen |
 | Projektstatus ohne Feinabgrenzung | Automatisch, wenig Pflege, passt zu `ProjectOverrides` | Bei gemischter API werden öffentliche Nicht-API-Symbole mitgeschützt | Empfohlener Default |
-| Projektstatus plus Namespace-Allowlist | Gute Balance aus Sicherheit und Pflegeaufwand; API-Schnitt kann im Projekt gebündelt gepflegt werden | Namespace-Schnitt kann zu breit sein und muss bei Umstrukturierungen angepasst werden | Empfohlen als opt-in Präzisionsmodus |
-| Klassen-Allowlist | Höchste mögliche Präzision | Hoher Pflegeaufwand, viele Einträge, starke Kopplung an Symbolnamen und Refactorings | Nicht in der ersten Umsetzung |
+| Namespace- oder Klassen-Allowlist | Feinere Eingrenzung der API | Zusätzliche Pflege, Drift bei Umstrukturierungen und höheres Fehlkonfigurationsrisiko | Nicht im aktuellen Scope |
 
 Die Empfehlung lautet daher: `ApiSurface` projektbezogen und automatisch aus
 `ProjectOverrides` auflösen, mit sicherem globalem Default `unknown`. Für eine
 vollständig externe Bibliothek genügt `external_library` ohne weitere Pflege.
-Für eine gemischte Bibliothek kann optional `PublicApiNamespaces` gepflegt
-werden. Eine einzelne globale Boolean-Eigenschaft wird nicht eingeführt.
+Eine einzelne globale Boolean-Eigenschaft wird nicht eingeführt.
 
 ### Alternative A: Tests aus der gesamten Solution entfernen
 
@@ -441,6 +416,8 @@ Projekte gleichermaßen verwendbar.
 - Keine vollständige Laufzeit- oder Reflection-Analyse.
 - Keine Garantie, dass ein Low-Confidence-Kandidat gefahrlos gelöscht werden
   kann.
+- Keine Namespace- oder Klassen-Allowlist für die Public API in dieser ersten
+  Umsetzung.
 - Keine Änderung der Linter-Regeln für Codequalität außerhalb der
   Dead-Code-Advisory-Pipeline.
 - Keine Aufwertung von Testcode zu Produktionscode.
@@ -457,8 +434,6 @@ Die spätere Umsetzung muss mindestens folgende Nachweise liefern:
 - Konfigurations- und Integrations-Tests für den Solution-weiten Default,
   Projekt-Overrides und die automatische Zuordnung zur richtigen Roslyn-
   Projektkonfiguration.
-- Tests für `external_library` ohne Allowlist sowie mit Allowlist: Symbole im
-  Namespace-Baum sind geschützt, Symbole außerhalb können Kandidaten werden.
 - Tests für Interface-Implementierungen, Overrides, Whitelist und Suppression.
 - Verify- beziehungsweise Integrationstests mit realer Solution und
   mindestens einem Testprojekt.
@@ -487,9 +462,8 @@ CLI-Optionen zu synchronisieren:
   produktiver Referenzdefinition, API-Schutz und Unsicherheitssemantik.
 
 Zusätzlich muss die Dokumentation die automatische Auflösung über
-`ProjectOverrides` sowie die optionale `PublicApiNamespaces`-Allowlist
-erklären. Ein Analyseaufruf darf die Projekt-API nicht als vergesslichen
-Pflichtparameter voraussetzen.
+`ProjectOverrides` erklären. Ein Analyseaufruf darf die Projekt-API nicht als
+vergesslichen Pflichtparameter voraussetzen.
 
 Die Dokumentation muss ausdrücklich festhalten, dass `IncludeTests = false`
 nicht bedeutet, dass Testprojekte aus der Solution entfernt werden. Es bedeutet
