@@ -149,13 +149,31 @@ internal static class GetServerHealthTool
         IAssemblyAnalysisRegistry? assemblyRegistry,
         GetServerHealthOptions options)
     {
+        var projectSnapshots = GetGlobalProjectSnapshots(registry, options.RuntimeContext);
         var assemblySnapshots = assemblyRegistry is null
             ? Array.Empty<AssemblyAnalysisHealthSnapshot>()
             : await assemblyRegistry.SnapshotsAsync().ConfigureAwait(false);
         return GetServerHealthResponseBuilder.Build(
-            registry.Snapshots(),
+            projectSnapshots,
             assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
             options);
+    }
+
+    private static IReadOnlyList<ProjectSnapshot> GetGlobalProjectSnapshots(
+        ProjectRegistry registry,
+        DaemonRuntimeContext? runtimeContext)
+    {
+        var registrySnapshots = registry.Snapshots();
+        if (runtimeContext is null) return registrySnapshots;
+
+        var daemonSnapshots = runtimeContext.Snapshot.Keys
+            .Select(runtimeContext.FindProjectSnapshot)
+            .OfType<ProjectSnapshot>();
+        return registrySnapshots
+            .Concat(daemonSnapshots)
+            .GroupBy(snapshot => snapshot.Definition.SolutionPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
     }
 
     internal static CallToolResult? ValidateOptions(GetServerHealthOptions options)

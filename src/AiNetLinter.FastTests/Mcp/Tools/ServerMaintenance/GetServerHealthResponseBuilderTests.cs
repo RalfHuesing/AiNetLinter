@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -57,20 +58,52 @@ public sealed class GetServerHealthResponseBuilderTests
     }
 
     [Fact]
-    public void Build_TargetAssemblyHealthContainsOnlyTheRequestedTarget()
+    public void Build_HealthOmitsRuntimeIdentifiers_AndSanitizesDiagnosticPaths()
     {
-        var entry = CreateAssemblyEntry("C:\\fixtures\\target-only.dll");
+        var entry = new AssemblyHealthEntry(
+            "C:\\fixtures\\health.dll",
+            "partial",
+            "decompiled",
+            null,
+            null,
+            null,
+            null,
+            ["Fehler in C:\\third-party\\private\\dependency.dll"]);
+        var runtimeContext = new DaemonRuntimeContext(
+            17,
+            () => new DaemonRuntimeSnapshot(1, 1234, TimeSpan.FromSeconds(3), [], "test"));
 
         var result = GetServerHealthResponseBuilder.Build(
             Array.Empty<ProjectSnapshot>(),
             [entry],
-            new GetServerHealthOptions(AssemblyPath: entry.TargetPath, IncludeDiagnostics: true));
+            new GetServerHealthOptions(IncludeDiagnostics: true, RuntimeContext: runtimeContext));
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("PID:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("connectionId:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("C:\\third-party\\private\\dependency.dll", text, StringComparison.Ordinal);
+        Assert.Contains("<path>", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_TargetAssemblyHealthContainsOnlyTheRequestedTarget()
+    {
+        var entry = CreateAssemblyEntry("C:\\fixtures\\target-only.dll") with
+        {
+            Diagnostics = ["nicht angeforderte Diagnose"],
+        };
+
+        var result = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(AssemblyPath: entry.TargetPath));
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains(entry.TargetPath, text, StringComparison.Ordinal);
         Assert.DoesNotContain("Version:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Daemon", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Assembly-Sessions", text, StringComparison.Ordinal);
+        Assert.Contains("Diagnosen: 1 (omitted; includeDiagnostics=true)", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -107,7 +140,9 @@ public sealed class GetServerHealthResponseBuilderTests
             [entry],
             new GetServerHealthOptions(IncludeDiagnostics: true, IncludeSessions: true));
         Assert.Contains("- LoadState: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("- Vollständigkeit: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text;
+        Assert.Contains("- analysisCompleteness: partial", text, StringComparison.Ordinal);
+        Assert.Contains("- capabilities: syntax=decompiled lint=unsupported", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -133,7 +168,7 @@ public sealed class GetServerHealthResponseBuilderTests
     }
 
     [Fact]
-    public void Build_PartialAssemblyUsesSameNextActionAsNavigation()
+    public void Build_PartialAssemblyDoesNotSuggestRetryForDiagnosticTruncation()
     {
         const string assemblyPath = "C:\\fixtures\\partial-health-probe.dll";
         var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics + 1)
@@ -153,15 +188,9 @@ public sealed class GetServerHealthResponseBuilderTests
                 Completeness: "partial",
                 NextAction: "Keine Aktion erforderlich.")],
             new GetServerHealthOptions(IncludeDiagnostics: true));
-        var target = new AnalysisTarget(
-            AnalysisTargetType.Assembly,
-            assemblyPath,
-            new AnalysisTargetRequest(assemblyPath));
-
-        var result = McpToolResults.WithNavigation(raw, target);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Vollständigkeit: partial", text, StringComparison.Ordinal);
-        Assert.Contains("Nächste Aktion: Scope oder Detaillevel verfeinern", text, StringComparison.Ordinal);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(raw.Content)).Text;
+        Assert.Contains("analysisCompleteness: partial", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Nächste Aktion: Scope oder Detaillevel verfeinern", text, StringComparison.Ordinal);
     }
 
     private static AssemblyHealthEntry CreateAssemblyEntry(string targetPath) =>

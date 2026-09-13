@@ -279,9 +279,10 @@ public sealed class WiringProjectContractTests
         OpenAndCloseLease(registry, solutionPathB);
         var all = await GetServerHealthTool.ExecuteAsync(registry);
         var allText = TextOf(all);
-        Assert.Contains("## Projekte (0)", allText, StringComparison.Ordinal);
+        Assert.Contains("## Projekte (2)", allText, StringComparison.Ordinal);
         Assert.DoesNotContain(solutionPathA, allText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(solutionPathB, allText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LoadState-Verteilung: Loaded=2", allText, StringComparison.Ordinal);
         Assert.Contains("Sessions gesamt:", allText, StringComparison.Ordinal);
         Assert.Contains("Statusverteilung:", allText, StringComparison.Ordinal);
         Assert.Contains("Diagnosen gesamt:", allText, StringComparison.Ordinal);
@@ -289,6 +290,8 @@ public sealed class WiringProjectContractTests
         var filteredText = TextOf(filtered);
         Assert.Contains(solutionPathB, filteredText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(solutionPathA, filteredText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("capabilities: syntax=available lint=", filteredText, StringComparison.Ordinal);
+        Assert.Contains("index: state=loaded", filteredText, StringComparison.Ordinal);
         var unknown = tempDir.CreateFile("unbekannt.slnx", string.Empty);
         var freshlyLoaded = await GetServerHealthTool.ExecuteAsync(registry, targetPath: unknown);
         Assert.NotEqual(true, freshlyLoaded.IsError);

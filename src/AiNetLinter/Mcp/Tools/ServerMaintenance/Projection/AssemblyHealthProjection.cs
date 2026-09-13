@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -11,7 +12,9 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 
 internal static class AssemblyHealthProjection
 {
-    private const string DetailNextAction = "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.";
+    private static readonly Regex AbsolutePathPattern = new(
+        @"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/]|/)[^\s""']+",
+        RegexOptions.CultureInvariant);
 
     internal static AssemblyHealthEntry FromSnapshot(AssemblyAnalysisHealthSnapshot snapshot) =>
         new(
@@ -53,8 +56,8 @@ internal static class AssemblyHealthProjection
             LockStatus: "released",
             LeaseStatus: "bounded",
             CleanupStatus: "not-observed",
-            ErrorPhase: origin.IsDecompiled ? "decompilation" : "assembly-analysis",
-            NextAction: "Keine Aktion erforderlich.");
+            ErrorPhase: null,
+            NextAction: null);
     }
 
     internal static AssemblyHealthEntry Project(
@@ -77,24 +80,18 @@ internal static class AssemblyHealthProjection
         return assembly with
         {
             LoadState = effectiveLoadState,
-            Diagnostics = includeDiagnostics ? summary.Samples : null,
+            Diagnostics = includeDiagnostics
+                ? summary.Samples.Select(SanitizeDiagnosticForHealth).ToArray()
+                : null,
             DiagnosticsSummary = summary,
             Completeness = effectiveCompleteness,
             TransitiveDiagnostics = null,
-            NextAction = ResolveNextAction(assembly.NextAction, effectiveLoadState, effectiveCompleteness, summary),
+            NextAction = assembly.NextAction,
         };
     }
 
-    private static string? ResolveNextAction(
-        string? current,
-        string effectiveLoadState,
-        string effectiveCompleteness,
-        AssemblyDiagnosticsSummary summary) =>
-        effectiveLoadState is "partial" or "degraded"
-            || effectiveCompleteness is "partial" or "degraded"
-            || summary.Truncated
-            ? DetailNextAction
-            : current;
+    private static string SanitizeDiagnosticForHealth(string diagnostic) =>
+        AbsolutePathPattern.Replace(diagnostic, "<path>");
 
     internal static IReadOnlyDictionary<string, int> CountStatuses(
         IEnumerable<AssemblyHealthEntry> assemblies) =>
@@ -102,43 +99,6 @@ internal static class AssemblyHealthProjection
             .GroupBy(assembly => assembly.LoadState, StringComparer.Ordinal)
             .OrderBy(group => group.Key, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-
-    internal static AssemblyHealthPublicEntry ToPublicEntry(AssemblyHealthEntry assembly) =>
-        new(
-            assembly.TargetPath,
-            assembly.LoadState,
-            assembly.OriginKind,
-            assembly.ContentHash,
-            assembly.Confidence,
-            assembly.DiagnosticsSummary,
-            assembly.Completeness,
-            assembly.Diagnostics,
-            assembly.DaemonProfile,
-            assembly.LockStatus,
-            assembly.LeaseStatus,
-            assembly.CleanupStatus,
-            assembly.ErrorCode,
-            assembly.ErrorPhase,
-            assembly.ErrorCause,
-            assembly.NextAction);
-
-    internal static TargetAssemblyHealthEntry ToTargetEntry(AssemblyHealthEntry assembly) =>
-        new(
-            assembly.TargetPath,
-            assembly.LoadState,
-            assembly.OriginKind,
-            assembly.ContentHash,
-            assembly.Confidence,
-            assembly.DiagnosticsSummary,
-            assembly.Completeness,
-            assembly.Diagnostics,
-            assembly.LockStatus,
-            assembly.LeaseStatus,
-            assembly.CleanupStatus,
-            assembly.ErrorCode,
-            assembly.ErrorPhase,
-            assembly.ErrorCause,
-            assembly.NextAction);
 
     private static string ResolveEffectiveStatus(
         string statusValue,

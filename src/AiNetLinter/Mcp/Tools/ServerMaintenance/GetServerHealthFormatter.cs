@@ -16,17 +16,17 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// </summary>
 internal static class GetServerHealthFormatter
 {
+    private const string DaemonProfileLabel = "Daemon-Profil";
+
     internal static void AppendDaemonSection(StringBuilder builder, DaemonHealthPayload? daemon)
     {
         if (daemon is null) return;
         builder.AppendLine($"- Mode: {daemon.Mode}");
         builder.AppendLine($"- Connections: {daemon.Connections}");
-        builder.AppendLine($"- PID: {daemon.ProcessId}");
         builder.AppendLine($"- Daemon-Uptime: {FormatUptime(TimeSpan.FromSeconds(daemon.UptimeSeconds))}");
         builder.AppendLine($"- Daemon-Keys: {(daemon.Keys.Count == 0 ? "keine" : string.Join(", ", daemon.Keys))}");
         builder.AppendLine($"- Daemon-Version: {daemon.DaemonVersion}");
-        AppendOptionalAssemblyValue(builder, "Daemon-Profil", daemon.DaemonProfile);
-        builder.AppendLine($"- connectionId: {daemon.ConnectionId}");
+        AppendOptionalAssemblyValue(builder, DaemonProfileLabel, daemon.DaemonProfile);
         builder.AppendLine();
     }
 
@@ -42,6 +42,7 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"- Zuletzt genutzt (UTC): {FormatTimestamp(snapshot.LastUsedUtc)}");
         builder.AppendLine($"- Uptime: {FormatUptime(server.Uptime)}");
         builder.AppendLine($"- Solution-Refreshes seit Start: {server.RefreshCount}");
+        AppendProjectCapabilities(builder, server);
         AppendStalenessSection(builder, server.LastStalenessStats);
         if (server.LastGoodStateUtc is { } lastGoodState)
         {
@@ -65,6 +66,7 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"- Config: {resolvedConfigPath ?? "not_configured"}");
         builder.AppendLine($"- Zuletzt genutzt (UTC): {FormatTimestamp(snapshot.LastUsedUtc)}");
         builder.AppendLine($"- Solution-Refreshes: {server.RefreshCount}");
+        AppendProjectCapabilities(builder, server);
         AppendStalenessSection(builder, server.LastStalenessStats, "für dieses Target");
         if (server.LastGoodStateUtc is { } lastGoodState)
         {
@@ -105,6 +107,16 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"- Diagnosen gesamt: {diagnosticCount}");
     }
 
+    internal static void AppendProjectAggregate(
+        StringBuilder builder,
+        int totalSessions,
+        IReadOnlyDictionary<string, int> statusCounts)
+    {
+        builder.AppendLine("- Sessiondetails global unterdrückt; nur serverweite Aggregate und Statuszähler");
+        builder.AppendLine($"- Sessions gesamt: {totalSessions}");
+        builder.AppendLine($"- LoadState-Verteilung: {string.Join(", ", statusCounts.Select(pair => $"{pair.Key}={pair.Value}"))}");
+    }
+
     private static void AppendAssemblyHeader(
         StringBuilder builder,
         AssemblyHealthEntry assembly,
@@ -114,10 +126,11 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"- LoadState: {assembly.LoadState}");
         if (!string.IsNullOrWhiteSpace(assembly.Completeness))
         {
-            builder.AppendLine($"- Vollständigkeit: {assembly.Completeness}");
+            builder.AppendLine($"- analysisCompleteness: {assembly.Completeness}");
         }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
-        if (includeDaemonProfile) AppendOptionalAssemblyValue(builder, "Daemon-Profil", assembly.DaemonProfile);
+        builder.AppendLine($"- capabilities: syntax={GetAssemblySyntaxCapability(assembly)} lint=unsupported");
+        if (includeDaemonProfile) AppendOptionalAssemblyValue(builder, DaemonProfileLabel, assembly.DaemonProfile);
         AppendOptionalAssemblyValue(builder, "Lock-Status", assembly.LockStatus);
         AppendOptionalAssemblyValue(builder, "Lease-Status", assembly.LeaseStatus);
         AppendOptionalAssemblyValue(builder, "Cleanup-Status", assembly.CleanupStatus);
@@ -161,8 +174,14 @@ internal static class GetServerHealthFormatter
             return;
         }
 
+        if (assembly.Diagnostics is null)
+        {
+            builder.AppendLine($"- Diagnosen: {summary.TotalCount} (omitted; includeDiagnostics=true)");
+            return;
+        }
+
         builder.AppendLine($"- Diagnosen: {summary.ShownCount} von {summary.TotalCount}{(summary.Truncated ? " (gekürzt)" : string.Empty)}");
-        if (assembly.Diagnostics is not { Count: > 0 })
+        if (assembly.Diagnostics.Count == 0)
         {
             return;
         }
@@ -184,6 +203,24 @@ internal static class GetServerHealthFormatter
             builder.AppendLine($"- Staleness-Warnungen (letzter Lauf): {staleness.WarningCount}, zuletzt: {warning}");
         }
     }
+
+    private static void AppendProjectCapabilities(StringBuilder builder, McpCodeGraphServer server)
+    {
+        var loadState = server.LoadState.ToString().ToLowerInvariant();
+        var syntaxCapability = server.LoadState == ServerLoadState.Loaded ? "available" : "unavailable";
+        var (_, configPath) = server.GetConfigSnapshot();
+        var lintCapability = configPath is null ? "not_configured" : "configured";
+        var solution = server.GetCurrentSolution();
+        var projectCount = solution?.ProjectIds.Count ?? 0;
+        var documentCount = solution?.Projects.Sum(project => project.DocumentIds.Count) ?? 0;
+        builder.AppendLine($"- capabilities: syntax={syntaxCapability} lint={lintCapability}");
+        builder.AppendLine($"- index: state={loadState} projects={projectCount} documents={documentCount}");
+    }
+
+    private static string GetAssemblySyntaxCapability(AssemblyHealthEntry assembly) =>
+        string.Equals(assembly.OriginKind, "decompiled", StringComparison.OrdinalIgnoreCase)
+            ? "decompiled"
+            : "available";
 
     private static string FormatTimestamp(DateTime utc) => utc.ToString("yyyy-MM-dd HH:mm:ss");
 

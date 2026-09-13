@@ -37,12 +37,18 @@ internal static class GetServerHealthResponseBuilder
         var sessionsTruncatedBy = sessionsTruncated ? new[] { "maxSessions" } : Array.Empty<string>();
         var statusCounts = AssemblyHealthProjection.CountStatuses(projectedAssemblies);
         var diagnosticCount = projectedAssemblies.Sum(assembly => assembly.DiagnosticsSummary?.TotalCount ?? 0);
+        var projectStatusCounts = snapshots
+            .GroupBy(snapshot => snapshot.Server.LoadState.ToString(), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         var daemonPayload = runtimeContext is null ? null : DaemonHealthProjection.FromContext(runtimeContext, targeted);
         var version = McpServerVersion.Get();
         var response = new HealthResponseData(
             version,
             McpServerVersion.RepositoryUrl,
             targeted ? snapshots : Array.Empty<ProjectSnapshot>(),
+            snapshots.Count,
+            projectStatusCounts,
             daemonPayload,
             shownAssemblies,
             options,
@@ -76,12 +82,6 @@ internal static class GetServerHealthResponseBuilder
             GetServerHealthFormatter.AppendTargetAssemblySection(builder, response.ShownAssemblies[0]);
         }
 
-        var project = response.Snapshots.Count == 1
-            ? ProjectHealthProjection.ToTargetEntry(response.Snapshots[0])
-            : null;
-        var assembly = response.ShownAssemblies is { Count: 1 }
-            ? AssemblyHealthProjection.ToTargetEntry(response.ShownAssemblies[0])
-            : null;
         return McpToolResults.Text(
             builder.ToString().TrimEnd());
     }
@@ -105,9 +105,19 @@ internal static class GetServerHealthResponseBuilder
         builder.AppendLine($"- Repository: {response.RepositoryUrl}");
         GetServerHealthFormatter.AppendDaemonSection(builder, response.Daemon);
         builder.AppendLine();
-        builder.AppendLine($"## Projekte ({response.Snapshots.Count})");
+        builder.AppendLine($"## Projekte ({response.TotalProjectSessions})");
         builder.AppendLine();
-        foreach (var snapshot in response.Snapshots) GetServerHealthFormatter.AppendProjectSection(builder, snapshot);
+        if (response.Snapshots.Count == 0)
+        {
+            GetServerHealthFormatter.AppendProjectAggregate(
+                builder,
+                response.TotalProjectSessions,
+                response.ProjectStatusCounts);
+        }
+        else
+        {
+            foreach (var snapshot in response.Snapshots) GetServerHealthFormatter.AppendProjectSection(builder, snapshot);
+        }
         builder.AppendLine($"## Assembly-Sessions ({response.TotalAssemblySessions})");
         builder.AppendLine();
         AppendAssemblyText(
@@ -147,6 +157,8 @@ internal static class GetServerHealthResponseBuilder
         string Version,
         string RepositoryUrl,
         IReadOnlyList<ProjectSnapshot> Snapshots,
+        int TotalProjectSessions,
+        IReadOnlyDictionary<string, int> ProjectStatusCounts,
         DaemonHealthPayload? Daemon,
         IReadOnlyList<AssemblyHealthEntry>? ShownAssemblies,
         GetServerHealthOptions Options,
@@ -155,8 +167,6 @@ internal static class GetServerHealthResponseBuilder
         IReadOnlyList<string> SessionsTruncatedBy,
         IReadOnlyDictionary<string, int> StatusCounts,
         int DiagnosticCount)
-    {
-        internal bool Targeted => Options.TargetPath is not null || Options.AssemblyPath is not null;
-    }
+    { }
 
 }
