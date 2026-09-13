@@ -109,7 +109,7 @@ internal static partial class CallGraphTreeBuilder
         if (state.Direction is CallTreeDirection.Incoming or CallTreeDirection.Both)
         {
             var references = await SymbolFinder.FindReferencesAsync(symbol, state.Solution, ct).ConfigureAwait(false);
-            var callers = await GroupByCallerAsync(references, ct).ConfigureAwait(false);
+            var callers = await GroupByCallerAsync(references, symbol, ct).ConfigureAwait(false);
             groups.AddRange(callers.Where(group => group.CallerSymbol is not null).Select(group => new GraphExpansion(group.CallerSymbol!, group.Locations, CallTreeDirection.Incoming, ClassifyDispatchKind(symbol))));
         }
         if (state.Direction is CallTreeDirection.Outgoing or CallTreeDirection.Both)

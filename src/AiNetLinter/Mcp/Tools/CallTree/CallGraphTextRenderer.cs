@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Handoffs;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
 
@@ -14,7 +15,7 @@ internal static class CallGraphTextRenderer
     {
         var nodes = graph.Nodes.ToDictionary(node => node.NodeId, StringComparer.Ordinal);
         var root = nodes[graph.RootNodeId];
-        var builder = new StringBuilder(FormatNode(root));
+        var builder = new StringBuilder($"[{root.NodeId}] {FormatNode(root)}");
         foreach (var edge in graph.Edges)
         {
             if (!nodes.TryGetValue(edge.FromNodeId, out var from)
@@ -29,6 +30,7 @@ internal static class CallGraphTextRenderer
             builder.Append($"\n└── ... und {graph.HiddenEdgeCount} weitere");
         }
 
+        AppendNodeHandoffs(builder, graph.Nodes);
         AppendMethodHints(builder, graph.MethodHints);
         return builder.ToString();
     }
@@ -62,6 +64,7 @@ internal static class CallGraphTextRenderer
             builder.Append(" --> overflow");
         }
 
+        AppendNodeHandoffs(builder, graph.Nodes, mermaidComment: true);
         AppendMethodHints(builder, graph.MethodHints);
         return builder.ToString();
     }
@@ -73,13 +76,48 @@ internal static class CallGraphTextRenderer
         var dispatch = string.IsNullOrWhiteSpace(edge.DispatchKind)
             ? string.Empty
             : $" [{edge.DispatchKind}]";
-        return $"{from.Name} -> {to.Name}{location}{dispatch}";
+        return $"[{from.NodeId}] {from.Name} -> [{to.NodeId}] {to.Name}{location}{dispatch}";
     }
 
     private static string FormatNode(CallGraphNode node) =>
         string.IsNullOrWhiteSpace(node.DisplayLine)
             ? node.Name
             : $"{node.Name} — {node.DisplayLine}";
+
+    private static void AppendNodeHandoffs(
+        StringBuilder builder,
+        IReadOnlyList<CallGraphNode> nodes,
+        bool mermaidComment = false)
+    {
+        var navigableNodes = nodes
+            .Where(node => SymbolHandoffIdentifier.HasWirePrefix(node.SymbolId))
+            .ToList();
+        if (navigableNodes.Count == 0) return;
+
+        if (mermaidComment)
+        {
+            foreach (var node in navigableNodes)
+            {
+                builder.Append("\n    %% handoffId: ");
+                builder.Append(node.NodeId);
+                builder.Append(" = ");
+                builder.Append(node.SymbolId);
+            }
+            return;
+        }
+
+        builder.Append("\n\nKnoten-Handoffs:");
+        foreach (var node in navigableNodes)
+        {
+            builder.Append("\n- ");
+            builder.Append(node.NodeId);
+            builder.Append(" (");
+            builder.Append(node.Name);
+            builder.Append("): handoffId: `");
+            builder.Append(node.SymbolId);
+            builder.Append('`');
+        }
+    }
 
     private static void AppendMethodHints(StringBuilder builder, IReadOnlyList<CallGraphMethodHint>? hints)
     {

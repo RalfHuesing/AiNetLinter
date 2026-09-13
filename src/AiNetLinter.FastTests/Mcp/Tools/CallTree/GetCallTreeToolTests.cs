@@ -99,7 +99,7 @@ public sealed partial class GetCallTreeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UsesGraphDomainForBothTextFormatsWithoutHandoffIds()
+    public async Task ExecuteAsync_EmitsCanonicalNodeHandoffsForBothTextFormats()
     {
         var state = _fixture.CreateServer();
 
@@ -112,10 +112,32 @@ public sealed partial class GetCallTreeToolTests
         var mermaidText = Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text;
         Assert.Contains("Caller.Run", asciiText, StringComparison.Ordinal);
         Assert.Contains("Caller.Run", mermaidText, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoff=true", asciiText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("handoff=true", mermaidText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("id=", asciiText, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("id=", mermaidText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Knoten-Handoffs:", asciiText, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `s:", asciiText, StringComparison.Ordinal);
+        Assert.Contains("%% handoffId: n1 = s:", mermaidText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IncomingExcludesOverrideDeclarationsAndRetainsRealCallers()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("CallTreeDispatch", [
+                ("Dispatch.cs", """
+                    namespace CallTreeDispatch;
+                    public abstract class Base { public abstract void Execute(); }
+                    public sealed class First : Base { public override void Execute() { } }
+                    public sealed class Second : Base { public override void Execute() { } }
+                    public sealed class Caller { public void Run(Base target) => target.Execute(); }
+                    """)])));
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            context.CreateServer(), new GetCallTreeInput("CallTreeDispatch.First.Execute", 1, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Caller.Run", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[n1] First.Execute -> [n1] First.Execute", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Second.Execute", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -219,9 +241,13 @@ public sealed partial class GetCallTreeToolTests
                 false,
                 32 * 1024));
 
-        Assert.Contains("Caller", Assert.IsType<TextContentBlock>(Assert.Single(ascii.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("Caller", Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("assembly=dependency.dll", Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text, StringComparison.Ordinal);
+        var asciiText = Assert.IsType<TextContentBlock>(Assert.Single(ascii.Content)).Text;
+        var mermaidText = Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text;
+        Assert.Contains("Caller", asciiText, StringComparison.Ordinal);
+        Assert.Contains("Caller", mermaidText, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `a:root`", asciiText, StringComparison.Ordinal);
+        Assert.Contains("%% handoffId: n1 = a:root", mermaidText, StringComparison.Ordinal);
+        Assert.Contains("assembly=dependency.dll", mermaidText, StringComparison.Ordinal);
     }
 
     [Fact]

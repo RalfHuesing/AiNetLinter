@@ -14,28 +14,13 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 2 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 1 Major, 1 Minor
 
 CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und CHAIN-04 sind durchgängig möglich.
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-05: `get_call_tree` ohne Node-Handoffs; Incoming vermischt Overrides (TC-C08)
-
-- **Betroffenes Tool / Schema**: `get_call_tree` (Parameter: `symbolIdentifier`, `direction`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source); Gegenprobe `LOCAL-01`
-- **Konkreter Aufruf**: `get_call_tree(targetPath=SOURCE-01, symbolIdentifier=<AttachRuntimeCachesAsync-handoffId>, direction="incoming"|"outgoing")`
-- **Beobachtung / Ist-Verhalten**:
-  - ASCII-Hierarchie ohne `handoffId` an den Knoten; Folgetools brauchen manuelles Parsen von `Typ.Methode — Datei:Zeile`.
-  - Incoming auf die abstrakte Methode fächert Geschwister-Overrides als gegenseitige Kanten auf (gleiche Zeile, `[virtual]`/`[override]`), nicht als echte Caller-Kette. Reale Caller sind dazwischen gemischt; Graph nach `topN` abgeschnitten (`… und 128 weitere`).
-  - Outgoing der Default-Implementierung war klein und korrekt, ebenfalls ohne Handoffs.
-  - `LOCAL-01` incoming hierarchisch, aber `Vollständigkeit: partial` plus Decompiler-Diagnoseflut; ebenfalls keine Node-IDs.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Der Baum ist optisch hierarchisch, aber nicht kettenfähig und für virtuelle Member semantisch irreführend.
-- **Empfehlung**:
-  - Pro Knoten `handoffId`. Overrides nicht als gegenseitige Calls modellieren (eigene Kante `overrides` oder nur echte Invoke-Kanten).
 
 ### [Major] C-06: Assembly-Modus: Status/Lease unklar, Completeness widersprüchlich (TC-C02, TC-C07)
 
@@ -66,6 +51,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und 
 
 ---
 
-Gruppe C: 0 Critical, 2 Major, 1 Minor
-IDs: C-05, C-06, C-07
+Gruppe C: 0 Critical, 1 Major, 1 Minor
+IDs: C-06, C-07
 Blocker: none

@@ -207,6 +207,7 @@ internal static class SymbolGraphToolRegistrations
         "direction: 'incoming' [Default: wer ruft auf], 'outgoing' [wen ruft es auf], 'both'. " +
         "depth: Tiefe (Default 2, Cap 5). topN: Fan-Out je Ebene (Default 10, max. 250 Knoten). " +
         "format: 'ascii' [Default] oder 'mermaid'. " +
+        "Jeder navigierbare Graph-Knoten enthält seine kanonische handoffId; incoming zeigt nur echte Aufrufe, keine Override-Deklarationen. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
         "includeBcl: Framework-Symbole bei outgoing (Default false). " +
         "includeReferences (Default false): bei Assemblies Referenzen einbeziehen. " +

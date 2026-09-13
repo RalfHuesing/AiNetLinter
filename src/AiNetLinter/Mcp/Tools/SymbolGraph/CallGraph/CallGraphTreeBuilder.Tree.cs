@@ -69,7 +69,7 @@ internal static partial class CallGraphTreeBuilder
         if (state.Direction is CallTreeDirection.Incoming or CallTreeDirection.Both)
         {
             var refs = await SymbolFinder.FindReferencesAsync(symbol, state.Solution, ct);
-            incoming = await BuildSortedGroupsAsync(refs, state.Solution, ct);
+            incoming = await BuildSortedGroupsAsync(refs, state.Solution, symbol, ct);
         }
         if (state.Direction is CallTreeDirection.Outgoing or CallTreeDirection.Both)
             outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, state.IncludeBcl, ct);
@@ -114,8 +114,12 @@ internal static partial class CallGraphTreeBuilder
     private static List<(CallerGroup Group, CallTreeDirection Direction)> CreateDirectionalGroups(IReadOnlyList<CallerGroup> incoming, IReadOnlyList<CallerGroup> outgoing, CallTreeDirection direction) =>
         (direction == CallTreeDirection.Incoming ? incoming : outgoing).Select(group => (group, direction)).ToList();
 
-    private static async Task<List<CallerGroup>> BuildSortedGroupsAsync(IEnumerable<ReferencedSymbol> refs, Solution solution, CancellationToken ct) =>
-        SortGroups(await GroupByCallerAsync(refs, ct), solution);
+    private static async Task<List<CallerGroup>> BuildSortedGroupsAsync(
+        IEnumerable<ReferencedSymbol> refs,
+        Solution solution,
+        ISymbol referencedSymbol,
+        CancellationToken ct) =>
+        SortGroups(await GroupByCallerAsync(refs, referencedSymbol, ct), solution);
 
     private static List<CallerGroup> SortGroups(IEnumerable<CallerGroup> groups, Solution solution) =>
         groups.OrderBy(g => FirstLocationPath(g, solution), StringComparer.Ordinal).ThenBy(FirstLocationLine).ToList();
@@ -126,28 +130,88 @@ internal static partial class CallGraphTreeBuilder
         return SortGroups(groups.Select(group => new CallerGroup(group.Symbol, group.Locations.ToList())), solution);
     }
 
-    private static async Task<List<CallerGroup>> GroupByCallerAsync(IEnumerable<ReferencedSymbol> refs, CancellationToken ct)
+    private static async Task<List<CallerGroup>> GroupByCallerAsync(
+        IEnumerable<ReferencedSymbol> refs,
+        ISymbol referencedSymbol,
+        CancellationToken ct)
     {
         var byCaller = new Dictionary<ISymbol, CallerGroup>(SymbolEqualityComparer.Default);
         var ungrouped = new List<CallerGroup>();
         foreach (var reference in refs)
             foreach (var referenceLocation in reference.Locations)
-                await AddLocationToGroupAsync(referenceLocation, byCaller, ungrouped, ct);
+                await AddLocationToGroupAsync(referenceLocation, referencedSymbol, byCaller, ungrouped, ct);
         return byCaller.Values.Concat(ungrouped).ToList();
     }
 
-    private static async Task AddLocationToGroupAsync(ReferenceLocation referenceLocation, Dictionary<ISymbol, CallerGroup> byCaller, List<CallerGroup> ungrouped, CancellationToken ct)
+    private static async Task AddLocationToGroupAsync(
+        ReferenceLocation referenceLocation,
+        ISymbol referencedSymbol,
+        Dictionary<ISymbol, CallerGroup> byCaller,
+        List<CallerGroup> ungrouped,
+        CancellationToken ct)
     {
         var location = referenceLocation.Location;
         if (!location.IsInSource || location.SourceTree is null) return;
         var callerSymbol = await CallGraphTraversal.ResolveEnclosingMemberAsync(referenceLocation, ct);
         if (callerSymbol is null) { ungrouped.Add(new CallerGroup(null, new List<Location> { location })); return; }
+        if (IsOverrideDeclarationReference(location, callerSymbol, referencedSymbol)) return;
         if (!byCaller.TryGetValue(callerSymbol, out var group))
         {
             group = new CallerGroup(callerSymbol, new List<Location>());
             byCaller[callerSymbol] = group;
         }
         group.Locations.Add(location);
+    }
+
+    // SymbolFinder liefert bei virtuellen Members auch die Deklarationen aller Overrides als
+    // Referenzen. Eine Deklaration ist jedoch keine Aufrufkante; andernfalls erscheinen
+    // Geschwister-Overrides im Incoming-Baum fälschlich als gegenseitige Caller.
+    private static bool IsOverrideDeclarationReference(Location location, ISymbol callerSymbol, ISymbol referencedSymbol) =>
+        IsWithinDeclaration(location, callerSymbol)
+        && ((callerSymbol is IMethodSymbol { IsOverride: true } callerMethod
+                && referencedSymbol is IMethodSymbol referencedMethod
+                && HasSameOverrideRoot(callerMethod, referencedMethod))
+            || (callerSymbol is IPropertySymbol { IsOverride: true } callerProperty
+                && referencedSymbol is IPropertySymbol referencedProperty
+                && HasSameOverrideRoot(callerProperty, referencedProperty))
+            || (callerSymbol is IEventSymbol { IsOverride: true } callerEvent
+                && referencedSymbol is IEventSymbol referencedEvent
+                && HasSameOverrideRoot(callerEvent, referencedEvent)));
+
+    private static bool IsWithinDeclaration(Location location, ISymbol symbol) =>
+        symbol.Locations.Any(declaration => declaration.IsInSource
+            && ReferenceEquals(declaration.SourceTree, location.SourceTree)
+            && declaration.SourceSpan.Start <= location.SourceSpan.Start
+            && declaration.SourceSpan.End >= location.SourceSpan.End);
+
+    private static bool HasSameOverrideRoot(IMethodSymbol left, IMethodSymbol right) =>
+        SymbolEqualityComparer.Default.Equals(GetOverrideRoot(left), GetOverrideRoot(right));
+
+    private static bool HasSameOverrideRoot(IPropertySymbol left, IPropertySymbol right) =>
+        SymbolEqualityComparer.Default.Equals(GetOverrideRoot(left), GetOverrideRoot(right));
+
+    private static bool HasSameOverrideRoot(IEventSymbol left, IEventSymbol right) =>
+        SymbolEqualityComparer.Default.Equals(GetOverrideRoot(left), GetOverrideRoot(right));
+
+    private static IMethodSymbol GetOverrideRoot(IMethodSymbol symbol)
+    {
+        var root = symbol.OriginalDefinition;
+        while (root.OverriddenMethod is not null) root = root.OverriddenMethod.OriginalDefinition;
+        return root;
+    }
+
+    private static IPropertySymbol GetOverrideRoot(IPropertySymbol symbol)
+    {
+        var root = symbol.OriginalDefinition;
+        while (root.OverriddenProperty is not null) root = root.OverriddenProperty.OriginalDefinition;
+        return root;
+    }
+
+    private static IEventSymbol GetOverrideRoot(IEventSymbol symbol)
+    {
+        var root = symbol.OriginalDefinition;
+        while (root.OverriddenEvent is not null) root = root.OverriddenEvent.OriginalDefinition;
+        return root;
     }
 
     private static CallTreeBuilderNode AddChild(AddChildRequest request)
