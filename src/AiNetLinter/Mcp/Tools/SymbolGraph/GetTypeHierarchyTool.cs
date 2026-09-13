@@ -62,6 +62,9 @@ internal static class GetTypeHierarchyTool
                 hint: "symbolIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
         }
 
+        if (!McpToolResults.TryRestoreSymbolIdentifier(symbolIdentifier, "$.symbolIdentifier", out symbolIdentifier, out var restoreError))
+            return restoreError;
+
         var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             solution, symbolIdentifier, ct, state.HandoffSymbolIdentity);
         if (error is not null) return error;

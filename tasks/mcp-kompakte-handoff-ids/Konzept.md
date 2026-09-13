@@ -163,6 +163,7 @@ Die folgenden Bausteine sind vollständig implementiert und durch Unit-Tests abg
 3. **`HandoffHandleRegistry`** (`src/AiNetLinter/Mcp/Handoffs/HandoffHandleRegistry.cs`):
    - `HandoffHandleRegistry.Default` als Singleton pro Hostlauf.
    - `GetOrCreateOpaqueHandleForOutput(string internalHandoffId)`: Liefert `Result<string>` mit `h:...`.
+   - `GetOpaqueHandleOrDefault(string internalHandoffId, string? fallback = null)`: Kompakter Einzeiler für alle Renderer.
    - `RestoreInternalHandoffForInput(string externalHandleOrSemanticInput)`: Zentrale Weiche für Eingaben (`h:...` restaurieren, `s:`/`a:` ablehnen, semantische Eingaben und Windows-Pfade unverändert durchreichen).
 
 4. **`Result<T>` & `ResultError`** (`src/AiNetLinter/Mcp/Handoffs/Result.cs`):
@@ -171,8 +172,12 @@ Die folgenden Bausteine sind vollständig implementiert und durch Unit-Tests abg
 5. **`LinterErrorCodes`** (`src/AiNetLinter/Output/LinterErrorCodes.cs`):
    - `INVALID_HANDOFF`, `UNSUPPORTED_HANDOFF_FORMAT`, `HANDOFF_UNKNOWN`, `HANDOFF_COUNTER_UNAVAILABLE`.
 
-6. **FastTests** (`src/AiNetLinter.FastTests/Mcp/Handoffs/`):
-   - `HandoffCounterAlphabetTests.cs`, `HandoffCounterStoreTests.cs`, `HandoffHandleRegistryTests.cs`.
+6. **Zentrale MCP-Consumer-Hilfsmethoden** (`src/AiNetLinter/Mcp/McpToolResults.cs`):
+   - `TryRestoreSymbolIdentifier(...)` für Einzelfelder und `TryRestoreSymbolIdentifiers(...)` für Listen.
+   - Einheitliche 2-Zeiler-Restaurierung am Tool-Eingangs-Gate inklusive `[NotNullWhen(false)]`-Nullability und strukturiertem Fehlerhandling.
+
+7. **FastTests** (`src/AiNetLinter.FastTests/Mcp/Handoffs/`):
+   - `HandoffCounterAlphabetTests.cs`, `HandoffCounterStoreTests.cs`, `HandoffHandleRegistryTests.cs`, `Group1CoreSymbolGraphHandoffTests.cs`, `Group2StructureHandoffTests.cs`.
 
 ## 4. Öffentlicher Vertrag
 
@@ -262,7 +267,7 @@ Für jeden gefundenen Producer:
 - [x] `find_references.symbolIdentifier` (Gruppe 1 migriert)
 - [ ] `get_call_tree.symbolIdentifier`
 - [ ] `get_impact.symbolIdentifier`
-- [ ] `get_type_hierarchy.symbolIdentifier`
+- [x] `get_type_hierarchy.symbolIdentifier` (Gruppe 2 migriert)
 - [x] `find_implementations.symbolIdentifier` (Gruppe 2 migriert)
 - [ ] `dependency_graph.symbolIdentifier`
 - [x] `get_class_structure.symbolIdentifier` (Gruppe 2 migriert)
