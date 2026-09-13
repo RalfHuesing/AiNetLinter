@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
@@ -58,11 +59,14 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
         Assert.Null(owner.Error);
         using (var ownerLease = owner.Lease!)
         {
-            handoffId = AnalysisSymbolIdentity.ForAssembly(
+            var internalHandoffId = AnalysisSymbolIdentity.ForAssembly(
                     ownerLease.CanonicalPath,
                     ownerLease.Context.Origin.ContentHash,
                     ownerLease.Context.Generation)
                 .FormatHandoff(LeaseSymbol(ownerLease, "Read"))!;
+            var publicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(internalHandoffId);
+            Assert.True(publicHandle.IsSuccess);
+            handoffId = publicHandle.Value!;
         }
 
         clock.Advance(TimeSpan.FromMinutes(2));
@@ -109,11 +113,14 @@ public sealed class AssemblyHandoffLifecycleIntegrationTests
         {
             firstServer = firstLease.Server;
             var symbol = LeaseSymbol(firstLease, "Read");
-            handoffId = AnalysisSymbolIdentity.ForAssembly(
+            var internalHandoffId = AnalysisSymbolIdentity.ForAssembly(
                     firstLease.CanonicalPath,
                     firstLease.Context.Origin.ContentHash,
                     firstLease.Context.Generation)
                 .FormatHandoff(symbol)!;
+            var publicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(internalHandoffId);
+            Assert.True(publicHandle.IsSuccess);
+            handoffId = publicHandle.Value!;
         }
 
         clock.Advance(TimeSpan.FromMinutes(2));

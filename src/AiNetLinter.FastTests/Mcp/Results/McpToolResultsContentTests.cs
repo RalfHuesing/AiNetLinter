@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Output;
@@ -64,6 +65,23 @@ public sealed class McpToolResultsContentTests
         Assert.DoesNotContain("handoffId: n1 = s:", text, StringComparison.Ordinal);
         Assert.Matches(@"handoffId: `h:[a-zA-Z0-9]+`", text);
         Assert.Matches(@"handoffId: n1 = h:[a-zA-Z0-9]+", text);
+    }
+
+    [Fact]
+    public void ExternalizeInternalHandoffs_CounterFailure_StopsResponseInsteadOfRenderingFallback()
+    {
+        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            McpToolResults.ExternalizeInternalHandoffs(
+                $"handoffId: `{internalId}`",
+                _ => Result<string>.Failure(
+                    LinterErrorCodes.HandoffCounterUnavailable,
+                    "Counter-Speicher nicht verfuegbar.")));
+
+        Assert.Contains(LinterErrorCodes.HandoffCounterUnavailable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(internalId, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("nicht verfuegbar", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

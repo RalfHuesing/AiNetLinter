@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
@@ -39,11 +40,14 @@ public sealed class AssemblyAnalysisContextNavigationTests
         string handoffId;
         using (var ownerLease = owner.Lease!)
         {
-            handoffId = AnalysisSymbolIdentity.ForAssembly(
+            var internalHandoffId = AnalysisSymbolIdentity.ForAssembly(
                     ownerLease.CanonicalPath,
                     ownerLease.Context.Origin.ContentHash,
                     ownerLease.Context.Generation)
                 .FormatHandoff(FindMember(ownerLease, "Probe.Target", "Read"))!;
+            var publicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(internalHandoffId);
+            Assert.True(publicHandle.IsSuccess);
+            handoffId = publicHandle.Value!;
         }
 
         var root = await registry.LeaseAsync(rootPath);

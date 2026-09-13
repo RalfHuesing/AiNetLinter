@@ -5,7 +5,7 @@
 - [X] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 - [X] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 - [X] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
-- [ ] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
+- [X] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 
 ## Durchführungsprotokoll
 
@@ -41,4 +41,6 @@
 
 ### 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 
-- Ausstehend.
+- Audit korrigierte den Counter-Fehlerpfad und aktualisierte reale Assembly-Toolketten.
+- Audit-Skript PASS (12/12, 17/17); `verify(solution)` pass, 10.0, 0 Violations.
+- Release-Gate grün: Build warnungsfrei, 2.646 FastTests und 235 IntegrationTests (je non-Stress).

@@ -10,6 +10,7 @@ using AiNetLinter.Baseline;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
@@ -317,14 +318,16 @@ public sealed class GetTypeHierarchyToolTests
         var serviceSymbol = firstLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
         var firstAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
         Assert.StartsWith("a:", firstAssemblySymbolId, StringComparison.Ordinal);
+        var firstPublicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(firstAssemblySymbolId);
+        Assert.True(firstPublicHandle.IsSuccess);
 
         var assemblyCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
-                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
-                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstPublicHandle.Value!, GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstPublicHandle.Value!, GetTypeHierarchyTool.DefaultMaxResults, default))));
 
         Assert.NotEqual(true, assemblyCallResult.IsError);
         var assemblyText = TextOf(assemblyCallResult);
@@ -347,6 +350,8 @@ public sealed class GetTypeHierarchyToolTests
         var thirdLease = thirdLeaseResult.Lease!;
         var currentServiceSymbol = thirdLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
         var currentAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(currentServiceSymbol, thirdLease.Server.AssemblySymbolIdentity);
+        var currentPublicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(currentAssemblySymbolId);
+        Assert.True(currentPublicHandle.IsSuccess);
         thirdLease.Dispose();
 
         // 3. Die aktuelle Snapshot-ID bleibt nach interner Generationseviction gültig.
@@ -355,8 +360,8 @@ public sealed class GetTypeHierarchyToolTests
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
-                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
-                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentPublicHandle.Value!, GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentPublicHandle.Value!, GetTypeHierarchyTool.DefaultMaxResults, default))));
 
         Assert.NotEqual(true, stableCallResult.IsError);
         var stableText = TextOf(stableCallResult);

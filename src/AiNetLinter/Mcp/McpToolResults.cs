@@ -373,13 +373,19 @@ internal static partial class McpToolResults
         return [new TextContentBlock { Text = rendered.Text }];
     }
 
-    internal static string ExternalizeInternalHandoffs(string text) =>
+    internal static string ExternalizeInternalHandoffs(
+        string text,
+        Func<string, Result<string>>? createHandle = null) =>
         InternalHandoffInContent.Replace(text, match =>
         {
-            var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(match.Groups["id"].Value);
-            return handle.IsSuccess
-                ? match.Groups["prefix"].Value + handle.Value + match.Groups["suffix"].Value
-                : "handoffId: [nicht verfügbar]";
+            var handle = (createHandle ?? HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput)(match.Groups["id"].Value);
+            if (handle.IsSuccess)
+            {
+                return match.Groups["prefix"].Value + handle.Value + match.Groups["suffix"].Value;
+            }
+
+            throw new InvalidOperationException(
+                $"Handoff-Ausgabe konnte nicht erzeugt werden ({handle.Error!.Value.Code}).");
         });
 
     /// <summary>
