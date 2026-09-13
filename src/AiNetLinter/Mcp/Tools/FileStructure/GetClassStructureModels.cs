@@ -18,7 +18,8 @@ public sealed record ClassStructureMemberEntry(
     string Signature,
     string FilePath,
     string ScopeType = "unknown",
-    string SourceKind = "editable");
+    string SourceKind = "editable",
+    string? HandoffId = null);
 
 /// <summary>Eine Partial-Deklaration des angefragten Typs; der Seed bleibt sichtbar.</summary>
 public sealed record ClassStructureLocation(

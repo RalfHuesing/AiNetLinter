@@ -14,28 +14,13 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 5 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 4 Major, 1 Minor
 
-CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) und CHAIN-04 waren durchgängig möglich. Die übrigen Ketten erfordern manuelles Parsen/Umbauen oder ein Ausweich-Tool.
+CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02 und CHAIN-04 waren durchgängig möglich. Die übrigen Ketten erfordern manuelles Parsen/Umbauen oder ein Ausweich-Tool.
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-01: `get_class_structure` liefert keine Member-Handoff-IDs (CHAIN-02)
-
-- **Betroffenes Tool / Schema**: `get_class_structure` (Parameter: `symbolIdentifier`); Folgetool `get_symbol_body` (`symbolIdentifiers`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source) und `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `find_symbol(targetPath=SOURCE-01, pattern="SiteComponentHandler", kind="class")` -> `get_class_structure(symbolIdentifier=<handoffId>)` -> `get_symbol_body(symbolIdentifiers=[…])`
-- **Beobachtung / Ist-Verhalten**:
-  - Die Member-Tabelle hat nur Kind/Name/Visibility/Lines/LineCount/Signature, **keine** `handoffId` pro Member (Source und Assembly identisch).
-  - Übernahme der Namensspalte (`AttachRuntimeCachesAsync`) bzw. der Schema-Form `Klasse.Methode` (`SiteComponentHandler.AttachRuntimeCachesAsync`) ergibt `AMBIGUOUS_SYMBOL`.
-  - Übernahme der Signatur-Spalte roh ergibt `SYMBOL_NOT_FOUND`.
-  - Funktioniert erst nach manuellem Zusammenbau `Dateien-Pfad` + Startzeile aus `Lines` (`…/SiteComponentHandler.cs:13`) oder nach Umweg über `get_file_skeleton`, das Member-`handoffId`s **hat**.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - TC-C06/CHAIN-02: jedes Member muss direkt konsumierbare Handoff-IDs für Folgetools tragen. Der Agent muss IDs selbst bauen oder ein zweites Tool zwischenschalten.
-- **Empfehlung**:
-  - Pro Member dieselbe `handoffId` ausgeben wie `get_file_skeleton` (kanonisches `s:…:M:…` bzw. `a:…:M:…`). `Klasse.Methode` ohne Qualifikation nicht als ausreichenden Handoff behandeln.
 
 ### [Major] C-02: Handoff-IDs passen nicht zu `resolve_type_origin`; `find_implementations` ohne IDs (CHAIN-03)
 
@@ -111,6 +96,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen) und CHAIN-04 waren durch
 
 ---
 
-Gruppe C: 0 Critical, 5 Major, 1 Minor
-IDs: C-01, C-02, C-04, C-05, C-06, C-07
+Gruppe C: 0 Critical, 4 Major, 1 Minor
+IDs: C-02, C-04, C-05, C-06, C-07
 Blocker: none

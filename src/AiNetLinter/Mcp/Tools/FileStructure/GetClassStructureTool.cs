@@ -87,7 +87,7 @@ internal static partial class GetClassStructureTool
             }
 
             var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var payload = await BuildPayloadAsync(namedType, solution, solutionDir, args, ct);
+            var payload = await BuildPayloadAsync(namedType, solution, solutionDir, state.HandoffSymbolIdentity, args, ct);
 
             var markdown = RenderMarkdown(payload);
             return McpToolResults.Text(markdown);
@@ -122,12 +122,13 @@ internal static partial class GetClassStructureTool
         INamedTypeSymbol namedType,
         Solution solution,
         string solutionDir,
+        AnalysisSymbolIdentity? handoffIdentity,
         GetClassStructureArgs args,
         CancellationToken ct)
     {
         var classifier = new McpScopeClassifier();
         var (files, locations, totalLines) = await CollectDeclarationFilesAsync(namedType, solution, solutionDir, classifier, args.Scope, ct);
-        var extractedMembers = ExtractMembers(namedType, solutionDir);
+        var extractedMembers = ExtractMembers(namedType, solutionDir, handoffIdentity);
         var scopedMembers = await FilterMembersByScopeAsync(extractedMembers, solution, solutionDir, classifier, args.Scope, ct);
         var sortedMembers = SortMembers(
             FilterMembers(scopedMembers.VisibleMembers, args.KindFilter, args.NameFilter),
@@ -235,7 +236,10 @@ internal static partial class GetClassStructureTool
         return namedType is not null;
     }
 
-    private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)
+    private static List<ClassStructureMemberEntry> ExtractMembers(
+        INamedTypeSymbol namedType,
+        string solutionDir,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var result = new List<ClassStructureMemberEntry>();
         if (namedType.IsRecord)
@@ -245,7 +249,7 @@ internal static partial class GetClassStructureTool
         foreach (var m in namedType.GetMembers())
         {
             if (IsExcludedMember(m)) continue;
-            result.Add(CreateMemberEntry(m, solutionDir));
+            result.Add(CreateMemberEntry(m, solutionDir, handoffIdentity));
         }
         return result;
     }
@@ -307,7 +311,10 @@ internal static partial class GetClassStructureTool
         return false;
     }
 
-    private static ClassStructureMemberEntry CreateMemberEntry(ISymbol m, string solutionDir)
+    private static ClassStructureMemberEntry CreateMemberEntry(
+        ISymbol m,
+        string solutionDir,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var syntaxNode = m.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
         var loc = syntaxNode?.GetLocation() ?? m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
@@ -337,8 +344,14 @@ internal static partial class GetClassStructureTool
             EndLine: endLine,
             LineCount: lineCount,
             Signature: signature,
-            FilePath: memberFilePath);
+            FilePath: memberFilePath,
+            HandoffId: FormatMemberHandoff(m, handoffIdentity));
     }
+
+    private static string? FormatMemberHandoff(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity) =>
+        handoffIdentity is not null && !symbol.IsImplicitlyDeclared && symbol.Locations.Any(location => location.IsInSource)
+            ? handoffIdentity.FormatHandoff(symbol)
+            : null;
 
     private static string ResolveMemberKind(ISymbol m)
     {
@@ -419,7 +432,8 @@ internal static partial class GetClassStructureTool
 
         table.AddColumn("Lines", ColumnAlign.Right)
             .AddColumn("LineCount", ColumnAlign.Right)
-            .AddColumn("Signature");
+            .AddColumn("Signature")
+            .AddColumn("Handoff-ID");
 
         foreach (var m in members)
         {
@@ -428,15 +442,18 @@ internal static partial class GetClassStructureTool
             if (isMultiFile)
             {
                 var fileName = !string.IsNullOrEmpty(m.FilePath) ? Path.GetFileName(m.FilePath) : "-";
-                table.AddRow(m.Kind, m.Name, m.Visibility, fileName, linesStr, countStr, m.Signature);
+                table.AddRow(m.Kind, m.Name, m.Visibility, fileName, linesStr, countStr, m.Signature, FormatHandoffId(m.HandoffId));
             }
             else
             {
-                table.AddRow(m.Kind, m.Name, m.Visibility, linesStr, countStr, m.Signature);
+                table.AddRow(m.Kind, m.Name, m.Visibility, linesStr, countStr, m.Signature, FormatHandoffId(m.HandoffId));
             }
         }
         table.AppendTo(sb);
     }
+
+    private static string FormatHandoffId(string? handoffId) =>
+        string.IsNullOrWhiteSpace(handoffId) ? "-" : $"handoffId: `{handoffId}`";
 }
 
 internal static class CSharpLiteralFormatter

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -86,7 +88,7 @@ public sealed partial class GetClassStructureToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("# Typ: SymbolGraphMini.Greeter", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("- Kind: class", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("| Kind | Name | Visibility | Lines | LineCount | Signature |", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("| Kind | Name | Visibility | Lines | LineCount | Signature | Handoff-ID |", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Greet", textContent.Text, StringComparison.Ordinal);
     }
 
@@ -104,6 +106,20 @@ public sealed partial class GetClassStructureToolTests
         Assert.Contains("Greeter.cs", text, StringComparison.Ordinal);
         Assert.Contains("Greet", text, StringComparison.Ordinal);
         Assert.DoesNotContain("maxMembers erhöhen", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MemberHandoff_IsReusableByGetSymbolBody()
+    {
+        var state = _fixture.CreateServer();
+        var structure = await GetClassStructureTool.ExecuteAsync(state, "Greeter", "lines", CancellationToken.None);
+        var structureText = TextOf(structure);
+        var handoffId = Regex.Match(structureText, @"handoffId: `(?<id>s:[^`]+:M:[^`]+)`").Groups["id"].Value;
+
+        Assert.NotEmpty(handoffId);
+        var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
+        Assert.NotEqual(true, body.IsError);
+        Assert.Contains("Greet", TextOf(body), StringComparison.Ordinal);
     }
 
     [Fact]
