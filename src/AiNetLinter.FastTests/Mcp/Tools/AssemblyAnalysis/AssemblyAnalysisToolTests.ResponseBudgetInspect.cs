@@ -37,7 +37,7 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Contains("von 180 (gekürzt: responseBudget)", text, StringComparison.Ordinal);
         Assert.Contains("Fortsetzung: continuationToken:", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
-        Assert.Contains("`Probe.Budget.Type000`; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Budget.Type000`; handoffId: `h:", text, StringComparison.Ordinal);
         Assert.Contains("method: `void Probe.Budget.Type000.Reset000(string input)`", text, StringComparison.Ordinal);
     }
 
@@ -117,7 +117,7 @@ public sealed partial class AssemblyAnalysisToolTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         const string expectedSignature = "string Probe.Extensions.Extend(object value)";
 
-        Assert.Contains("`Probe.Extend` für `object` — not_decidable; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Extend` für `object` — not_decidable; handoffId: `h:", text, StringComparison.Ordinal);
         Assert.Contains($"Signatur: `{expectedSignature}`", text, StringComparison.Ordinal);
     }
 

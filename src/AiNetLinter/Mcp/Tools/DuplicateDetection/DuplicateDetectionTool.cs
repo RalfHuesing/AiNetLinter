@@ -109,7 +109,14 @@ internal static class DuplicateDetectionTool
                 hint: "helperSymbol als C#-Symbol-Identifikator angeben (z. B. 'Klasse.Methode' oder 'M:Namespace.Klasse.Methode').");
         }
 
-        var (result, error) = await RefactoringDriftScanner.ScanAsync(solution, config, input, ct);
+        if (!McpToolResults.TryRestoreSymbolIdentifier(
+                input.HelperSymbol, "$.helperSymbol", out var helperSymbol, out var handoffError))
+        {
+            return handoffError!;
+        }
+
+        var (result, error) = await RefactoringDriftScanner.ScanAsync(
+            solution, config, input with { HelperSymbol = helperSymbol }, ct);
         if (error is not null) return error;
 
         return RefactoringDriftResponseBuilder.Build(solution, result!);

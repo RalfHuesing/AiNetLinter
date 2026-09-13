@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.FastTests.Fixtures;
@@ -74,6 +75,38 @@ public sealed class MetricsLookupToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Greet", text, StringComparison.Ordinal);
         Assert.Contains("Method:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HandoffOutput_IsOpaqueAndCanBeUsedAsNextInput()
+    {
+        var state = _fixture.CreateServer();
+
+        var initial = await MetricsLookupTool.ExecuteAsync(state, ["Greeter.Greet"], CancellationToken.None);
+        var initialText = Assert.IsType<TextContentBlock>(Assert.Single(initial.Content)).Text;
+        var match = Regex.Match(initialText, @"- \*\*Id:\*\* `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant);
+
+        Assert.True(match.Success, "metrics_lookup muss eine kopierbare opaque Handoff-ID ausgeben.");
+        Assert.DoesNotContain("`s:", initialText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`a:", initialText, StringComparison.Ordinal);
+
+        var followUp = await MetricsLookupTool.ExecuteAsync(state, [match.Groups["id"].Value], CancellationToken.None);
+
+        Assert.NotEqual(true, followUp.IsError);
+        Assert.Contains("Greet", Assert.IsType<TextContentBlock>(Assert.Single(followUp.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("s:legacy:target:M:Probe.Helper")]
+    [InlineData("a:legacy:target:M:Probe.Helper")]
+    public async Task ExecuteAsync_LegacyWireHandoff_ReturnsRecoverableUnsupportedFormat(string legacyHandoff)
+    {
+        var result = await MetricsLookupTool.ExecuteAsync(_fixture.CreateServer(), [legacyHandoff], CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("UNSUPPORTED_HANDOFF_FORMAT", text, StringComparison.Ordinal);
+        Assert.Contains("$.symbolIdentifiers[0]", text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -320,7 +320,7 @@ internal static class GetTypeHierarchyFormatter
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
         var handoff = string.IsNullOrEmpty(entry.Id)
             ? string.Empty
-            : $"; handoffId: `{AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(entry.Id)}`";
+            : $"; handoffId: `{AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(entry.Id)}`";
         return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}{handoff}";
     }
 

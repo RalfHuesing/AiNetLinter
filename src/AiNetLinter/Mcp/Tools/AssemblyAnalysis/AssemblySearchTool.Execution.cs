@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -138,5 +139,7 @@ internal static partial class AssemblySearchTool
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
     private static string FormatHandoffSuffix(string? handoffId) =>
-        string.IsNullOrWhiteSpace(handoffId) ? string.Empty : $"; handoffId: `{handoffId}`";
+        string.IsNullOrWhiteSpace(handoffId)
+            ? string.Empty
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(handoffId)}`";
 }

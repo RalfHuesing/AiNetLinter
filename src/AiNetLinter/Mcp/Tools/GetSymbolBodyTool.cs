@@ -289,8 +289,7 @@ internal static partial class GetSymbolBodyTool
         }
         if (!string.IsNullOrEmpty(idSuffix))
         {
-            var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(idSuffix);
-            var outputId = handle.IsSuccess ? handle.Value : idSuffix;
+            var outputId = HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(idSuffix);
             markdown.Line($"handoffId: `{outputId}`");
         }
         markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");

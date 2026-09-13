@@ -361,9 +361,7 @@ internal static partial class GetClassStructureTool
         if (handoffIdentity is null || symbol.IsImplicitlyDeclared || !symbol.Locations.Any(location => location.IsInSource))
             return null;
         var internalId = handoffIdentity.FormatHandoff(symbol);
-        if (string.IsNullOrWhiteSpace(internalId)) return null;
-        var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(internalId);
-        return result.IsSuccess ? result.Value : internalId;
+        return string.IsNullOrWhiteSpace(internalId) ? null : internalId;
     }
 
     private static string ResolveMemberKind(ISymbol m)
@@ -468,7 +466,7 @@ internal static partial class GetClassStructureTool
     private static string FormatHandoffId(string? handoffId)
     {
         if (string.IsNullOrWhiteSpace(handoffId)) return "-";
-        return $"handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(handoffId)}`";
+        return $"handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(handoffId)}`";
     }
     private static string FormatLiteral(object? value) => value is null ? "null"
         : (Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)

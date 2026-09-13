@@ -139,6 +139,24 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("s:legacy:target:M:OptionsHelper.BuildDefault")]
+    [InlineData("a:legacy:target:M:OptionsHelper.BuildDefault")]
+    public async Task ExecuteAsync_RefactoringDrift_LegacyWireHelperSymbol_IsRejected(string legacyHandoff)
+    {
+        using var context = CreateContext(("A.cs", Helper), ("Stubs.cs", StubTypes));
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            context.CreateServer(),
+            new DuplicateDetectionInput(null, null, null, null, null, "refactoring-drift", legacyHandoff),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("UNSUPPORTED_HANDOFF_FORMAT", text, StringComparison.Ordinal);
+        Assert.Contains("$.helperSymbol", text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ExecuteAsync_RefactoringDrift_FindsCandidate_TextSaysCandidatesNotViolations()
     {

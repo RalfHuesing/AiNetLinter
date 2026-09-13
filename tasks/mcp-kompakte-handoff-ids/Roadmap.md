@@ -1,7 +1,7 @@
 # Roadmap – Kompakte MCP-Handoff-IDs
 
 - [X] 1. Ist-Stand, vollständige Verdrahtungsinventur und offene Scope-Lücken auditieren
-- [ ] 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
+- [X] 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
 - [ ] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 - [ ] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 - [ ] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
@@ -17,7 +17,9 @@
 
 ### 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
 
-- Ausstehend.
+- `metrics_lookup` und `find_duplicates.helperSymbol` restaurieren/erzeugen opaque Handles.
+- Interne-ID-Fallbacks in Renderern entfernt; Counterfehler werden propagiert.
+- Build, `verify(changes)` und 1.832 Unit-FastTests grün; Audit-Skript braucht Anpassung an die neue zentrale API.
 
 ### 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 

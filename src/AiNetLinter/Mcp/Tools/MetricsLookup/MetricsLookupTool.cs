@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -40,6 +41,11 @@ internal static class MetricsLookupTool
                 "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifiersBatchHint);
         }
+        if (!McpToolResults.TryRestoreSymbolIdentifiers(
+                identifiers, "$.symbolIdentifiers", out var restoredIdentifiers, out var handoffError))
+        {
+            return handoffError!;
+        }
         if (state.AssemblySymbolIdentity?.IsAssembly == true)
         {
             return McpToolResults.Recoverable(
@@ -52,7 +58,7 @@ internal static class MetricsLookupTool
         {
             var configSnapshot = state.GetConfigSnapshot();
             if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
-            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, identifiers, state.HandoffSymbolIdentity, ct);
+            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, restoredIdentifiers, state.HandoffSymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -122,6 +128,17 @@ internal static class MetricsLookupTool
         }
 
         var dto = MetricsLookupScanner.ScanSymbol(symbol, config, solutionRoot, ct, assemblyIdentity);
+        if (!string.IsNullOrWhiteSpace(dto.DocCommentId)
+            && SymbolHandoffIdentifier.HasWirePrefix(dto.DocCommentId))
+        {
+            var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(dto.DocCommentId);
+            if (!handle.IsSuccess)
+            {
+                return (null, McpToolResults.CompilationError(
+                    $"Handoff-Ausgabe fuer metrics_lookup konnte nicht erzeugt werden ({handle.Error!.Value.Code})."));
+            }
+            dto = dto with { DocCommentId = handle.Value };
+        }
         var formattedMarkdown = MetricsLookupFormatter.Format(dto);
         mb.Line(formattedMarkdown.TrimEnd());
 

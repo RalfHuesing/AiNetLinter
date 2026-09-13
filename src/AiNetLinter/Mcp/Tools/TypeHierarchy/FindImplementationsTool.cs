@@ -94,7 +94,16 @@ internal static class FindImplementationsTool
                 includeGenerated,
                 new McpScopeClassifier()),
             ct).ConfigureAwait(false);
-        return ApplyResponseBudget(resultDto, request.MaxResponseBytes);
+        try
+        {
+            return ApplyResponseBudget(resultDto, request.MaxResponseBytes);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return McpToolResults.CompilationError(
+                $"Handoff-Ausgabe fuer find_implementations konnte nicht erzeugt werden: {exception.Message}",
+                context: effectiveSymbolIdentifier);
+        }
     }
 
     private static async Task<(IReadOnlyList<ISymbol>? Symbols, string? ErrorMessage)> FindRawImplementationsAsync(
@@ -396,8 +405,7 @@ internal static class FindImplementationsTool
             sb.AppendLine($"  {item.DisplayLocation}");
             if (!string.IsNullOrWhiteSpace(item.Id))
             {
-                var result = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(item.Id);
-                var externalId = result.IsSuccess ? result.Value : item.Id;
+                var externalId = HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(item.Id);
                 sb.AppendLine($"  handoffId: `{externalId}`");
             }
         }

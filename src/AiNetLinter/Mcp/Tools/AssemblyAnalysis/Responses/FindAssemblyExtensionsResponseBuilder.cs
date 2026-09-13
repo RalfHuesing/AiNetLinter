@@ -8,6 +8,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis.Responses;
@@ -132,7 +133,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
                 : $"{extension.Namespace}.{extension.Name}";
             var handoffId = string.IsNullOrWhiteSpace(extension.Id)
                 ? string.Empty
-                : $"; handoffId: `{extension.Id}`";
+                : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(extension.Id)}`";
             builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}{handoffId}");
             builder.AppendLine($"  Signatur: `{extension.Signature}`");
             if (extension.ApplicabilityReason is not null) builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");

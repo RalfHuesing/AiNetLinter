@@ -29,6 +29,6 @@ public sealed class AssemblyAnalysisCatalogBudgetTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains("Probe.First", text, System.StringComparison.Ordinal);
         Assert.Contains("(class, Public", text, System.StringComparison.Ordinal);
-        Assert.Contains("handoffId: `a:", text, System.StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", text, System.StringComparison.Ordinal);
     }
 }

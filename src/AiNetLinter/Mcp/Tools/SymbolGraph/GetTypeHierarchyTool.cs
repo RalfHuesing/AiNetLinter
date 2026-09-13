@@ -87,13 +87,21 @@ internal static class GetTypeHierarchyTool
                 ScopeType: scopeType,
                 IncludeGenerated: includeGenerated,
                 ScopeClassifier: new McpScopeClassifier()));
-        var text = GetTypeHierarchyFormatter.FormatText(payload);
         // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution
         // aufgeloest und koennen bei weit verbreiteten Basistypen/Interfaces (z. B. IDisposable)
         // das maxResults-Limit ueberschreiten — Sufficiency-Hinweis daher nur im nicht-trunkierten
         // Fall (analog zu FindReferencesTool/ViolationAnalysisTool).
-        return ApplyResponseBudget(payload, request.MaxResponseBytes);
+        try
+        {
+            return ApplyResponseBudget(payload, request.MaxResponseBytes);
+        }
+        catch (System.InvalidOperationException exception)
+        {
+            return McpToolResults.CompilationError(
+                $"Handoff-Ausgabe fuer get_type_hierarchy konnte nicht erzeugt werden: {exception.Message}",
+                context: symbolIdentifier);
+        }
     }
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)

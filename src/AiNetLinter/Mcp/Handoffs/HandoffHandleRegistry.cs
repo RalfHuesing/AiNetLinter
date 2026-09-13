@@ -76,15 +76,16 @@ internal sealed class HandoffHandleRegistry
     }
 
     /// <summary>
-    /// Liefert das externe opaque Handle ("h:...") für eine interne Handoff-ID oder bei einem Fehler den Standardwert (Fallback).
+    /// Liefert ein opaques Ausgabe-Handle oder bricht die Ausgabe ab. Interne Handoff-IDs duerfen
+    /// niemals als Fallback in MCP-Content gelangen, weil sie Target- und Snapshot-Metadaten tragen.
     /// </summary>
-    /// <param name="internalHandoffId">Die interne Handoff-ID.</param>
-    /// <param name="fallback">Der Rückgabewert im Fehlerfall (Standard: internalHandoffId).</param>
-    /// <returns>Das externe Handle "h:..." oder der Fallback.</returns>
-    internal string GetOpaqueHandleOrDefault(string internalHandoffId, string? fallback = null)
+    internal string GetOpaqueHandleForOutputOrThrow(string internalHandoffId)
     {
         var result = GetOrCreateOpaqueHandleForOutput(internalHandoffId);
-        return result.IsSuccess ? result.Value! : (fallback ?? internalHandoffId);
+        if (result.IsSuccess) return result.Value!;
+
+        throw new InvalidOperationException(
+            $"Handoff-Ausgabe konnte nicht erzeugt werden ({result.Error!.Value.Code}).");
     }
 
     /// <summary>

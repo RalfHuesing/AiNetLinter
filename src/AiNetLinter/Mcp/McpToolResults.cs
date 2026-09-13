@@ -276,21 +276,15 @@ internal static partial class McpToolResults
             return true;
         }
 
-        if (HandoffCounterAlphabet.IsValidHandle(rawInput) || rawInput.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(rawInput);
+        if (!restored.IsSuccess)
         {
-            var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(rawInput);
-            if (!restored.IsSuccess)
-            {
-                effectiveIdentifier = string.Empty;
-                errorResult = HandoffError(restored.Error, fieldPath);
-                return false;
-            }
-
-            effectiveIdentifier = restored.Value!;
-            return true;
+            effectiveIdentifier = string.Empty;
+            errorResult = HandoffError(restored.Error, fieldPath);
+            return false;
         }
 
-        effectiveIdentifier = rawInput;
+        effectiveIdentifier = restored.Value!;
         return true;
     }
 

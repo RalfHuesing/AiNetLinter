@@ -158,7 +158,7 @@ public sealed class AssemblySearchDeclarationFilterTests
             new AssemblySearchArguments(pattern, false, "text", 10, 0, 0, 0, null, null, null, true, kind),
             CancellationToken.None);
         var text = AssemblyAnalysisTestSupport.TextOf(result);
-        var handoffId = Regex.Match(text, @"handoffId: `(?<id>a:[^`]+)`").Groups["id"].Value;
+        var handoffId = Regex.Match(text, @"handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
 
         Assert.NotEmpty(handoffId);
         var body = await GetSymbolBodyTool.ExecuteAsync(lease, [handoffId], 80, CancellationToken.None);

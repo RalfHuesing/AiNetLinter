@@ -46,7 +46,7 @@ public sealed partial class AssemblyAnalysisToolTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
         Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
-        Assert.Contains("`Probe.Api.PublicApi`; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Api.PublicApi`; handoffId: `h:", text, StringComparison.Ordinal);
         Assert.Contains("property: `Probe.Api.PublicApi.Name`", text, StringComparison.Ordinal);
         Assert.Contains("event: `Probe.Api.PublicApi.Changed`", text, StringComparison.Ordinal);
         Assert.Contains("Convert(string value)", text, StringComparison.Ordinal);
@@ -138,7 +138,7 @@ public sealed partial class AssemblyAnalysisToolTests
         var text = AssemblyAnalysisTestSupport.TextOf(result);
         Assert.Contains("Assembly-Extensions: 1 von 1", text, StringComparison.Ordinal);
         Assert.Contains("Vollständigkeit: `complete`", text, StringComparison.Ordinal);
-        Assert.Contains("`Probe.Extensions.Mark` für `object` — not_decidable; handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.Contains("`Probe.Extensions.Mark` für `object` — not_decidable; handoffId: `h:", text, StringComparison.Ordinal);
         Assert.Contains("Signatur: `string Probe.Extensions.Extensions.Mark(object value, int count)`", text, StringComparison.Ordinal);
     }
 

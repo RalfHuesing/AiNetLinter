@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Handoffs;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -172,7 +173,9 @@ internal static class InspectAssemblyFormatter
     }
 
     private static string FormatHandoffId(string? id) =>
-        string.IsNullOrWhiteSpace(id) ? string.Empty : $"; handoffId: `{id}`";
+        string.IsNullOrWhiteSpace(id)
+            ? string.Empty
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(id)}`";
 
     private static string FormatTruncation(bool truncated, IReadOnlyList<string>? reasons) =>
         truncated

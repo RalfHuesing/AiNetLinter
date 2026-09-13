@@ -161,9 +161,7 @@ internal static class GetFileSkeletonTool
                 : symbolId =>
                 {
                     var formatted = assemblyIdentity.Format(symbolId);
-                    if (string.IsNullOrEmpty(formatted)) return formatted;
-                    var result = AiNetLinter.Mcp.Handoffs.HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(formatted);
-                    return result.IsSuccess ? result.Value : formatted;
+                    return formatted;
                 });
 
         if (types.Count == 0)
