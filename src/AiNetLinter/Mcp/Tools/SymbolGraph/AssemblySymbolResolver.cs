@@ -86,8 +86,7 @@ internal static class AssemblySymbolResolver
 
     private static (SymbolHandoffIdentifier? Value, CallToolResult? Error) ParseHandoff(string identifier)
     {
-        var looksLikeHandoff = SymbolHandoffIdentifier.HasWirePrefix(identifier)
-            || SymbolHandoffIdentifier.HasUnsupportedPrefix(identifier);
+        var looksLikeHandoff = SymbolHandoffIdentifier.IsInternalIdentifier(identifier);
         if (!looksLikeHandoff) return (null, null);
         return SymbolHandoffIdentifier.TryParse(identifier, out var handoff)
             ? (handoff, null)

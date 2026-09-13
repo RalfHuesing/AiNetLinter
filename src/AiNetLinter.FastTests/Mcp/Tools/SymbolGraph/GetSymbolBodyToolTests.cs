@@ -147,7 +147,7 @@ public sealed class GetSymbolBodyToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `i:", textContent.Text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -213,7 +213,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `i:", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }
@@ -395,11 +395,11 @@ public sealed class GetSymbolBodyToolTests
     [Fact]
     public void ApplyFinalResponseBudget_PreservesOnlyVisibleContentOrReturnsRecovery()
     {
-        var original = McpToolResults.Text("handoffId: `s:assembly-handoff-opaque-1`\npublic void WorkOne() { }");
+        var original = McpToolResults.Text("handoffId: `i:1:assembly-handoff-opaque-1`\npublic void WorkOne() { }");
         var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(original, 512);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text;
         Assert.True(text.Contains("handoffId:", StringComparison.Ordinal) || text.Contains("RESPONSE_BUDGET_TOO_SMALL", StringComparison.Ordinal));
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 }
 

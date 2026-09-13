@@ -33,7 +33,7 @@ internal static class ResolveTypeOriginHandoffResolver
             identifier = restored.Value!;
         }
 
-        if (!SymbolHandoffIdentifier.HasWirePrefix(identifier)) return (null, null);
+        if (!SymbolHandoffIdentifier.IsInternalIdentifier(identifier)) return (null, null);
         if (!SymbolHandoffIdentifier.TryParse(identifier, out var handoff)) return (null, InvalidHandoff());
         if (!handoff.DocumentationCommentId.StartsWith("T:", StringComparison.Ordinal)) return (null, InvalidTypeHandoff());
 

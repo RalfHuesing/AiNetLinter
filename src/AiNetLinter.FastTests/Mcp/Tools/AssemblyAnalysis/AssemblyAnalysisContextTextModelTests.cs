@@ -181,7 +181,7 @@ public sealed class AssemblyAnalysisContextTextModelTests
         Assert.NotEqual(true, result.IsError);
         Assert.Contains("Symbol: h:", text, StringComparison.Ordinal);
         Assert.Contains("Abschnitt: classStructure", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public sealed class AssemblyAnalysisContextTextModelTests
         Assert.Contains("Abschnitt: body", text, StringComparison.Ordinal);
         Assert.Contains("Read", text, StringComparison.Ordinal);
         Assert.DoesNotContain("[ERROR]", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -240,32 +240,7 @@ public sealed class AssemblyAnalysisContextTextModelTests
         Assert.Contains("Abschnitt: body", text, StringComparison.Ordinal);
         Assert.Contains("Extend", text, StringComparison.Ordinal);
         Assert.DoesNotContain("[ERROR]", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("a:legacy:identifier")]
-    [InlineData("s:legacy:identifier")]
-    public async Task ExecuteAsync_RejectsLegacyAssemblyHandoffWithParameterError(string legacyHandoff)
-    {
-        using var temp = TestTempDirectory.Create("assembly-context-legacy-handoff-");
-        var assemblyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "ContextLegacyHandoffProbe",
-            "namespace Probe; public sealed class Target { }");
-        await using var registry = new AssemblyAnalysisRegistry();
-        var leaseResult = await registry.LeaseAsync(assemblyPath);
-        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
-
-        var result = await AssemblyAnalysisContextTool.ExecuteAsync(
-            lease,
-            CreateArguments(legacyHandoff, includeBody: true),
-            CancellationToken.None);
-
-        var text = AssemblyAnalysisTestSupport.TextOf(result);
-        Assert.NotEqual(true, result.IsError);
-        Assert.Contains("UNSUPPORTED_HANDOFF_FORMAT", text, StringComparison.Ordinal);
-        Assert.Contains("fieldPath: $.symbolIdentifier", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -323,7 +298,6 @@ public sealed class AssemblyAnalysisContextTextModelTests
     private static void AssertContainsOnlyOpaqueHandoffs(string text)
     {
         Assert.NotEmpty(ExtractHandoffId(text));
-        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 }

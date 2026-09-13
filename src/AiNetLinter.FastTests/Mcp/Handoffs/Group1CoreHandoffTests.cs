@@ -34,7 +34,7 @@ public sealed class Group1CoreHandoffTests
 
         var text = TextOf(result);
         Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]

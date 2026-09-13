@@ -42,13 +42,13 @@ public sealed class McpToolResultsContentTests
     [Fact]
     public void Text_ExternalizesInternalHandoffBeforeItReachesContent()
     {
-        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+        const string internalId = "i:0:target-token:snapshot-token:M:Namespace.Type.Member";
 
         var text = TextOf(McpToolResults.Text($"handoffId: `{internalId}`"));
 
         Assert.Matches(@"handoffId: `h:[a-zA-Z0-9]+`", text);
         Assert.DoesNotContain(internalId, text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -56,13 +56,13 @@ public sealed class McpToolResultsContentTests
     {
         var result = new CallToolResult
         {
-            Content = [new TextContentBlock { Text = "handoffId: `a:target:snapshot:T:Namespace.Type`\n%% handoffId: n1 = s:target:snapshot:M:Namespace.Type.Member" }],
+            Content = [new TextContentBlock { Text = "handoffId: `i:1:target:snapshot:T:Namespace.Type`\n%% handoffId: n1 = i:0:target:snapshot:M:Namespace.Type.Member" }],
         };
 
         var text = TextOf(McpToolResponsePipeline.Apply(result));
 
-        Assert.DoesNotContain("handoffId: `a:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: n1 = s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: n1 = i:", text, StringComparison.Ordinal);
         Assert.Matches(@"handoffId: `h:[a-zA-Z0-9]+`", text);
         Assert.Matches(@"handoffId: n1 = h:[a-zA-Z0-9]+", text);
     }
@@ -70,7 +70,7 @@ public sealed class McpToolResultsContentTests
     [Fact]
     public void ExternalizeInternalHandoffs_CounterFailure_StopsResponseInsteadOfRenderingFallback()
     {
-        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+        const string internalId = "i:0:target-token:snapshot-token:M:Namespace.Type.Member";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             McpToolResults.ExternalizeInternalHandoffs(

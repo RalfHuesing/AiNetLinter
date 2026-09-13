@@ -8,7 +8,7 @@ namespace AiNetLinter.Mcp.Handoffs;
 
 /// <summary>
 /// Zentrale Registry für flüchtige Handoff-Handles.
-/// Verwaltet die 1:1-Bijektion zwischen internen Handoff-IDs und kurzen externen Opaque-Handles (h:...).
+/// Verwaltet die 1:1-Bijektion zwischen internen Navigations-IDs und kurzen externen Opaque-Handles (h:...).
 /// </summary>
 internal sealed class HandoffHandleRegistry
 {
@@ -38,7 +38,7 @@ internal sealed class HandoffHandleRegistry
     /// Das Handle ist nur eine technische Adresse. Der umgebende MCP-Text muss Symbolart,
     /// verständlichen Namen bzw. Signatur und bei Bedarf relativen Pfad sowie Position ausgeben.
     /// </summary>
-    /// <param name="internalHandoffId">Die bestehende interne s:- oder a:-ID.</param>
+    /// <param name="internalHandoffId">Die interne Navigations-ID.</param>
     /// <returns>Ein <see cref="Result{T}"/> mit dem externen Handle (z. B. "h:a") oder einem Fehler.</returns>
     internal Result<string> GetOrCreateOpaqueHandleForOutput(string internalHandoffId)
     {
@@ -124,14 +124,6 @@ internal sealed class HandoffHandleRegistry
                 LinterErrorCodes.HandoffUnknown,
                 $"Das Handoff-Handle '{externalHandleOrSemanticInput}' ist unbekannt. Der MCP-Host wurde möglicherweise neu gestartet.",
                 hint: "Bitte das Symbol über find_symbol, get_file_skeleton oder einen passenden Producer erneut ermitteln.");
-        }
-
-        if (SymbolHandoffIdentifier.HasWirePrefix(externalHandleOrSemanticInput))
-        {
-            return Result<string>.Failure(
-                LinterErrorCodes.UnsupportedHandoffFormat,
-                "Öffentliche Handoff-IDs im Format 's:' oder 'a:' werden nicht mehr unterstützt.",
-                hint: "Bitte das neue 'h:...'-Handle aus einer aktuellen Tool-Antwort kopieren.");
         }
 
         return Result<string>.Success(externalHandleOrSemanticInput);

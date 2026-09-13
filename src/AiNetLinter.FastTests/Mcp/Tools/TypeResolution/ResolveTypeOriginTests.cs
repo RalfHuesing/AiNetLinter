@@ -196,7 +196,7 @@ public sealed class ResolveTypeOriginTests
         using var lease = leaseResult.Lease!;
         var implementations = await FindImplementationsTool.ExecuteAsync(
             lease.Server, "IGreeter", maxResults: 50, ct: CancellationToken.None);
-        var handoffId = ExtractHandoffId(GetText(implementations), "T", "a");
+        var handoffId = ExtractHandoffId(GetText(implementations), "T");
 
         var result = await ResolveTypeOriginTool.ExecuteAssemblyAsync(lease, handoffId, CancellationToken.None);
 
@@ -278,13 +278,9 @@ public sealed class ResolveTypeOriginTests
         return block.Text;
     }
 
-    private static string ExtractHandoffId(string text, string kind, string origin = "s")
+    private static string ExtractHandoffId(string text, string kind)
     {
         var match = Regex.Match(text, @"handoffId: `(?<id>h:[^`]+)`");
-        if (!match.Success)
-        {
-            match = Regex.Match(text, $@"handoffId: `(?<id>{origin}:[^`]+:{kind}:[^`]+)`");
-        }
         Assert.True(match.Success, text);
         return match.Groups["id"].Value;
     }

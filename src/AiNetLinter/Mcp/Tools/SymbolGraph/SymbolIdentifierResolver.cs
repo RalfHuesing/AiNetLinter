@@ -259,11 +259,10 @@ internal static class SymbolIdentifierResolver
         }
         normalizedId = value;
 
-        if (!SymbolHandoffIdentifier.HasWirePrefix(value)
-            && !SymbolHandoffIdentifier.HasUnsupportedPrefix(value))
+        if (!SymbolHandoffIdentifier.IsInternalIdentifier(value))
         {
             // Unpräfixte Werte bleiben direkte fachliche Suchanfragen. Sie werden niemals als
-            // Handoff ausgegeben; nur s:/a:-Werte durchlaufen die gebundene ID-Prüfung.
+            // Nur restaurierte interne IDs durchlaufen die gebundene ID-Prüfung.
             isAssemblyId = false;
             return true;
         }

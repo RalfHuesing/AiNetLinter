@@ -177,7 +177,7 @@ internal static class AssemblyAnalysisContextTool
         string effectiveSymbolIdentifier,
         CancellationToken cancellationToken)
     {
-        if (!arguments.IncludeReferences && !SymbolHandoffIdentifier.HasWirePrefix(effectiveSymbolIdentifier))
+        if (!arguments.IncludeReferences && !SymbolHandoffIdentifier.IsInternalIdentifier(effectiveSymbolIdentifier))
         {
             return (lease, null);
         }

@@ -198,8 +198,8 @@ public sealed partial class GetCallTreeToolTests
         var graph = new CallGraphPayload(
             "n1",
             [
-                new CallGraphNode("n1", "a:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
-                new CallGraphNode("n2", "a:caller", "Caller", "Caller.cs:2 [assembly=dependency.dll; origin=source-backed]", "method"),
+                new CallGraphNode("n1", "i:1:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
+                new CallGraphNode("n2", "i:1:caller", "Caller", "Caller.cs:2 [assembly=dependency.dll; origin=source-backed]", "method"),
             ],
             [new CallGraphEdge("n2", "n1", [new CallGraphCallSite("Caller.cs", 2, 1, "Dependency")])]);
         var navigation = new AssemblyNavigationSummary(
@@ -255,7 +255,7 @@ public sealed partial class GetCallTreeToolTests
     {
         var nodes = new List<CallGraphNode>
         {
-            new("n1", "a:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
+            new("n1", "i:1:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
         };
         var edges = new List<CallGraphEdge>();
         for (var index = 2; index <= 8; index++)
@@ -263,7 +263,7 @@ public sealed partial class GetCallTreeToolTests
             var nodeId = $"n{index}";
             nodes.Add(new CallGraphNode(
                 nodeId,
-                $"a:caller-{index}",
+                $"i:1:caller-{index}",
                 $"Caller{index}",
                 new string('x', 180),
                 "method"));
@@ -305,13 +305,13 @@ public sealed partial class GetCallTreeToolTests
     {
         var nodes = new List<CallGraphNode>
         {
-            new("n1", "a:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
+            new("n1", "i:1:root", "Root", "Root.cs:1 [assembly=root.dll; origin=decompiled]", "method"),
         };
         var edges = new List<CallGraphEdge>();
         for (var index = 2; index <= 14; index++)
         {
             var nodeId = $"n{index}";
-            nodes.Add(new CallGraphNode(nodeId, $"a:caller-{index}", $"Caller{index}", new string('x', 180), "method"));
+            nodes.Add(new CallGraphNode(nodeId, $"i:1:caller-{index}", $"Caller{index}", new string('x', 180), "method"));
             edges.Add(new CallGraphEdge(
                 nodeId,
                 "n1",
@@ -353,12 +353,12 @@ public sealed partial class GetCallTreeToolTests
             "Caller.cs:8",
             Array.Empty<MetricsTreeNode>(),
             Handoff: true,
-            Id: "a:secret");
+            Id: "i:1:secret");
 
         var text = GetCallTreeTool.RenderTree(tree, null, 10, includeHandoffMetadata: false);
 
         Assert.DoesNotContain("handoff", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("a:secret", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("i:1:secret", text, StringComparison.Ordinal);
     }
 
     [Fact]

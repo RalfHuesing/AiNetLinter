@@ -32,8 +32,8 @@ public sealed class Group3ContextAndCallTreeHandoffTests
         var graph = new CallGraphPayload(
             "n1",
             [
-                new CallGraphNode("n1", "s:SymbolGraphMini:SymbolGraphMini.Greeter.Greet#1", "Greet", "Greeter.cs:5", "method"),
-                new CallGraphNode("n2", "s:SymbolGraphMini:SymbolGraphMini.Caller.Run#1", "Run", "Caller.cs:5", "method"),
+                new CallGraphNode("n1", "i:0:SymbolGraphMini:SymbolGraphMini.Greeter.Greet#1", "Greet", "Greeter.cs:5", "method"),
+                new CallGraphNode("n2", "i:0:SymbolGraphMini:SymbolGraphMini.Caller.Run#1", "Run", "Caller.cs:5", "method"),
             ],
             [new CallGraphEdge("n2", "n1", [new CallGraphCallSite("Caller.cs", 5, 1, "SymbolGraphMini")])]);
 
@@ -41,13 +41,13 @@ public sealed class Group3ContextAndCallTreeHandoffTests
         var ascii = CallGraphTextRenderer.RenderAscii(graph);
         var asciiMatch = Regex.Match(ascii, @"handoffId:\s*`(?<handle>h:[a-zA-Z0-9]+)`");
         Assert.True(asciiMatch.Success, $"Expected h:... handle in ASCII call tree: {ascii}");
-        Assert.DoesNotContain("handoffId: `s:", ascii, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", ascii, StringComparison.Ordinal);
 
         // 2. Mermaid output
         var mermaid = CallGraphTextRenderer.RenderMermaid(graph);
         var mermaidMatch = Regex.Match(mermaid, @"%% handoffId:\s*n1\s*=\s*(?<handle>h:[a-zA-Z0-9]+)");
         Assert.True(mermaidMatch.Success, $"Expected h:... handle in Mermaid comments: {mermaid}");
-        Assert.DoesNotContain("%% handoffId: n1 = s:", mermaid, StringComparison.Ordinal);
+        Assert.DoesNotContain("%% handoffId: n1 = i:", mermaid, StringComparison.Ordinal);
     }
 
     [Fact]

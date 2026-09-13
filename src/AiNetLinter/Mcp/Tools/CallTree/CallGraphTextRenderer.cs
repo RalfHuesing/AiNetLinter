@@ -90,7 +90,7 @@ internal static class CallGraphTextRenderer
         bool mermaidComment = false)
     {
         var navigableNodes = nodes
-            .Where(node => SymbolHandoffIdentifier.HasWirePrefix(node.SymbolId))
+            .Where(node => SymbolHandoffIdentifier.IsInternalIdentifier(node.SymbolId))
             .ToList();
         if (navigableNodes.Count == 0) return;
 

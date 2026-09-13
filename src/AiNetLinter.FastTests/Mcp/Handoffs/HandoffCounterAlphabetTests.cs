@@ -51,7 +51,7 @@ public sealed class HandoffCounterAlphabetTests
     [InlineData("a b")]
     [InlineData("a-b")]
     [InlineData("a_b")]
-    [InlineData("a:b")]
+    [InlineData("x:b")]
     [InlineData("h:a")]
     [InlineData("äöü")]
     [InlineData("!")]
@@ -81,8 +81,8 @@ public sealed class HandoffCounterAlphabetTests
     [InlineData("h: ")]
     [InlineData("h:a ")]
     [InlineData("h:a!")]
-    [InlineData("s:a")]
-    [InlineData("a:a")]
+    [InlineData("i:0")]
+    [InlineData("x:a")]
     [InlineData("H:a")]
     public void IsValidHandle_RejectsMalformedHandles(string? handle)
     {
@@ -96,7 +96,7 @@ public sealed class HandoffCounterAlphabetTests
     [InlineData("c:/project/file.cs", true)]
     [InlineData("h:a", false)]
     [InlineData("h:aaZaZ", false)]
-    [InlineData("s:foo", false)]
+    [InlineData("x:foo", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void IsWindowsDrivePath_IdentifiesDrivePathsCorrectly(string? input, bool expected)

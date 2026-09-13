@@ -97,7 +97,8 @@ die Antwort zeigt deshalb zusätzlich Symbolart, Signatur und Fundort. Nach
 Daemon- oder Stdio-Neustart sind frühere Handles bewusst ungültig
 (`HANDOFF_UNKNOWN`). Dann das Symbol mit den sichtbaren Angaben erneut über
 `find_symbol`, `get_file_skeleton` oder einen passenden Producer ermitteln.
-Alte öffentliche Handoff-Formate werden absichtlich nicht unterstützt.
+Nur `h:…` wird als Handoff-Handle interpretiert; andere Eingaben folgen dem
+jeweiligen Symbolparameter-Vertrag.
 
 Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen `maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, den passenden Handle oder Typ ermitteln und erst danach Bodies, Referenzen oder weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
 

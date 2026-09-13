@@ -397,7 +397,7 @@ public sealed class FindSymbolToolTests
             fixture.CreateServer(), ["Run"], kind: "method", maxResults: 50, CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.DoesNotContain("id: `s:", text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `i:", text, System.StringComparison.Ordinal);
         Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
         Assert.Contains("OtherCaller.cs", text, System.StringComparison.Ordinal);
 

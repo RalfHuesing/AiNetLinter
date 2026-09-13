@@ -129,7 +129,7 @@ internal static class MetricsLookupTool
 
         var dto = MetricsLookupScanner.ScanSymbol(symbol, config, solutionRoot, ct, assemblyIdentity);
         if (!string.IsNullOrWhiteSpace(dto.DocCommentId)
-            && SymbolHandoffIdentifier.HasWirePrefix(dto.DocCommentId))
+            && SymbolHandoffIdentifier.IsInternalIdentifier(dto.DocCommentId))
         {
             var handle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(dto.DocCommentId);
             if (!handle.IsSuccess)

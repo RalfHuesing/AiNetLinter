@@ -869,7 +869,6 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `TARGET_MISMATCH` | Eine Handoff-ID gehört zu einem anderen kanonischen Target |
 | `STALE_SNAPSHOT` | Eine Handoff-ID gehört zu einem veralteten Analyse-Snapshot |
 | `INVALID_HANDOFF` | Ein `h:…`-Wert hat kein gültiges Handle-Format |
-| `UNSUPPORTED_HANDOFF_FORMAT` | Ein früheres öffentliches Handoff-Drahtformat wurde übergeben |
 | `HANDOFF_UNKNOWN` | Das Handle ist im laufenden Host nicht bekannt; Symbol erneut ermitteln |
 | `HANDOFF_COUNTER_UNAVAILABLE` | Die persistierte Handle-High-Water-Mark kann nicht sicher fortgeschrieben werden |
 | `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt; `targetPath` fehlt, ist relativ, nicht vorhanden, ein Verzeichnis oder hat eine nicht unterstützte Endung |
@@ -923,8 +922,7 @@ enthält weiterhin Symbolart, verständlichen Namen oder Signatur und gegebenenf
 relativen Pfad sowie Position. Das Handle unverändert an ein fachlich passendes
 Folgetool übergeben, nicht daraus eine Bedeutung ableiten. Es bleibt nur bis zum
 Shutdown des Daemon- beziehungsweise Stdio-Hosts gültig. Nach `HANDOFF_UNKNOWN`
-das Symbol mit dem sichtbaren Kontext erneut suchen; alte öffentliche
-Handoff-Drahtformate werden nicht akzeptiert.
+das Symbol mit dem sichtbaren Kontext erneut suchen.
 
 `get_file_skeleton` nennt für jeden Typ `namespace`, `typeKind`, `name`,
 `relativePath` und ein opaques Handoff-Handle sowie die `members`. Member nennen

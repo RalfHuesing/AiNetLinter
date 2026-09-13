@@ -20,15 +20,16 @@ public sealed class SymbolHandoffIdentifierTests
             generation: 42);
 
         var identifier = identity.Format("T:Probe.Type")!;
-        var parts = identifier.Split(':', 4);
+        var parts = identifier.Split(':', 5);
 
-        Assert.Equal(4, parts.Length);
-        Assert.Equal("a", parts[0]);
-        Assert.Equal(22, parts[1].Length);
+        Assert.Equal(5, parts.Length);
+        Assert.Equal("i", parts[0]);
+        Assert.Equal("1", parts[1]);
         Assert.Equal(22, parts[2].Length);
-        Assert.All(parts[1..3].SelectMany(value => value), character =>
+        Assert.Equal(22, parts[3].Length);
+        Assert.All(parts[2..4].SelectMany(value => value), character =>
             Assert.True(char.IsLetterOrDigit(character) || character is '-' or '_'));
-        Assert.Equal("T:Probe.Type", parts[3]);
+        Assert.Equal("T:Probe.Type", parts[4]);
         Assert.DoesNotContain("Probe.dll", identifier, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(new string('a', 64), identifier, StringComparison.Ordinal);
         Assert.DoesNotContain(":42:", identifier, StringComparison.Ordinal);
@@ -61,14 +62,12 @@ public sealed class SymbolHandoffIdentifierTests
     }
 
     [Theory]
-    [InlineData("source:legacy:legacy:T:Probe.Type")]
-    [InlineData("assembly:legacy:legacy:T:Probe.Type")]
-    [InlineData("x:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
-    [InlineData("a:aaaaaaaaaaaaaaaaaaaaaa=:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
-    [InlineData("a:aaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
-    [InlineData("a:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:Probe.Type")]
-    [InlineData("a:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:M:Probe.Type#lf:Local")]
-    [InlineData("a:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:")]
+    [InlineData("i:2:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaaa=:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Type")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:Probe.Type")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:M:Probe.Type#lf:Local")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:")]
     public void TryParse_RejectsEveryNonCanonicalHandoffForm(string value)
     {
         Assert.False(SymbolHandoffIdentifier.TryParse(value, out _));

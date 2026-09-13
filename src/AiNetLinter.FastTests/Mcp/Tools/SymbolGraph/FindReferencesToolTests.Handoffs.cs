@@ -66,7 +66,7 @@ public sealed partial class FindReferencesToolTests
 
     private static string ExtractHandoffId(string text)
     {
-        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>[sh]:[^`]+)`", RegexOptions.CultureInvariant);
+        var match = Regex.Match(text, @"(?:handoffId|id): `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant);
         return match.Success
             ? match.Groups["id"].Value
             : throw new InvalidOperationException("Der Content muss eine kopierbare Symbol-Handoff-ID enthalten.");

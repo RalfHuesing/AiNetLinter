@@ -18,7 +18,7 @@ public sealed partial class GetCallTreeToolTests
     public void AssemblyCallGraphBuilder_GlobalHardCapLimitsMergedNodesAndEdgesDeterministically()
     {
         var nodes = Enumerable.Range(1, 260).Select(index => new CallGraphNode(
-            $"n{index}", $"a:symbol-{index}", $"Node{index}", $"Node{index}.cs:1", "method")).ToList();
+            $"n{index}", $"i:1:symbol-{index}", $"Node{index}", $"Node{index}.cs:1", "method")).ToList();
         var edges = Enumerable.Range(2, 259).Select(index => new CallGraphEdge(
             $"n{index}", "n1", [new CallGraphCallSite($"Node{index}.cs", 1, 1, "Assembly")]))
             .Concat(Enumerable.Range(1, 50).Select(index => new CallGraphEdge(

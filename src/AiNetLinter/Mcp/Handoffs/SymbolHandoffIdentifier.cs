@@ -18,11 +18,12 @@ internal readonly record struct SymbolHandoffIdentifier(
 {
     internal const int TokenBytes = SymbolHandoffToken.TokenBytes;
     internal const int EncodedTokenLength = SymbolHandoffToken.EncodedLength;
-    private const string SourcePrefix = "s:";
-    private const string AssemblyPrefix = "a:";
+    private const string InternalPrefix = "i:";
+    private const char SourceOriginCode = '0';
+    private const char AssemblyOriginCode = '1';
 
     internal string Format() =>
-        $"{(Origin == SymbolHandoffOrigin.Source ? SourcePrefix : AssemblyPrefix)}{TargetToken}:{ContentToken}:{DocumentationCommentId}";
+        $"{InternalPrefix}{(Origin == SymbolHandoffOrigin.Source ? SourceOriginCode : AssemblyOriginCode)}:{TargetToken}:{ContentToken}:{DocumentationCommentId}";
 
     internal static bool TryCreate(
         SymbolHandoffCreationRequest request,
@@ -43,16 +44,18 @@ internal readonly record struct SymbolHandoffIdentifier(
     internal static bool TryParse(string value, out SymbolHandoffIdentifier identifier)
     {
         identifier = default;
-        if (string.IsNullOrEmpty(value) || ContainsWhitespace(value)) return false;
+        if (!HasValidEnvelope(value) || !TryGetOrigin(value[2], out var origin)) return false;
 
-        var origin = value.StartsWith(SourcePrefix, StringComparison.Ordinal)
-            ? SymbolHandoffOrigin.Source
-            : value.StartsWith(AssemblyPrefix, StringComparison.Ordinal)
-                ? SymbolHandoffOrigin.Assembly
-                : (SymbolHandoffOrigin?)null;
-        if (origin is null) return false;
+        return TryParseComponents(value, origin, out identifier);
+    }
 
-        var targetStart = 2;
+    private static bool TryParseComponents(
+        string value,
+        SymbolHandoffOrigin origin,
+        out SymbolHandoffIdentifier identifier)
+    {
+        identifier = default;
+        const int targetStart = 4;
         var targetEnd = value.IndexOf(':', targetStart);
         if (targetEnd <= targetStart) return false;
         var contentStart = targetEnd + 1;
@@ -69,38 +72,12 @@ internal readonly record struct SymbolHandoffIdentifier(
             return false;
         }
 
-        identifier = new(origin.Value, targetToken, contentToken, documentationCommentId);
+        identifier = new(origin, targetToken, contentToken, documentationCommentId);
         return true;
     }
 
-    internal static bool HasWirePrefix(string value) =>
-        value.StartsWith(SourcePrefix, StringComparison.Ordinal)
-        || value.StartsWith(AssemblyPrefix, StringComparison.Ordinal);
-
-    internal static bool HasUnsupportedPrefix(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return false;
-
-        var separator = value.IndexOf(':');
-        if (separator <= 0) return false;
-
-        var prefix = value[..separator];
-        if (prefix.Equals("source", StringComparison.Ordinal)
-            || prefix.Equals("assembly", StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        foreach (var character in prefix)
-        {
-            if (character is < 'a' or > 'z') return false;
-        }
-
-        // Ein einbuchstabiger Windows-Laufwerksbuchstabe ist ein Positionspfad, kein Handoff.
-        return prefix.Length != 1
-            || value.Length <= separator + 1
-            || (value[separator + 1] is not '\\' and not '/');
-    }
+    internal static bool IsInternalIdentifier(string value) =>
+        value.StartsWith(InternalPrefix, StringComparison.Ordinal);
 
     internal static bool IsCanonicalDocumentationCommentId(string? value)
     {
@@ -115,6 +92,24 @@ internal readonly record struct SymbolHandoffIdentifier(
 
     internal static string ForError(string value) =>
         value.Length <= 80 ? value : value[..80] + "…";
+
+    private static bool HasValidEnvelope(string value) =>
+        !string.IsNullOrEmpty(value)
+        && !ContainsWhitespace(value)
+        && value.StartsWith(InternalPrefix, StringComparison.Ordinal)
+        && value.Length >= 5
+        && value[3] == ':';
+
+    private static bool TryGetOrigin(char value, out SymbolHandoffOrigin origin)
+    {
+        origin = value switch
+        {
+            SourceOriginCode => SymbolHandoffOrigin.Source,
+            AssemblyOriginCode => SymbolHandoffOrigin.Assembly,
+            _ => default,
+        };
+        return value is SourceOriginCode or AssemblyOriginCode;
+    }
 
     private static bool ContainsWhitespace(string value)
     {

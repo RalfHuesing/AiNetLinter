@@ -317,7 +317,7 @@ public sealed class GetTypeHierarchyToolTests
         using var firstLease = firstLeaseResult.Lease!;
         var serviceSymbol = firstLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
         var firstAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
-        Assert.StartsWith("a:", firstAssemblySymbolId, StringComparison.Ordinal);
+        Assert.StartsWith("i:1:", firstAssemblySymbolId, StringComparison.Ordinal);
         var firstPublicHandle = HandoffHandleRegistry.Default.GetOrCreateOpaqueHandleForOutput(firstAssemblySymbolId);
         Assert.True(firstPublicHandle.IsSuccess);
 

@@ -30,7 +30,7 @@ internal static partial class McpToolResults
 {
     private static readonly AgentContentRenderer ContentRenderer = new();
     private static readonly Regex InternalHandoffInContent = new(
-        @"(?<prefix>handoffId:\s*(?:`|\w+\s*=\s*))(?<id>[sa]:[^`\s\r\n]+)(?<suffix>`?)",
+        @"(?<prefix>handoffId:\s*(?:`|\w+\s*=\s*))(?<id>i:[01]:[^`\s\r\n]+)(?<suffix>`?)",
         RegexOptions.CultureInvariant);
 
     internal const string WorkspaceDiagnosticHint =
@@ -174,7 +174,7 @@ internal static partial class McpToolResults
     /// </summary>
     internal static CallToolResult SymbolNotFound(string identifier)
     {
-        if (SymbolHandoffIdentifier.HasWirePrefix(identifier))
+        if (SymbolHandoffIdentifier.IsInternalIdentifier(identifier))
         {
             return Recoverable(
                 LinterErrorCodes.SymbolNotFound,

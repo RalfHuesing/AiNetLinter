@@ -113,7 +113,7 @@ public sealed class SymbolIdentifierResolverTests
 
         var id = identity.Format("T:Probe.Type")!;
 
-        Assert.StartsWith("a:", id, System.StringComparison.Ordinal);
+        Assert.StartsWith("i:1:", id, System.StringComparison.Ordinal);
         Assert.DoesNotContain(":42:", id, System.StringComparison.Ordinal);
         Assert.True(SymbolHandoffIdentifier.TryParse(id, out var parsed));
         Assert.Equal(SymbolHandoffOrigin.Assembly, parsed.Origin);
@@ -217,10 +217,9 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Theory]
-    [InlineData("x:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
-    [InlineData("source:legacy:legacy:T:Probe.Current")]
-    [InlineData("assembly:legacy:legacy:T:Probe.Current")]
-    [InlineData("s:aaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
+    [InlineData("i:2:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
+    [InlineData("i:1:aaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
     public async Task TryResolveByStableIdAsync_NonCanonicalHandoffLikeInputIsInvalidArgument(string identifier)
     {
         using var owner = RoslynTestSolutionFactory.CreateSolution(

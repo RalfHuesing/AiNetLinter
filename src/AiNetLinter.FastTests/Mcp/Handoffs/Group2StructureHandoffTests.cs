@@ -32,7 +32,7 @@ public sealed class Group2StructureHandoffTests
 
         var text = TextOf(result);
         Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class Group2StructureHandoffTests
 
         var text = TextOf(result);
         Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class Group2StructureHandoffTests
 
         var text = TextOf(result);
         Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class Group2StructureHandoffTests
 
         var text = TextOf(result);
         Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("handoffId: `s:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]

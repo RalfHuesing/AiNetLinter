@@ -29,8 +29,8 @@ public sealed class HandoffHandleRegistryTests
         var store = new HandoffCounterStore(temp.GetPath("counter.json"));
         var registry = new HandoffHandleRegistry(store);
 
-        const string internalId1 = "s:targetA:contentA:M:Namespace.Class.MethodA";
-        const string internalId2 = "s:targetB:contentB:M:Namespace.Class.MethodB";
+        const string internalId1 = "i:0:targetA:contentA:M:Namespace.Class.MethodA";
+        const string internalId2 = "i:0:targetB:contentB:M:Namespace.Class.MethodB";
 
         var handle1 = registry.GetOrCreateOpaqueHandleForOutput(internalId1);
         var handle1Again = registry.GetOrCreateOpaqueHandleForOutput(internalId1);
@@ -70,7 +70,7 @@ public sealed class HandoffHandleRegistryTests
     public void GetOrCreateOpaqueHandleForOutput_FailsWhenCounterStoreFails()
     {
         var registry = new HandoffHandleRegistry(new FailingCounterStore());
-        var result = registry.GetOrCreateOpaqueHandleForOutput("s:t:c:M:Foo");
+        var result = registry.GetOrCreateOpaqueHandleForOutput("i:0:t:c:M:Foo");
 
         Assert.False(result.IsSuccess);
         Assert.Equal(LinterErrorCodes.HandoffCounterUnavailable, result.Error!.Value.Code);
@@ -98,7 +98,7 @@ public sealed class HandoffHandleRegistryTests
     [InlineData("h:a-b")]
     [InlineData("h:ä")]
     [InlineData("H:a")]
-    [InlineData("h:a:extended")]
+    [InlineData("h:too:many")]
     public void RestoreInternalHandoffForInput_MalformedHandle_ReturnsInvalidHandoff(string malformedHandle)
     {
         using var temp = TestTempDirectory.Create("registry-");
@@ -115,29 +115,14 @@ public sealed class HandoffHandleRegistryTests
     public void GetOpaqueHandleForOutputOrThrow_CounterFailure_DoesNotLeakInternalId()
     {
         var registry = new HandoffHandleRegistry(new FailingCounterStore());
-        const string internalId = "s:target-token:snapshot-token:M:Namespace.Type.Member";
+        const string internalId = "i:0:target-token:snapshot-token:M:Namespace.Type.Member";
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => registry.GetOpaqueHandleForOutputOrThrow(internalId));
 
         Assert.Contains(LinterErrorCodes.HandoffCounterUnavailable, exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(internalId, exception.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("s:target-token", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("s:t1:c1:M:Namespace.Class.Method")]
-    [InlineData("a:t2:c2:T:Namespace.Type")]
-    public void RestoreInternalHandoffForInput_OldPublicWireFormat_ReturnsUnsupportedHandoffFormat(string oldHandoff)
-    {
-        using var temp = TestTempDirectory.Create("registry-");
-        var store = new HandoffCounterStore(temp.GetPath("counter.json"));
-        var registry = new HandoffHandleRegistry(store);
-
-        var result = registry.RestoreInternalHandoffForInput(oldHandoff);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(LinterErrorCodes.UnsupportedHandoffFormat, result.Error!.Value.Code);
+        Assert.DoesNotContain("i:0:target-token", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -189,7 +174,7 @@ public sealed class HandoffHandleRegistryTests
         await Parallel.ForEachAsync(Enumerable.Range(0, uniqueKeys * iterationsPerKey), async (index, _) =>
         {
             await Task.Yield();
-            var key = $"s:target:content:M:Method_{index % uniqueKeys}";
+            var key = $"i:0:target:content:M:Method_{index % uniqueKeys}";
             var result = registry.GetOrCreateOpaqueHandleForOutput(key);
             Assert.True(result.IsSuccess);
             collected.Add((key, result.Value!));

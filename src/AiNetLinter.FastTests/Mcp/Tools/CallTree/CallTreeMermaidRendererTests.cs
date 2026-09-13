@@ -93,7 +93,7 @@ public sealed class CallTreeMermaidRendererTests
     [Fact]
     public void Render_ExcludesCanonicalHandoffIdFromMermaidLabel()
     {
-        const string handoffId = "a:assembly:owner:snapshot:member:Probe.Target.Read";
+        const string handoffId = "i:1:assembly:owner:snapshot:member:Probe.Target.Read";
         var root = new MetricsTreeNode(
             "Target.Read",
             "",

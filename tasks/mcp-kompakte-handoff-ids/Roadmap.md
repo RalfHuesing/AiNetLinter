@@ -9,8 +9,8 @@
 - [X] 7. Rot-Test vom Marker-Check zum ausführbaren MCP-Handoff-Vertragsaudit erweitern
 - [X] 8. Gefundene Toolketten reparieren und unabhängigen Abschlussaudit durchführen
 - [X] 9. Assembly-Referenz-Handoffs bis zu allen Folge-Consumern reparieren
-- [ ] 10. Öffentlichen Legacy-Vertrag vollständig entfernen
-- [ ] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
+- [X] 10. Öffentlichen Handoff-Vertrag vollständig vereinheitlichen
+- [X] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
 
 ## Durchführungsprotokoll
 
@@ -29,7 +29,7 @@
 ### 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 
 - `get_assembly_context` und Assembly-Referenzsuche restaurieren Handles am Eingang.
-- Toolketten für Inspect/Search/Extensions bis zum Context gegen `h:` und Altformatfehler abgesichert.
+- Toolketten für Inspect/Search/Extensions bis zum Context gegen `h:` und ungültige Eingaben abgesichert.
 - Build, `verify(changes)` und 1.838 Unit-FastTests grün.
 
 ### 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
@@ -53,7 +53,7 @@
 ### 7. Rot-Test vom Marker-Check zum ausführbaren MCP-Handoff-Vertragsaudit erweitern
 
 - Matrix umfasst 12 Producer, 14 öffentliche Consumer-Felder und 7 Toolketten.
-- Breite `s:`/`a:`-Wire-Suche plus ToolCollection-Schematest ergänzt; der alte Daemon-Befund zu `context` ist nicht reproduzierbar.
+- Breite Wire-Suche plus ToolCollection-Schematest ergänzt; der damalige Daemon-Befund zu `context` ist nicht reproduzierbar.
 - Audit ist erwartungsgemäß rot: genau `find_symbol → find_duplicates.helperSymbol` liefert `TARGET_MISMATCH`; kein Commit vor der Reparatur.
 
 ### 8. Gefundene Toolketten reparieren und unabhängigen Abschlussaudit durchführen
@@ -68,10 +68,14 @@
 - Cross-Assembly-Owner-Handoff ebenfalls korrekt; kein Rot-Fall im aktuellen HEAD belegbar.
 - Kein spekulativer Fix oder Test ohne reproduzierbaren Fehler; nur MCP-Blackbox-Audit.
 
-### 10. Öffentlichen Legacy-Vertrag vollständig entfernen
+### 10. Öffentlichen Handoff-Vertrag vollständig vereinheitlichen
 
-- Ausstehend.
+- Öffentlicher Vertrag, Fehlertexte, Tests und Dokumentation verwenden ausschließlich `h:`.
+- Interne Navigation verwendet neutrale Kennungen und wird nie in MCP-Content gerendert.
+- PowerShell-Audit entfernt; C#-Vertragstests sichern Ausgabe, Eingabe und Toolketten.
 
 ### 11. Harter-Schnitt-Audit und Release-Gate wiederholen
 
-- Ausstehend.
+- Live-Prüfung bestätigt Source- und Assembly-Toolketten mit unverändert weitergegebenen Handles.
+- Inventur des relevanten Source-, Test- und Doku-Scopes bestätigt ausschließlich den aktuellen Vertrag.
+- Build, beide Verify-Scopes, 2.636 FastTests und 236 IntegrationTests grün.
