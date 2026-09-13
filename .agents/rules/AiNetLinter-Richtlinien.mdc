@@ -29,7 +29,6 @@ Nutzeranweisungen haben Vorrang.
 - Für Textsuche zuerst `rg` verwenden.
 - Keine externen Source-Repositories oder analysierten Ziel-Assemblies modifizieren.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
-- Bei unklaren oder abgeschnittenen Testausgaben eine TRX-Datei zur Diagnose nutzen, statt denselben Lauf ungezielt zu wiederholen.
 
 ## Code und Teststrategie
 
@@ -44,10 +43,10 @@ Nutzeranweisungen haben Vorrang.
 - Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
 - **Workflow- und MCP-Quality-Gates**:
   - **Taskbeginn**: Saubere Codebasis voraussetzen; vor der ersten Änderung kein Build, Verify oder Test.
-  - **Incremental Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge: `dotnet build`, `verify(targetPath)`, passender FastTests-Lauf (standardmäßig `dotnet test src/AiNetLinter.FastTests --filter Category=Unit`). Kein bekannter roter Stand bleibt als Zwischen- oder Übergabestand bestehen.
-  - **Release Gate**: Vor Abschluss in dieser Reihenfolge: `dotnet build`, `verify(targetPath, scope: "solution")`, `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`, `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`.
+  - **Incremental Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge: `dotnet build`, `verify(targetPath)`, passender FastTests-Lauf (standardmäßig `pwsh scripts/test-fast.ps1 -Filter Category=Unit`). Kein bekannter roter Stand bleibt als Zwischen- oder Übergabestand bestehen.
+  - **Release Gate**: Vor Abschluss in dieser Reihenfolge: `dotnet build`, `verify(targetPath, scope: "solution")`, `pwsh scripts/test-fast.ps1`, `pwsh scripts/test-integration.ps1`.
   - Jeder fehlgeschlagene Schritt ist vor dem Weiterarbeiten zu beheben; danach das jeweilige Gate vollständig wiederholen. Das Release Gate ist nur bei `verdict=pass`, `score=10.0` und `violationCount=0` erfüllt. Advisory-Kandidaten bei `changes` erfordern Agentenurteil, beeinflussen das Verdict nicht und sind keine sichere Lösch- oder Änderungsanweisung.
-  - `dotnet build` muss alle vier Projekte fehler- und warnungsfrei bauen (`TreatWarningsAsErrors`). `Stress`-Tests laufen nur auf ausdrückliche Anforderung. Bei unklaren oder abgebrochenen Testläufen `--logger "trx;LogFileName=<Name>.trx"` verwenden.
+  - `dotnet build` muss alle vier Projekte fehler- und warnungsfrei bauen (`TreatWarningsAsErrors`). `Stress`-Tests laufen nur auf ausdrückliche Anforderung. Tests stets über `scripts/test-fast.ps1` bzw. `scripts/test-integration.ps1` ausführen; Messungen landen statisch in `TestResults/FastTests.trx` bzw. `TestResults/IntegrationTests.trx` (zur Diagnose nutzen, keine Ad-hoc-TRX-Logger ergänzen).
   - Für reine Dokumentations-, Markdown- oder Agentenregel-Änderungen sind Build und Tests nicht erforderlich; `git diff --check` und eine saubere Diff-Prüfung genügen.
 - Kommentare erklären nur nicht offensichtliches „Why“; keine Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 

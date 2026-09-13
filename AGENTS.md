@@ -17,8 +17,7 @@ Der verbindliche Gate-Ablauf steht ausschließlich in
 `.agents/rules/AiNetLinter-Richtlinien.mdc`; die Testebenen stehen in
 `.agents/rules/AiNetLinter-TestRichtlinien.mdc`. Diese Dateien sind die
 einzige Source of Truth für Prüfzeitpunkt, Reihenfolge, Testauswahl und
-Abschlusskriterien. Bei unklaren oder abgebrochenen Testläufen die dort
-genannte TRX-Diagnose verwenden.
+Abschlusskriterien.
 
 ---
 
