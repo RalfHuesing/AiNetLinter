@@ -229,64 +229,58 @@ internal static partial class AssemblySearchTool
 
     private static void RenderFileMatches(StringBuilder builder, IGrouping<string, AssemblySearchMatch> fileGroup)
     {
-        var matchLines = fileGroup.Select(match => match.Line).ToHashSet();
-        var lastPrintedLine = -1;
+        var matchesByLine = fileGroup.ToLookup(match => match.Line);
+        var contextLines = new Dictionary<int, string>();
 
         foreach (var match in fileGroup)
         {
-            lastPrintedLine = RenderContextBefore(builder, match, matchLines, lastPrintedLine);
-            lastPrintedLine = RenderMatchLine(builder, match, lastPrintedLine);
-            lastPrintedLine = RenderContextAfter(builder, match, matchLines, lastPrintedLine);
+            CollectContextLines(contextLines, match);
+        }
+
+        var allLines = matchesByLine.Select(group => group.Key)
+            .Concat(contextLines.Keys)
+            .Distinct()
+            .OrderBy(line => line);
+
+        foreach (var line in allLines)
+        {
+            RenderFileLine(builder, fileGroup.Key, line, matchesByLine[line], contextLines);
         }
     }
 
-    private static int RenderContextBefore(
-        StringBuilder builder,
-        AssemblySearchMatch match,
-        HashSet<int> matchLines,
-        int lastPrintedLine)
+    private static void CollectContextLines(Dictionary<int, string> contextLines, AssemblySearchMatch match)
     {
         for (var i = 0; i < match.ContextBefore.Count; i++)
         {
             var line = match.Line - match.ContextBefore.Count + i;
-            if (line > lastPrintedLine && !matchLines.Contains(line))
-            {
-                builder.AppendLine($"{match.FilePath}-{line}- {match.ContextBefore[i]}");
-                lastPrintedLine = line;
-            }
+            contextLines.TryAdd(line, match.ContextBefore[i]);
         }
 
-        return lastPrintedLine;
-    }
-
-    private static int RenderMatchLine(StringBuilder builder, AssemblySearchMatch match, int lastPrintedLine)
-    {
-        if (match.Line > lastPrintedLine)
-        {
-            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}{FormatHandoffSuffix(match.HandoffId)}");
-            return match.Line;
-        }
-
-        return lastPrintedLine;
-    }
-
-    private static int RenderContextAfter(
-        StringBuilder builder,
-        AssemblySearchMatch match,
-        HashSet<int> matchLines,
-        int lastPrintedLine)
-    {
         for (var i = 0; i < match.ContextAfter.Count; i++)
         {
             var line = match.Line + 1 + i;
-            if (line > lastPrintedLine && !matchLines.Contains(line))
-            {
-                builder.AppendLine($"{match.FilePath}-{line}- {match.ContextAfter[i]}");
-                lastPrintedLine = line;
-            }
+            contextLines.TryAdd(line, match.ContextAfter[i]);
+        }
+    }
+
+    private static void RenderFileLine(
+        StringBuilder builder,
+        string filePath,
+        int line,
+        IEnumerable<AssemblySearchMatch> matches,
+        Dictionary<int, string> contextLines)
+    {
+        var isMatch = false;
+        foreach (var match in matches)
+        {
+            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}{FormatHandoffSuffix(match.HandoffId)}");
+            isMatch = true;
         }
 
-        return lastPrintedLine;
+        if (!isMatch && contextLines.TryGetValue(line, out var text))
+        {
+            builder.AppendLine($"{filePath}-{line}- {text}");
+        }
     }
 
     private static void AppendTruncationHint(StringBuilder builder, AssemblySearchPayload payload)

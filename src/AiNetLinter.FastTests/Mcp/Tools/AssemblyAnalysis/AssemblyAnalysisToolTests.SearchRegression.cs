@@ -211,4 +211,39 @@ public sealed partial class AssemblyAnalysisToolTests
         var countLine3 = rendered.Split('\n').Count(l => l.Contains("line 3", StringComparison.Ordinal));
         Assert.Equal(1, countLine3);
     }
+
+    [Fact]
+    public void AssemblySearch_RendersAdjacentMatchesWithContextLinesInOrderWithoutSkipping()
+    {
+        using var temp = TestTempDirectory.Create("asm-search-adjacent-");
+        var filePath = Path.Combine(temp.DirectoryPath, "Service.cs");
+        File.WriteAllText(filePath, "line 1\nline 2 MATCH_A\nline 3 MATCH_B\nline 4\nline 5");
+
+        var args = new AssemblySearchArguments(
+            "MATCH_",
+            IsRegex: false,
+            SearchKind: "text",
+            MaxResults: 50,
+            MaxFiles: 0,
+            ContextLines: 2,
+            MaxResponseBytes: 0,
+            FileFilter: null,
+            Cursor: null);
+
+        var payload = AssemblySearchTool.Scan(temp.DirectoryPath, args, CancellationToken.None);
+        Assert.Equal(2, payload.Results.Count);
+
+        var rendered = AssemblySearchTool.RenderText(payload);
+        var lines = rendered.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+        var contentLines = lines.Skip(2).ToArray();
+        Assert.Equal(new[]
+        {
+            "Service.cs-1- line 1",
+            "Service.cs:2: line 2 MATCH_A",
+            "Service.cs:3: line 3 MATCH_B",
+            "Service.cs-4- line 4",
+            "Service.cs-5- line 5"
+        }, contentLines);
+    }
 }
