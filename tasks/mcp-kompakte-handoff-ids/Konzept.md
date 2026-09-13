@@ -1,10 +1,7 @@
 ---
-status: draft
-execution_mode: requires_user_decision
-open_questions:
-  - id: restart_uniqueness
-    question: "Gilt ein pro MCP-Hoststart kryptographisch zufälliger 128-Bit-Session-Nonce als ausreichende Garantie dafür, dass ein Handle aus einer früheren Sitzung niemals auf ein neues Symbol zeigt?"
-    recommendation: "Ja. Ohne persistente Zustandsablage ist dies die stärkste praktikable Lösung. Eine Kollision ist theoretisch möglich, kryptographisch aber vernachlässigbar."
+status: ready
+execution_mode: autonomous
+open_questions: []
 ---
 
 # Konzept: Externe opaque Handoff-Handles
@@ -120,6 +117,8 @@ h:<sessionNonce>.<counter>
 - Bei Zählerüberlauf oder einer festen Sicherheitsgrenze schlagen nur neue Registrierungen mit `HANDOFF_CAPACITY_EXCEEDED` fehl.
 
 Ein Zufallswert pro Handle ist nicht erforderlich. Session-Nonce plus Zähler ist kürzer, innerhalb der Sitzung kollisionsfrei und nach einem Neustart praktisch eindeutig.
+
+Entschieden: Der kryptographisch zufällige 128-Bit-Session-Nonce gilt als ausreichende operative Garantie gegen eine falsche Auflösung nach einem Neustart. Eine persistente Zustandsablage ist dafür nicht erforderlich.
 
 Ein Windows-Pfad wie `h:\...` darf nicht als Handle erkannt werden. Nur das vollständig gültige Format aktiviert die Registry-Auflösung.
 
@@ -365,8 +364,10 @@ Auf dem festgeschriebenen Baseline-Datensatz:
 - [ ] Code-/Textsuche bestätigt: keine öffentliche interne ID und keine unverdrahtete Handoff-Stelle.
 - [ ] Baseline-Messung bestätigt Tokenersparnis ohne Informationsverlust.
 
-Freigabefähig ist das Konzept erst, wenn:
+Freigabestatus:
 
-- [ ] die offene Frage im Frontmatter entschieden ist;
-- [ ] der Nutzer den Draft ausdrücklich freigibt;
-- [ ] alle Muss-Kriterien und Testfälle als verbindlicher Umsetzungsvertrag gelten.
+- [x] Die Neustart-Eindeutigkeit ist entschieden.
+- [x] Der Nutzer hat den Draft ausdrücklich freigegeben.
+- [x] Muss-Kriterien und Testfälle gelten als verbindlicher Umsetzungsvertrag.
+
+Der spätere Orchestrator darf den beschriebenen Scope ohne Zwischenfreigaben vollständig bis zum Release-Gate umsetzen. Diese Freigabe startet die Umsetzung nicht automatisch.
