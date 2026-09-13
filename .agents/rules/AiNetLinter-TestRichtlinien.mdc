@@ -1,13 +1,22 @@
 ---
-description: Testebenen und effiziente Testgestaltung für AiNetLinter.
+description: Testebenen, Testdesign und Testumgebung für AiNetLinter.
 globs: src/**/*Tests/**/*.cs
 alwaysApply: false
 ---
 
 # AiNetLinter-TestRichtlinien
 
-- FastTests sind Standard für deterministische Fachlogik, `Result`-Inhalte, Mapping sowie String- und Formatierungsergebnisse; sie starten keinen Server und keine vollständige Infrastruktur.
-- Integrationstests belegen ausschließlich reale Grenzen oder Zusammensetzung: MCP-/CLI-Transport, Prozess- oder Serverlebenszyklus, Dateisystem, Roslyn-Laden und Konfigurationsbindung.
-- Einen fachlichen Fall nicht zusätzlich über vollständigen Serverstart testen. Pro Boundary genügen repräsentative Vertragstests; Varianten und Edge-Cases gehören in FastTests.
-- Die Behauptung eines Tests bestimmt seine Ebene, nicht der Ordner des Produktionscodes. Ein echter End-to-End-Vertrag bleibt ein Integrationstest.
-- Prüfzeitpunkt, Reihenfolge und Abschlussnachweis stehen ausschließlich in `AiNetLinter-Richtlinien.mdc`; diese Datei definiert nur Testebenen und Testumfang.
+- **Test-Design & Ebenen**:
+  - FastTests sind Standard für deterministische Fachlogik, `Result`-Inhalte, Mapping sowie String- und Formatierungsergebnisse; sie starten keinen Server und keine vollständige Infrastruktur.
+  - Integrationstests belegen ausschließlich reale Grenzen oder Zusammensetzung: MCP-/CLI-Transport, Prozess- oder Serverlebenszyklus, Dateisystem, Roslyn-Laden und Konfigurationsbindung.
+  - Einen fachlichen Fall nicht zusätzlich über vollständigen Serverstart testen. Pro Boundary genügen repräsentative Vertragstests; Varianten und Edge-Cases gehören in FastTests.
+  - Die Behauptung eines Tests bestimmt seine Ebene, nicht der Ordner des Produktionscodes. Ein echter End-to-End-Vertrag bleibt ein Integrationstest.
+- **Test-Methodik & Qualität**:
+  - **Red-Test-First bei Bugs**: Bei Fehlern oder unerwartetem Verhalten zuerst einen isolierten fehlschlagenden xUnit-v3-Test (Rot-Test / Reproduktionstest) schreiben. Erst danach gezielt beheben, bis der Test grün ist (dauerhafter Regressionsschutz).
+  - Jede Logikänderung erhält xUnit-v3-Tests, die Verhalten statt Implementierungsdetails prüfen.
+  - Tests niemals abschwächen oder auskommentieren; stets Ursache beheben.
+- **Infrastruktur & Isolation**:
+  - Tests parallelisierbar halten (globale Serialisierung nur bei belegtem Bedarf; gemeinsame Zustände via Lock, Fixture oder Semaphore sichern).
+  - Testtemporärdateien ausschließlich über `AiNetLinter.TestKit.TestTempDirectory` im ignorierten Repo-Temp anlegen (nie im System-Temp).
+  - MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-Testinfrastruktur (keine Ad-hoc-Skripte committen).
+- **Abgrenzung**: Prüfzeitpunkt, Reihenfolge, Skripte und Quality-Gates stehen ausschließlich in `AiNetLinter-Richtlinien.mdc`.
