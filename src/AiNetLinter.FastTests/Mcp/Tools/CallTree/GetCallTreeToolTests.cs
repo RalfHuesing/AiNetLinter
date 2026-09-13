@@ -113,8 +113,8 @@ public sealed partial class GetCallTreeToolTests
         Assert.Contains("Caller.Run", asciiText, StringComparison.Ordinal);
         Assert.Contains("Caller.Run", mermaidText, StringComparison.Ordinal);
         Assert.Contains("Knoten-Handoffs:", asciiText, StringComparison.Ordinal);
-        Assert.Contains("handoffId: `s:", asciiText, StringComparison.Ordinal);
-        Assert.Contains("%% handoffId: n1 = s:", mermaidText, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", asciiText, StringComparison.Ordinal);
+        Assert.Contains("%% handoffId: n1 = h:", mermaidText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -245,8 +245,8 @@ public sealed partial class GetCallTreeToolTests
         var mermaidText = Assert.IsType<TextContentBlock>(Assert.Single(mermaid.Content)).Text;
         Assert.Contains("Caller", asciiText, StringComparison.Ordinal);
         Assert.Contains("Caller", mermaidText, StringComparison.Ordinal);
-        Assert.Contains("handoffId: `a:root`", asciiText, StringComparison.Ordinal);
-        Assert.Contains("%% handoffId: n1 = a:root", mermaidText, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", asciiText, StringComparison.Ordinal);
+        Assert.Contains("%% handoffId: n1 = h:", mermaidText, StringComparison.Ordinal);
         Assert.Contains("assembly=dependency.dll", mermaidText, StringComparison.Ordinal);
     }
 

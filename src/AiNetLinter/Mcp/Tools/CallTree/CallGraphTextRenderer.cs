@@ -101,7 +101,7 @@ internal static class CallGraphTextRenderer
                 builder.Append("\n    %% handoffId: ");
                 builder.Append(node.NodeId);
                 builder.Append(" = ");
-                builder.Append(node.SymbolId);
+                builder.Append(HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(node.SymbolId));
             }
             return;
         }
@@ -114,7 +114,7 @@ internal static class CallGraphTextRenderer
             builder.Append(" (");
             builder.Append(node.Name);
             builder.Append("): handoffId: `");
-            builder.Append(node.SymbolId);
+            builder.Append(HandoffHandleRegistry.Default.GetOpaqueHandleOrDefault(node.SymbolId));
             builder.Append('`');
         }
     }

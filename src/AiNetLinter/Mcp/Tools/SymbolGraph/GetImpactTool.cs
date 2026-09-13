@@ -191,7 +191,9 @@ internal static partial class GetImpactTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(input.EffectiveSymbolIdentifier, "$.symbolIdentifier", out var symbolIdentifier, out var restoreError))
+            return restoreError;
+
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             solution, symbolIdentifier, ct, assemblyIdentity);
         if (error is not null) return error;
@@ -224,7 +226,9 @@ internal static partial class GetImpactTool
         GetImpactInput input,
         CancellationToken ct)
     {
-        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(input.EffectiveSymbolIdentifier, "$.symbolIdentifier", out var symbolIdentifier, out var restoreError))
+            return restoreError;
+
         var plan = AssemblySearchPlan.Create(symbolIdentifier, input.IncludeReferences);
         var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
             lease,

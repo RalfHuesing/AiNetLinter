@@ -238,15 +238,15 @@ Die Umstellung muss vollständig sein. Vor der Implementierung wird per Codeinve
 - [x] `get_file_skeleton` (Gruppe 2 migriert)
 - [x] `get_symbol_body` (Gruppe 1 migriert)
 - [x] `find_references` (Gruppe 1 migriert, CallGraph-Knoten)
-- [ ] `get_call_tree`
-- [ ] `get_impact`
+- [x] `get_call_tree` (Gruppe 3 migriert, CallGraphTextRenderer für ASCII & Mermaid)
+- [x] `get_impact` (Gruppe 3 migriert: analysiert, kein Producer von Handoffs)
 - [x] `get_type_hierarchy` (Gruppe 2 migriert)
 - [x] `find_implementations` (Gruppe 2 migriert)
-- [ ] `dependency_graph`
+- [x] `dependency_graph` (Gruppe 3 migriert: analysiert, kein Producer von Handoffs)
 - [x] `get_class_structure` (Gruppe 2 migriert)
 - [ ] `metrics_lookup`
-- [ ] `get_feature_context`
-- [ ] `get_test_context`
+- [x] `get_feature_context` (Gruppe 3 migriert: analysiert, kein Producer von Handoffs)
+- [x] `get_test_context` (Gruppe 3 migriert: analysiert, kein Producer von Handoffs)
 - [ ] `inspect_assembly`
 - [ ] `search_assembly`
 - [ ] `find_assembly_extensions`
@@ -265,14 +265,14 @@ Für jeden gefundenen Producer:
 - [x] `get_symbol_body.symbolIdentifiers[]` (Gruppe 1 migriert)
 - [ ] `metrics_lookup.symbolIdentifiers[]`
 - [x] `find_references.symbolIdentifier` (Gruppe 1 migriert)
-- [ ] `get_call_tree.symbolIdentifier`
-- [ ] `get_impact.symbolIdentifier`
+- [x] `get_call_tree.symbolIdentifier` (Gruppe 3 migriert)
+- [x] `get_impact.symbolIdentifier` (Gruppe 3 migriert)
 - [x] `get_type_hierarchy.symbolIdentifier` (Gruppe 2 migriert)
 - [x] `find_implementations.symbolIdentifier` (Gruppe 2 migriert)
-- [ ] `dependency_graph.symbolIdentifier`
+- [x] `dependency_graph.symbolIdentifier` (Gruppe 3 migriert)
 - [x] `get_class_structure.symbolIdentifier` (Gruppe 2 migriert)
-- [ ] `get_feature_context.symbolIdentifier`
-- [ ] `get_test_context.symbolIdentifier`
+- [x] `get_feature_context.symbolIdentifier` (Gruppe 3 migriert)
+- [x] `get_test_context.symbolIdentifier` (Gruppe 3 migriert)
 - [ ] `get_assembly_context.symbolIdentifier`
 - [ ] `find_duplicates.helperSymbol`
 - [x] `resolve_type_origin.typeName` (Gruppe 2 migriert)
@@ -310,7 +310,7 @@ pwsh -File scripts/audit-handoff-wiring.ps1
 - **Verhalten:**
   - Solange unmigrierte Stellen vorhanden sind, listet das Skript jede betroffene Datei auf und bricht mit **Exit-Code 1** ab (**Rot-Test**).
   - Sobald alle Stellen angebunden sind, meldet es Erfolg und beendet mit **Exit-Code 0** (**Grün-Test**).
-- **Start-Baseline:** Stand zu Beginn von Phase 2 sind genau 27 offene Stellen (17 Producer, 10 Consumer).
+- **Start-Baseline:** Stand zu Beginn von Phase 2 sind genau 27 offene Stellen (17 Producer, 10 Consumer). Nach Gruppe 3 verbleiben exakt 7 unmigrierte Stellen (4 Producer, 3 Consumer).
 
 #### 2. Ripgrep (`rg`)-Suchmuster für manuelle Verifikation
 - **Producer-Ausgaben finden:**

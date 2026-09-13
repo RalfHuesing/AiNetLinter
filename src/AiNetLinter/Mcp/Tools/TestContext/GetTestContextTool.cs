@@ -41,6 +41,9 @@ internal static class GetTestContextTool
                 hint: "symbolIdentifier angeben: z. B. \"Namespace.Klasse\", \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
         }
 
+        if (!McpToolResults.TryRestoreSymbolIdentifier(targetSymbol, "$.symbolIdentifier", out targetSymbol, out var restoreError))
+            return restoreError;
+
         try
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(

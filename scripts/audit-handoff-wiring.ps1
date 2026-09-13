@@ -15,36 +15,34 @@ $McpRoot = Join-Path $RepoRoot "src/AiNetLinter/Mcp"
 Write-Host "=== AiNetLinter Handoff-Audit & Rot-Test ===" -ForegroundColor Cyan
 
 $ProducerFiles = @(
-    "Tools/TypeHierarchy/FindImplementationsTool.cs",
+    "Tools/SymbolGraph/FindSymbolTool.cs",
     "Tools/SymbolGraph/CallGraph/TransitiveCallGraphFormatter.cs",
     "Tools/SymbolGraph/GetTypeHierarchyFormatter.cs",
-    "Tools/SymbolGraph/FindSymbolTool.cs",
-    "Tools/GetSymbolBodyTool.cs",
     "Tools/FileStructure/GetClassStructureTool.cs",
-    "Tools/FileStructure/GetFileSkeletonTool.cs",
-    "Tools/AssemblyAnalysis/AssemblySearchTool.Execution.cs",
-    "Tools/AssemblyAnalysis/Responses/FindAssemblyExtensionsResponseBuilder.cs",
-    "Tools/AssemblyAnalysis/InspectAssemblyFormatter.cs",
+    "../Maps/Skeleton/SkeletonMarkdownRenderer.cs",
     "Tools/CallTree/CallGraphTextRenderer.cs",
-    "Tools/FeatureContext/FeatureContextScanner.cs",
-    "Tools/TestContext/GetTestContextTool.cs",
-    "Tools/MetricsLookup/MetricsLookupScanner.cs",
     "Tools/MetricsLookup/MetricsLookupTool.cs",
-    "Tools/DependencyGraph/DependencyGraphTool.cs",
-    "../Maps/Skeleton/SkeletonMarkdownRenderer.cs"
+    "Tools/AssemblyAnalysis/AssemblySearchTool.Execution.cs",
+    "Tools/AssemblyAnalysis/InspectAssemblyFormatter.cs",
+    "Tools/AssemblyAnalysis/Responses/FindAssemblyExtensionsResponseBuilder.cs"
 )
 
 $ConsumerFiles = @(
     "Tools/SymbolGraph/SymbolIdentifierResolver.cs",
     "Tools/TypeResolution/ResolveTypeOriginHandoffResolver.cs",
     "Tools/TypeHierarchy/FindImplementationsTool.cs",
-    "Tools/MetricsLookup/MetricsLookupTool.cs",
+    "Tools/SymbolGraph/FindReferencesTool.cs",
+    "Tools/SymbolGraph/GetTypeHierarchyTool.cs",
+    "Tools/GetSymbolBodyTool.cs",
+    "Tools/FileStructure/GetClassStructureTool.cs",
+    "Tools/CallTree/GetCallTreeTool.cs",
+    "Tools/SymbolGraph/GetImpactTool.cs",
+    "Tools/DependencyGraph/DependencyGraphTool.cs",
     "Tools/FeatureContext/GetFeatureContextTool.cs",
     "Tools/TestContext/GetTestContextTool.cs",
-    "Tools/FileStructure/GetClassStructureTool.cs",
-    "Tools/DependencyGraph/DependencyGraphTool.cs",
-    "Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs",
-    "Tools/DuplicateDetection/DuplicateDetectionTool.cs"
+    "Tools/MetricsLookup/MetricsLookupTool.cs",
+    "Tools/DuplicateDetection/DuplicateDetectionTool.cs",
+    "Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs"
 )
 
 $UnmigratedProducers = [System.Collections.Generic.List[string]]::new()

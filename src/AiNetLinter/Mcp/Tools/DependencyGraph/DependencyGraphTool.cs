@@ -146,7 +146,9 @@ internal static class DependencyGraphTool
         TypeScopeExecutionRequest request,
         CancellationToken ct)
     {
-        var symbolIdentifier = input.SymbolIdentifier!;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(input.SymbolIdentifier, "$.symbolIdentifier", out var symbolIdentifier, out var restoreError))
+            return restoreError;
+
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             solution,
             symbolIdentifier,

@@ -56,13 +56,14 @@ internal static class GetCallTreeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var symbolIdentifier = input.SymbolIdentifier;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(input.SymbolIdentifier, "$.symbolIdentifier", out var symbolIdentifier, out var restoreError))
+            return restoreError;
 
         try
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                symbolIdentifier!,
+                symbolIdentifier,
                 ct,
                 state.HandoffSymbolIdentity);
             if (error is not null) return error;
