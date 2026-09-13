@@ -26,7 +26,7 @@ Nutzeranweisungen haben Vorrang.
 
 ## Windows und Dateien
 
-- Für Textsuche zuerst `rg` verwenden.
+- Für allgemeine Textsuche (Nicht-C#-Dateien, exakte Strings, Kommentare) `rg` verwenden; für C#-Semantik und Code-Erkundung immer pro-aktiv den AiNetLinter MCP Server nutzen (siehe `AiNetLinter-McpWorkflow.mdc`).
 - Keine externen Source-Repositories oder analysierten Ziel-Assemblies modifizieren.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
 

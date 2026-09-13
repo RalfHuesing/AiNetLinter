@@ -6,8 +6,7 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 
 ## 1. Regeln, MCP
 
-- **Verbindliche Regeln (`.agents/rules/`)**: Projektregeln stehen in `AiNetLinter-Richtlinien.mdc`, testbezogene Regeln in `AiNetLinter-TestRichtlinien.mdc` und der projektübergreifende C#-Semantik-Workflow in `AiNetLinter-McpWorkflow.mdc`. `README.md` beschreibt nur deren Pflege und ist keine tägliche Arbeitsanweisung.
-- **Semantische C#-Analyse via MCP**: Server `ainetlinter` mit `targetPath: "AiNetLinter.slnx"` (absoluter Pfad im Workspace) nutzen. Für Symbole, Referenzen, Aufrufketten, Impact und Verstöße die semantischen MCP-Tools bevorzugen (siehe `.agents/rules/AiNetLinter-McpWorkflow.mdc`); Textsuche via `rg`.
+- **Pro-aktive C#-Semantikanalyse via MCP (Pflicht)**: Server `ainetlinter` mit `targetPath: "AiNetLinter.slnx"` (absoluter Pfad im Workspace) **immer pro-aktiv** und als primäres Werkzeug nutzen. Für Code-Erkundung, Symbole, Referenzen, Aufrufketten, Impact und Verstöße direkt die semantischen MCP-Tools aufrufen. Textsuche via `rg` ist erlaubt (insb. für Nicht-C#-Dateien, exakte Strings oder als Fallback), aber MCP liefert gezielteren AST-Kontext (Details: `.agents/rules/AiNetLinter-McpWorkflow.mdc`).
 
 ---
 
