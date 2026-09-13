@@ -43,6 +43,21 @@ internal static class InspectAssemblyFormatter
         return builder.ToString().TrimEnd();
     }
 
+    internal static string FormatContextOverview(InspectAssemblyPayload payload, string targetFramework)
+    {
+        var builder = new StringBuilder();
+        var identity = payload.Identity;
+        builder.AppendLine($"Assembly: `{identity?.Name ?? "unbekannt"}`");
+        if (identity is not null)
+        {
+            builder.AppendLine($"Identität: {identity.Name}, Version {identity.Version}, Kultur {identity.Culture}");
+        }
+        builder.AppendLine($"Zielframework: `{targetFramework}`");
+        AppendNamespaces(builder, payload.Namespaces, payload.TotalNamespaces, publicOnly: true);
+        AppendReferences(builder, payload.References, payload.ReferenceSummary);
+        return builder.ToString().TrimEnd();
+    }
+
     private static void AppendHeader(StringBuilder builder, InspectAssemblyPayload payload)
     {
         builder.AppendLine($"Assembly: `{payload.Identity?.Name ?? "unbekannt"}`");

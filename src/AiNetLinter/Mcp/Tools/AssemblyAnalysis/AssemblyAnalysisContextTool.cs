@@ -72,6 +72,11 @@ internal static class AssemblyAnalysisContextTool
                     false, null, AssemblyAnalysisService.DefaultMaxMembers, arguments.IncludeReferences,
                     budget, arguments.DetailLevel, arguments.Cursor));
             var sectionTexts = new Dictionary<string, string>(StringComparer.Ordinal);
+            sectionTexts.Add(
+                "assembly",
+                InspectAssemblyFormatter.FormatContextOverview(
+                    inspection,
+                    GetTargetFramework(lease.Context)));
             var symbolError = await AddSymbolSectionsAsync(lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
             if (symbolError is not null) return symbolError;
             return McpToolResults.Text(RenderText(CreateTextModel(lease, arguments, inspection, sectionTexts)));
@@ -82,6 +87,18 @@ internal static class AssemblyAnalysisContextTool
                 $"Unerwarteter Fehler in get_assembly_context: {exception.Message}",
                 lease.CanonicalPath);
         }
+    }
+
+    private static string GetTargetFramework(AssemblyContext context)
+    {
+        const string targetFrameworkAttribute = "System.Runtime.Versioning.TargetFrameworkAttribute";
+        var attribute = context.Assembly.GetAttributes()
+            .FirstOrDefault(attribute => string.Equals(
+                attribute.AttributeClass?.ToDisplayString(),
+                targetFrameworkAttribute,
+                StringComparison.Ordinal));
+        var value = attribute?.ConstructorArguments.FirstOrDefault().Value as string;
+        return string.IsNullOrWhiteSpace(value) ? "nicht verfügbar" : value;
     }
 
     private static async Task<CallToolResult?> AddSymbolSectionsAsync(

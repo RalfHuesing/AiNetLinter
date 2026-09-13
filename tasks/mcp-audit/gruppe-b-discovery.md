@@ -10,25 +10,11 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 3 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 2 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] B-04: `get_assembly_context` liefert Übersicht ohne Verweise und Zielframework
-
-- **Betroffenes Tool / Schema**: `get_assembly_context` (Parameter: `includeReferences`, Default-Übersicht ohne `symbolIdentifier`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `get_assembly_context(targetPath="<LOCAL-01>", includeReferences=true, includeMetrics=true)` sowie Varianten mit `includeMetrics=false`, `detailLevel="compact"|"standard"`, `maxResponseBytes=2048|8192|16384`
-- **Beobachtung / Ist-Verhalten**:
-  - Nutzlast faktisch nur: Envelope plus `Assembly-Kontext: 48 von 48` / `Scope: root+references; Vollständigkeit: partial`.
-  - Keine Assembly-Identität, kein Zielframework/TFM, keine Referenzliste, keine Typübersicht – trotz `includeReferences=true` und ausreichendem Budget.
-  - Mit `includeBody=true` und `includeClassStructure=true` plus `symbolIdentifier` erscheinen Body/Struktur; die Übersichts-Metadaten (Verweise, TFM) fehlen weiterhin.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Composite-Einstieg soll Verweise, Zielframework und Metadaten strukturiert liefern. `48 von 48` ohne Einträge ist ein leeres Erfolgs-Envelope und zwingt zum Ausweichen auf `inspect_assembly`.
-- **Empfehlung**:
-  - Ohne Symbol mindestens Identität, TFM, Public-Namespaces und Referenzliste (gekürzt + Continuation) serialisieren; Zähler nur zusammen mit den zugehörigen Einträgen.
 
 ### [Major] B-05: `includeMetrics` auf Assembly ergibt irreführendes Solution-`NOT_CONFIGURED`
 

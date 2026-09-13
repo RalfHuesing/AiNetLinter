@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **20 Befunde:** 1 Critical, 14 Major, 5 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **19 Befunde:** 1 Critical, 13 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -39,7 +39,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Major | C-05 | `get_call_tree` | Keine Node-Handoffs; Incoming vermischt Overrides als Calls | Baum nicht kettenfähig, semantisch irreführend | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-04 | `get_impact` | Keine Risiko-Stufe; Projektliste unvollständig (Host fehlt) | Unterschätzung der Produktionswirkung | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-06 | `find_symbol`, `find_references`, `get_symbol_body` | Assembly: `partial` vs. Body-`complete`; `includeReferences` ohne Scope-Objekt | Lease/„keine Treffer“/Cap nicht unterscheidbar | [C](gruppe-c-symbol-chaining.md) |
-| Major | B-04 | `get_assembly_context` | Übersicht ohne Identität, TFM, Verweise (`48 von 48` leer) | Composite-Einstieg unbrauchbar | [B](gruppe-b-discovery.md) |
 | Major | B-05 | `get_assembly_context` | `includeMetrics` → Solution-`NOT_CONFIGURED` | Irreführender Rules-Hint am Assembly-Target | [B](gruppe-b-discovery.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
@@ -78,7 +77,7 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 ## 4. Referenzierte Teilberichte der Subagenten
 
 - [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 0 / 0
-- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 3 / 0
+- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 2 / 0
 - [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 6 / 1
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
 - [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 3 / 2
