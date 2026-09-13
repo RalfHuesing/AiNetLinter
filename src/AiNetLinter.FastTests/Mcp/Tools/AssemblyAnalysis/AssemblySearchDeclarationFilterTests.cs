@@ -198,6 +198,42 @@ public sealed class AssemblySearchDeclarationFilterTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_RejectsOpaquePatternAndResolvesQualifiedTypeFromInspection()
+    {
+        using var temp = TestTempDirectory.Create("assembly-search-qualified-type-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "SearchQualifiedTypeProbe", """
+            namespace Probe { public sealed class SearchProbe { } }
+            namespace Other { public sealed class SearchProbe { } }
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        using var lease = Assert.IsType<AssemblyAnalysisLease>(leaseResult.Lease);
+
+        var inspection = await InspectAssemblyTool.ExecuteAsync(
+            lease,
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 10));
+        var inspectionText = AssemblyAnalysisTestSupport.TextOf(inspection);
+        var qualifiedTypeName = Regex.Match(inspectionText, @"- `(?<name>Probe\.SearchProbe)`").Groups["name"].Value;
+        var handoffId = Regex.Match(inspectionText, @"handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
+
+        var unsupported = await AssemblySearchTool.ExecuteAsync(
+            lease,
+            new AssemblySearchArguments(handoffId, false, "text", 10, DeclarationOnly: true, Kind: "type"),
+            CancellationToken.None);
+        var search = await AssemblySearchTool.ExecuteAsync(
+            lease,
+            new AssemblySearchArguments(qualifiedTypeName, false, "text", 10, DeclarationOnly: true, Kind: "type"),
+            CancellationToken.None);
+
+        Assert.False(unsupported.IsError ?? false);
+        Assert.Contains("UNSUPPORTED_IDENTIFIER", AssemblyAnalysisTestSupport.TextOf(unsupported), StringComparison.Ordinal);
+        Assert.Contains("get_symbol_body", AssemblyAnalysisTestSupport.TextOf(unsupported), StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", AssemblyAnalysisTestSupport.TextOf(search), StringComparison.Ordinal);
+        Assert.Contains("public sealed class SearchProbe", AssemblyAnalysisTestSupport.TextOf(search), StringComparison.Ordinal);
+        Assert.DoesNotContain("Other", AssemblyAnalysisTestSupport.TextOf(search), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_TextMatch_DoesNotPromiseHandoff()
     {
         using var temp = TestTempDirectory.Create("assembly-search-raw-text-");

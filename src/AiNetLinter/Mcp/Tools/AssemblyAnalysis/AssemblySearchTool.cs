@@ -88,6 +88,7 @@ internal static partial class AssemblySearchTool
     {
         var kind = NormalizeKind(arguments.SearchKind);
         return ValidateKind(kind, arguments.Pattern)
+            ?? ValidateOpaquePattern(arguments.Pattern)
             ?? ValidateSymbolKind(arguments.Kind)
             ?? ValidateLimits(arguments)
             ?? ValidateCursor(arguments.EffectiveCursor);
@@ -160,10 +161,10 @@ internal static partial class AssemblySearchTool
         CancellationToken cancellationToken)
     {
         var kind = NormalizeKind(arguments.SearchKind)!;
-        var pattern = ResolvePattern(kind, arguments.Pattern);
+        var qualifiedTypeName = GetQualifiedTypeName(arguments);
+        var pattern = qualifiedTypeName is null ? ResolvePattern(kind, arguments.Pattern) : GetTypeLeafName(qualifiedTypeName);
         var fileFilter = AssemblyFileFilter.Create(arguments.FileFilter, "fileFilter");
-
-        var useRegex = DetermineUseRegex(arguments.Pattern, arguments.IsRegex, pattern);
+        var useRegex = qualifiedTypeName is null && DetermineUseRegex(arguments.Pattern, arguments.IsRegex, pattern);
         var regex = CreateRegex(pattern, useRegex);
         var accumulator = ScanFiles(root, arguments, pattern, regex, fileFilter, cancellationToken);
 

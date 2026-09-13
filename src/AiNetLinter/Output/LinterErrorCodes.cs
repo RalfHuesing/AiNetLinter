@@ -30,5 +30,6 @@ internal static class LinterErrorCodes
     internal const string TargetUnreadable   = "TARGET_UNREADABLE";
     internal const string InvalidHandoff     = "INVALID_HANDOFF";
     internal const string HandoffUnknown     = "HANDOFF_UNKNOWN";
+    internal const string UnsupportedIdentifier = "UNSUPPORTED_IDENTIFIER";
     internal const string HandoffCounterUnavailable = "HANDOFF_COUNTER_UNAVAILABLE";
 }

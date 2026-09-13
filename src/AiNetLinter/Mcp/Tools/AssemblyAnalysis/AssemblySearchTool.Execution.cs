@@ -8,14 +8,46 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Handoffs;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 internal static partial class AssemblySearchTool
 {
+    private static CallToolResult? ValidateOpaquePattern(string? pattern) =>
+        !string.IsNullOrWhiteSpace(pattern)
+        && pattern.StartsWith(HandoffCounterAlphabet.HandlePrefix, StringComparison.OrdinalIgnoreCase)
+            ? McpToolResults.Recoverable(
+                LinterErrorCodes.UnsupportedIdentifier,
+                "pattern unterstützt keine Handoff-ID, weil search_assembly eine Text- und Mustersuche ist.",
+                hint: "Die Handoff-ID direkt an get_symbol_body.symbolIdentifiers übergeben.")
+            : null;
+
+    internal static string? GetQualifiedTypeName(AssemblySearchArguments arguments)
+    {
+        if (!string.Equals(arguments.Kind, "type", StringComparison.OrdinalIgnoreCase)
+            || arguments.IsRegex == true
+            || string.IsNullOrWhiteSpace(arguments.Pattern))
+        {
+            return null;
+        }
+
+        var pattern = arguments.Pattern.Trim();
+        var separator = pattern.LastIndexOf('.');
+        return separator > 0 && separator < pattern.Length - 1 ? pattern : null;
+    }
+
+    private static string GetTypeLeafName(string qualifiedTypeName)
+    {
+        var leafName = qualifiedTypeName[(qualifiedTypeName.LastIndexOf('.') + 1)..];
+        var genericStart = leafName.IndexOf('<');
+        return genericStart >= 0 ? leafName[..genericStart] : leafName;
+    }
+
     private static string CreatePagingBinding(AssemblyAnalysisLease lease, AssemblySearchArguments arguments) =>
         AssemblyPaging.CreateSearchBinding(lease.CanonicalPath, lease.Context.Origin.ContentHash, arguments);
 
@@ -45,6 +77,8 @@ internal static partial class AssemblySearchTool
     {
         if (!IsHandoffEligibleKind(arguments.Kind)) return payload;
 
+        var qualifiedTypeName = GetQualifiedTypeName(arguments);
+
         var solution = lease.Server.GetCurrentSolution();
         var identity = lease.Server.AssemblySymbolIdentity;
         if (solution is null || identity is null) return payload;
@@ -54,24 +88,32 @@ internal static partial class AssemblySearchTool
             .Where(document => !string.IsNullOrWhiteSpace(document.FilePath))
             .GroupBy(document => NormalizeFullPath(document.FilePath!), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        var matches = new AssemblySearchMatch[payload.Results.Count];
-        for (var index = 0; index < payload.Results.Count; index++)
+        var matches = new List<AssemblySearchMatch>(payload.Results.Count);
+        foreach (var match in payload.Results)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var match = payload.Results[index];
             var path = NormalizeFullPath(Path.Combine(root, match.FilePath.Replace('/', Path.DirectorySeparatorChar)));
             if (!documentsByPath.TryGetValue(path, out var document))
             {
-                matches[index] = match;
+                if (qualifiedTypeName is null) matches.Add(match);
                 continue;
             }
 
             var handoffId = await ResolveDeclarationHandoffAsync(
-                document, match, arguments.Kind!, identity, cancellationToken).ConfigureAwait(false);
-            matches[index] = match with { HandoffId = handoffId };
+                document, match, arguments.Kind!, qualifiedTypeName, identity, cancellationToken).ConfigureAwait(false);
+            if (qualifiedTypeName is null || handoffId is not null) matches.Add(match with { HandoffId = handoffId });
         }
 
-        return payload with { Results = matches };
+        return qualifiedTypeName is null
+            ? payload with { Results = matches }
+            : payload with
+            {
+                Results = matches,
+                TotalCount = matches.Count,
+                ReturnedCount = matches.Count,
+                MatchedFileCount = matches.Select(match => match.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                ReturnedFileCount = matches.Select(match => match.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            };
     }
 
     private static bool IsHandoffEligibleKind(string? kind) =>
@@ -83,6 +125,7 @@ internal static partial class AssemblySearchTool
         Document document,
         AssemblySearchMatch match,
         string kind,
+        string? qualifiedTypeName,
         AnalysisSymbolIdentity identity,
         CancellationToken cancellationToken)
     {
@@ -94,11 +137,32 @@ internal static partial class AssemblySearchTool
         var handoffIds = match.MatchRanges
             .Select(range => ResolveDeclarationSymbol(root, text, semanticModel, match.Line, range, kind))
             .Where(symbol => symbol is not null)
+            .Where(symbol => qualifiedTypeName is null || MatchesQualifiedTypeName(symbol!, qualifiedTypeName))
             .Select(symbol => identity.FormatHandoff(symbol!))
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         return handoffIds.Length == 1 ? handoffIds[0] : null;
+    }
+
+    private static bool MatchesQualifiedTypeName(ISymbol symbol, string qualifiedTypeName) =>
+        symbol is INamedTypeSymbol type
+        && string.Equals(FormatQualifiedTypeName(type), qualifiedTypeName, StringComparison.Ordinal);
+
+    private static string FormatQualifiedTypeName(INamedTypeSymbol type)
+    {
+        var typeName = FormatTypeName(type);
+        var namespaceName = type.ContainingNamespace.ToDisplayString();
+        return string.IsNullOrEmpty(namespaceName) ? typeName : $"{namespaceName}.{typeName}";
+    }
+
+    private static string FormatTypeName(INamedTypeSymbol type)
+    {
+        var containingType = type.ContainingType is null ? string.Empty : $"{FormatTypeName(type.ContainingType)}.";
+        var typeParameters = type.TypeParameters.Length == 0
+            ? string.Empty
+            : $"<{string.Join(", ", type.TypeParameters.Select(parameter => parameter.Name))}>";
+        return $"{containingType}{type.Name}{typeParameters}";
     }
 
     private static ISymbol? ResolveDeclarationSymbol(

@@ -83,7 +83,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "searchKind: 'text' [eigenes pattern], 'data_access' [DB/Datei], 'external_calls' [HTTP/RPC/Prozess]. " +
         "pattern: Suchbegriff (isRegex: auto/true/false). " +
         "declarationOnly: schliesst Kommentare/Strings/XML-Docs aus. " +
-        "kind: 'method', 'type', 'property'. fileFilter: Glob oder Regex. " +
+        "kind: 'method', 'type', 'property'; vollqualifizierte Typnamen aus inspect_assembly sind mit kind='type' suchbar. " +
+        "Handoff-IDs direkt an get_symbol_body uebergeben. fileFilter: Glob oder Regex. " +
         "maxResults (Default 50, Cap 1000), contextLines (0-5), maxResponseBytes, continuationToken.";
 
     private static void AddInspectAssembly(
