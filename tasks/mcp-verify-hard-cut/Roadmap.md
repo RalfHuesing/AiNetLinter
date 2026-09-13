@@ -10,7 +10,7 @@
 - [X] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
 - [X] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
 - [X] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
-- [ ] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
+- [X] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
 
 ## Durchführungsprotokoll
 
@@ -79,6 +79,12 @@
 - Fehlende, ungültige und nicht vorhandene `targetPath`-Ziele liefern vor dem Lease Contract-v2-Fehler; ein Folgeaufruf bleibt nutzbar.
 - Interne Scanner tragen Verify-/Advisory-Namen; frühere Toolnamen erscheinen nur noch in Negativinventaren.
 - Commit: `a986e74bcf21e7fb80c4ab3a5acd94249f048494`.
+
+### Folgeaudit – Abschluss
+
+- Frischer Audit korrigierte die groß-/kleinschreibungsunabhängige Assembly-Zielklassifikation; nachgezogene Verträge und interne Namen sind konsistent.
+- Abschlussgate: Build 0 Warnungen/Fehler, FastTests 2481/2481 und IntegrationTests 235/235 (ohne `Stress`).
+- Nachträge: `107508228e17f389d909616fe86102df217c356b`, `50460f1fba0ef8ff457e02ec572936e642b00a84`, `cf04cd73d5423afd93c746d4e38a9e9531bfc48b`.
 
 ### Vorbereitung
 
