@@ -10,76 +10,106 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 2 Major, 2 Minor
+- **Gefundene Befunde:** 1 Critical, 2 Major, 3 Minor
+
+Live-Katalog: 33 Fach-Tools plus Cursor-internes `mcp_auth` (generische Auth-Description, nicht als AiNetLinter-Fach-Tool beworben — kein Befund). Quality-Gate ist `verify` (`targetPath`, `scope`); keine Alt-Filter `scopeFilter` / `minScore` / `maxViolations` im Schema.
+
+Ohne Befund geblieben: Typfehler (handlungsweisende JSON-Typ-Meldung, kein Stacktrace); `kind=invalidKind` (gültige Enum-Werte genannt); Ordner-statt-Datei; Session-Isolation SOURCE-01 → LOCAL-01 → LOCAL-02 → FALSE-01 → SOURCE-02 → SOURCE-01 (keine Cache-Kontamination, `TARGET_MISMATCH` bei fremder Handoff-ID, FALSE-01 zerstört SOURCE-Session nicht).
 
 ---
 
 ## 2. Negative Befunde
 
-### [Major] E-03: `maxResponseBytes=500` trifft Tool-spezifische Floors statt des Budget-Retry-Vertrags
+### [Critical] E-01: `verify` liefert Fehler im Success-Envelope
 
-- **Betroffener Querschnittsbereich**: Response-Budget / deterministischer Retry
-- **Betroffenes Tool / Schema**: `find_symbol`, `get_class_structure`, `inspect_assembly` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `SOURCE-01` (Source) / `LOCAL-01` (Assembly)
-- **Konkreter Aufruf**: `find_symbol(targetPath=SOURCE-01, pattern="Handler", maxResponseBytes=500)`; `get_class_structure(..., maxResponseBytes=500)`; `inspect_assembly(targetPath=LOCAL-01, maxResponseBytes=500)`
+- **Betroffener Querschnittsbereich**: Frühvalidierung & Envelope
+- **Betroffenes Tool / Schema**: `verify` (Parameter: `targetPath`)
+- **Ziel-Label**: ungebunden / nicht existente Solution (kein gültiges `SOURCE-*`)
+- **Konkreter Aufruf**: `verify()` ohne `targetPath`; `verify(targetPath=<nicht existente .sln>)`
 - **Beobachtung / Ist-Verhalten**:
-  - Source (`find_symbol`, `get_class_structure`): `[ERROR] INVALID_ARGUMENT` — „maxResponseBytes muss zwischen 512 und 65536 Bytes liegen“, `fieldPath: $.maxResponseBytes`. Kein `minimumResponseBytes`, kein `RESPONSE_BUDGET_TOO_SMALL`.
-  - Assembly (`inspect_assembly`): `[ERROR] INVALID_ARGUMENT` — Floor **2048** Bytes („maschinenlesbarer Assembly-Envelope“). Kein `fieldPath`, kein `minimumResponseBytes`. Hinweis nennt konfiguriertes Default 16384.
-  - `get_file_tree` akzeptiert 500 (siehe E-02) — dritter, widersprüchlicher Pfad.
-  - Nach Anhebung auf 512: `find_symbol` liefert korrekt `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes: 16685`; Retry mit 16685 liefert ≥1 Symboleinheit (50 von 732). Der dokumentierte Retry greift also erst **nach** dem Floor, nicht beim geforderten 500-Byte-Probe.
+  - Fach-Payload im **Erfolgs-Tool-Result** (kein Tool-Error-Flag / kein `[ERROR]`-Wrapper, im Gegensatz zu `find_symbol`, `inspect_assembly`, `reload_config` bei fehlendem `targetPath`).
+  - Ohne Pflichtfeld: `verdict: error`, `code: INVALID_ARGUMENT`, `message: targetPath ist erforderlich.`, `field: $.targetPath`, `recovery: …`.
+  - Nicht existente Solution: `verdict: error`, `code: SOLUTION_NOT_FOUND`, `field: $.targetPath` — ebenfalls ohne Tool-Error-Flag.
+  - Schema: `targetPath` hat Default `""` und steht **nicht** in `required`; Laufzeit weist denselben Pfad trotzdem als Pflicht zurück.
+  - Contract-v2-`navigation.status` mit `operation=error` fehlt; stattdessen flaches `verdict: error`.
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Der Integrationsvertrag („bei Budgetfehler denselben Aufruf mit `maxResponseBytes=minimumResponseBytes` wiederholen“) ist für den kanonischen 500-Byte-Probe nicht ausführbar: Agent muss deutsche Prosa parsen und je Tool 512 vs. 2048 vs. „einfach akzeptieren“ raten.
-  - Schema-Default `0` bei mehreren Assembly-Tools steht zusätzlich quer zum Source-Floor (explizites `0` auf `find_symbol` = `INVALID_ARGUMENT`, auf `inspect_assembly` = Server-Default).
+  - JSON-RPC-/Tool-Envelope muss bei Fehler `isError=true` setzen. Agenten, die nur das Envelope-Flag auswerten, behandeln den Fehlschlag als erfolgreiches Gate.
+  - `SOLUTION_NOT_FOUND` im Success-Body ist besonders irreführend: der Code ist korrekt, das Flag nicht.
 - **Empfehlung**:
-  - Einheitlicher Floor, als JSON-Feld `minimumResponseBytes` auch bei Unterschreitung des Floors (nicht nur als `INVALID_ARGUMENT`-Prosa).
-  - Schema-`default` und Laufzeit-Floor angleichen; `fieldPath` auch auf dem Assembly-Pfad setzen.
+  - `targetPath` im Schema als `required` ohne leeren Default; Fehler ausschließlich als Tool-Error mit `isError=true`, `navigation.status.operation=error` und bestehendem `field`.
 
-### [Major] E-05: `find_dead_code` nennt bei ungültigen Enums keine gültigen Werte
+### [Major] E-02: `maxResponseBytes=500` bricht das Budget-Protokoll
 
-- **Betroffener Querschnittsbereich**: Enum-Validierung (TC-E03)
-- **Betroffenes Tool / Schema**: `find_dead_code` (Parameter: `kind`, `accessibility`)
+- **Betroffener Querschnittsbereich**: Response-Budget-Recovery
+- **Betroffenes Tool / Schema**: `find_symbol`, `get_class_structure` (Parameter: `maxResponseBytes`)
 - **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `find_dead_code(targetPath=SOURCE-01, kind="invalidKind")`; `find_dead_code(targetPath=SOURCE-01, accessibility="nope")`
+- **Konkreter Aufruf**: `find_symbol(targetPath=SOURCE-01, pattern=…, maxResponseBytes=500)`; `get_class_structure(targetPath=SOURCE-01, symbolIdentifier=h:…, maxResponseBytes=500)`
 - **Beobachtung / Ist-Verhalten**:
-  - `kind`: `[ERROR] INVALID_ARGUMENT: Unbekannter kind-Wert.` Hint: „Parameter pruefen und gemaess Spezifikation uebergeben.“ `fieldPath: $.kind`. Keine Werteliste.
-  - `accessibility`: analog „Unbekannter accessibility-Wert“, Hint identisch generisch, `fieldPath: $.accessibility`. Keine Werteliste.
-  - Input-Schema listet für beide Felder kein `enum`, nur Defaults (`kind=all`, `accessibility=private_internal`).
-  - Gegensatz: `find_symbol` (`kind=invalidKind`) listet gültige Werte; ebenso `get_namespace_tree`, `get_file_tree` (`view`), `get_call_tree` (`direction`), `get_hotspots` (`scopeType`), `find_duplicates` (`mode`), `search_assembly` (`searchKind`).
+  - Beide Tools: `INVALID_ARGUMENT` — `maxResponseBytes muss zwischen 512 und 65536 Bytes liegen.` JSON-Schema der Properties enthält **kein** `minimum: 512`.
+  - Dieselben 500 Bytes bei `get_file_tree(targetPath=SOURCE-01, view=summary)` und `inspect_assembly(targetPath=LOCAL-01)`: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes` und Retry-Hinweis.
+  - Ab 512 Bytes: `find_symbol` → `RESPONSE_BUDGET_TOO_SMALL` (`minimumResponseBytes=10054`, inkl. `Status: operation=error`); `get_class_structure` → Erfolg mit 1 Member (Budget-Kürzung, mindestens 1 Einheit).
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Erwartung TC-E03: gültige Enum-Werte in der Fehlermeldung. Ohne Schema-Enum und ohne Hint-Liste muss der Agent raten oder andere Tools imitieren (`kind`-Werte von `find_symbol` sind nicht dieselben).
+  - Der dokumentierte Probe-Wert 500 soll entweder Wire-treu beantwortet oder mit `RESPONSE_BUDGET_TOO_SMALL` + deterministischem `minimumResponseBytes` quittiert werden. Ein hartes `INVALID_ARGUMENT` unterhalb eines undokumentierten Floors verhindert den einheitlichen Retry-Pfad.
 - **Empfehlung**:
-  - Dieselbe Fehlerform wie `find_symbol`: gültige Werte im Hint, plus `enum` im JSON-Schema.
+  - Floor 512 im JSON-Schema exponieren **oder** Werte &lt; 512 wie bei `get_file_tree`/`inspect_assembly` in `RESPONSE_BUDGET_TOO_SMALL` überführen (`minimumResponseBytes` ≥ 512). Verhalten über alle budgetfähigen Tools angleichen.
 
-### [Minor] E-06: Drei Scope-Namen plus zwei Test-Filter-Modelle ohne Querschnittsdoku
+### [Major] E-03: Retry mit `minimumResponseBytes` hält das Wire-Budget nicht ein
 
-- **Betroffener Querschnittsbereich**: Cross-Tool Parameter-Naming (TC-E05)
-- **Betroffenes Tool / Schema**: `search_pattern` (`scope`), `find_duplicates` (`scopeDir`), Audit-Tools (`scopeFilter`), `get_file_tree`/`metrics_tree` (`root`); zusätzlich `includeTests` vs. `scopeType`
-- **Ziel-Label**: Schema-Vergleich über alle 33 Tools (kein Laufzeit-Target)
-- **Konkreter Aufruf**: GetDynamicTools Namespace-Schemas; stichprobenartig ungültiges `scopeType` auf `get_hotspots`
+- **Betroffener Querschnittsbereich**: Deterministisches Budget-Retry
+- **Betroffenes Tool / Schema**: `inspect_assembly`, `get_file_tree` (Parameter: `maxResponseBytes`)
+- **Ziel-Label**: `LOCAL-01` (Assembly) / `SOURCE-01` (Source)
+- **Konkreter Aufruf**: `inspect_assembly(targetPath=LOCAL-01, maxResponseBytes=500)` → Retry exakt `maxResponseBytes=2048`; `get_file_tree(targetPath=SOURCE-01, view=summary, maxResponseBytes=500)` → Retry exakt `maxResponseBytes=2090`
 - **Beobachtung / Ist-Verhalten**:
-  - Pfad-/Projekt-Einschränkung heißt je Tool `scope` (relativer Pfad), `scopeDir` (Verzeichnis), `scopeFilter` (Projektname oder Pfad-Substring) oder `root` (Tree-Wurzel). Keine Schema-Beschreibung, dass die Namen bewusste Aliase oder bewusste Semantik-Differenzen eines gemeinsamen Vertrags sind.
-  - Test-Einbeziehung: `find_dead_code` / `find_magic_values` nutzen Boolean `includeTests`; `get_hotspots` / `find_duplicates` / viele Symbol-Tools nutzen Tri-State `scopeType` (`production`|`tests`|`all`). `get_violations`, `pattern_detect`, `safeguard` haben weder `scopeType` noch `includeTests`.
+  - Erster Call jeweils korrekt `RESPONSE_BUDGET_TOO_SMALL` mit `requestedBytes`, `minimumResponseBytes`, `retry`.
+  - Retry `inspect_assembly` mit 2048: **Erfolg**, mindestens 1 API-Typ — aber Nutzlast weit oberhalb 2048 (gekürzte Typen plus lange Referenz-/Diagnoseblöcke, Continuation). Kein erneutes `RESPONSE_BUDGET_TOO_SMALL`.
+  - Retry `get_file_tree` mit 2090: **Erfolg** mit vollständiger Summary-Landkarte plus Warn-/Next-Zeilen; sichtbare Nutzlast über dem gemeldeten Minimum. Der erste Hinweis versprach die „vollständige wertvolle Dateilandkarte“ bei genau diesem Wert.
+  - Kontrast: `get_class_structure(maxResponseBytes=512)` kürzt auf 1 Member und bleibt nah am Cap.
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Agent kopiert `scopeFilter` an `find_duplicates` oder `includeTests` an `get_hotspots` und erhält „Unbekanntes Argument“ bzw. stilles Ignorieren, obwohl die fachliche Absicht identisch ist (Suche eingrenzen / Tests ein- oder ausschließen).
+  - `minimumResponseBytes` muss die kleinste **wire-konforme** Nutzlast mit ≥1 Einheit beschreiben. Liefert der Retry mehr als `maxResponseBytes` ohne neuen Budget-Fehler, ist das Cap unbrauchbar und das Minimum nicht deterministisch.
 - **Empfehlung**:
-  - Entweder kanonische Namen (`scopeFilter` + `scopeType`) mit Aliasen oder in jeder Beschreibung die bewusste Abweichung und das Mapping nennen.
+  - Retry hart auf `maxResponseBytes` kappen oder erneut `RESPONSE_BUDGET_TOO_SMALL` mit höherem, ehrlichem `minimumResponseBytes` liefern. Referenz-/Diagnoseblöcke nicht ungekürzt in die Minimalprojektion ziehen.
 
-### [Minor] E-07: `fieldPath` fehlt bei einem Teil der Enum-Fehler
+### [Minor] E-04: `navigation.status` nur bei einem Teil der Fehler
 
-- **Betroffener Querschnittsbereich**: Envelope-Konsistenz der Validierung
-- **Betroffenes Tool / Schema**: `get_namespace_tree` (`kind`), `get_file_tree` (`view`), `get_call_tree` (`direction`), `get_hotspots` (`scopeType`), `inspect_assembly` (`maxResponseBytes`-Floor, siehe E-03)
-- **Ziel-Label**: `SOURCE-01`
-- **Konkreter Aufruf**: `get_namespace_tree(kind="bogus")`, `get_file_tree(view="notAView")`, `get_call_tree(direction="sideways")`, `get_hotspots(scopeType="invalidScope")`
+- **Betroffener Querschnittsbereich**: Envelope / Contract v2
+- **Betroffenes Tool / Schema**: Validierungsfehler vs. Budget-Fehler (`find_symbol`, `inspect_assembly`, `reload_config`, `verify`, `get_file_tree`)
+- **Ziel-Label**: ungebunden / `SOURCE-01` / `LOCAL-01`
+- **Konkreter Aufruf**: Pflichtfeld weglassen; Typfehler; `kind=invalidKind`; `maxResponseBytes=500|512`
 - **Beobachtung / Ist-Verhalten**:
-  - Gültige Werte werden genannt (gut), aber ohne `fieldPath`.
-  - `find_symbol` / `find_dead_code` / Pflichtfeld- und Typfehler setzen durchgängig `fieldPath: $.…`.
+  - Budget-Fehler `get_file_tree` und `find_symbol` (512): Textzeile `Status: operation=error, completeness=not_applicable, analysisQuality=complete`.
+  - Budget-Fehler `inspect_assembly` (500): maschinenlesbare Budget-Felder, **keine** Status-Zeile.
+  - Pflichtfeld-/Typ-/Enum-Fehler: `INVALID_ARGUMENT` + `fieldPath`/`hint`, **kein** `navigation.status`.
+  - `verify`: `verdict: error` statt `navigation.status`.
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Maschinenlesbare Korrektur (`fieldPath`) ist sonst Teil des v2-Fehlervertrags. Fehlt sie, muss der Agent den Feldnamen aus Prosa rekonstruieren (`kind-Filter`, `view muss …`).
+  - Contract v2 verlangt `navigation.status.operation=error` einheitlich. Agenten können Fehler nicht über ein Feld routen.
 - **Empfehlung**:
-  - `fieldPath` auf allen `INVALID_ARGUMENT`-Pfaden setzen, analog zu Pflichtfeld- und Typfehlern.
+  - Jede Fehlerantwort (Validierung, Budget, Target) mit demselben `navigation.status`-Block ausstatten; `verify` nicht als Sonderform belassen (siehe E-01).
 
----
+### [Minor] E-05: MASK-01 als `targetPath` wie fehlende Datei
 
-## 3. Kurznotiz zu Prüffällen ohne Befund
+- **Betroffener Querschnittsbereich**: Ungültige Pfade
+- **Betroffenes Tool / Schema**: `inspect_assembly` (Parameter: `targetPath`)
+- **Ziel-Label**: `MASK-01` (Verzeichnismaske)
+- **Konkreter Aufruf**: `inspect_assembly(targetPath=MASK-01)`
+- **Beobachtung / Ist-Verhalten**:
+  - `INVALID_ARGUMENT`: Parameter müsse auf eine **vorhandene Datei** zeigen; Hint nennt `.sln/.slnx/.dll/.exe`.
+  - Kein Hinweis, dass Wildcards/Masken kein gültiges `targetPath` sind und Discovery anders zu adressieren ist. Dieselbe Code-Familie wie bei einer schlicht nicht existenten Datei (kein `FILE_NOT_FOUND`).
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Eine Maske ist kein fehlender Dateiname. Ohne Glob-Diagnose sucht der Agent weiter nach „der Datei“ statt ein Discovery-Tool zu wählen.
+- **Empfehlung**:
+  - Wildcard/`*` in `targetPath` als eigenen, selbsterklärenden Code behandeln (z. B. `INVALID_ARGUMENT` mit Hint „keine Globs; konkrete Datei oder Discovery-Tool“). Fehlende Dateien optional als `FILE_NOT_FOUND` unterscheiden.
 
-Nicht als positive Wertung, nur zur Abgrenzung: TC-E01 (fehlendes `targetPath` / `symbolIdentifier` → `[ERROR] INVALID_ARGUMENT` + `fieldPath`; `get_server_health` ohne `targetPath` erlaubt), TC-E02 (String statt Array → Typmeldung ohne Stacktrace), TC-E03-Pfade (`C:\nicht\existent.dll` / Ordner statt Datei, kein Crash), TC-E04-Retry von `find_symbol` nach `minimumResponseBytes=16685` (≥1 Einheit), TC-E06 (SOURCE-01 → LOCAL-01 → LOCAL-02 → SOURCE-01, plus FALSE-01: keine Assembly-Typen in der Source-Antwort, keine Source-Typen als Cache in LOCAL-01).
+### [Minor] E-06: `symbolIdentifier` an Batch-Tools ohne Alias-Hinweis
+
+- **Betroffener Querschnittsbereich**: Parameter-Naming
+- **Betroffenes Tool / Schema**: `get_symbol_body` (Parameter: `symbolIdentifiers`); Kontrast `resolve_type_origin` (`typeName`)
+- **Ziel-Label**: `SOURCE-01` (Modus: Source)
+- **Konkreter Aufruf**: `get_symbol_body(targetPath=SOURCE-01, symbolIdentifier=h:…)` (Singular, wie bei fast allen Gruppe-C-Tools)
+- **Beobachtung / Ist-Verhalten**:
+  - `INVALID_ARGUMENT: Unbekanntes Argument: symbolIdentifier`. Hint: nur Schema-Argumente verwenden. **Kein** Verweis auf `symbolIdentifiers` (Array).
+  - Derselbe `h:…`-Token ist bei `get_class_structure` / `find_references` / `get_feature_context` der Parameter `symbolIdentifier`, bei `resolve_type_origin` Pflichtfeld `typeName` (im Description-Text erwähnt).
+  - Übrige Naming-Unterschiede (`pattern`/`namePatterns` vs. `symbolIdentifier`, `helperSymbol`, `filePath`/`filePaths`) sind im Live-Schema semantisch begründet oder beschrieben. `verify` bewirbt keine Alt-Filter — kein zusätzlicher Defekt.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Naheliegendes Chaining (`h:…` → `symbolIdentifier`) scheitert an einem unbekannten Schlüsselnamen ohne Korrekturvorschlag. Das erhöht Reibung, obwohl das Schema den Plural kennt.
+- **Empfehlung**:
+  - Bei unbekanntem `symbolIdentifier` explizit `symbolIdentifiers` (Array) vorschlagen; optional Alias akzeptieren und intern zu `["h:…"]` mappen. `resolve_type_origin` auf `symbolIdentifier` angleichen oder in jeder Handoff-Zeile den Zielparameter `typeName` nennen.

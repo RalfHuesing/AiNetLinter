@@ -1,73 +1,109 @@
-# MCP-Audit – Gruppe D: Codequalität, Linter, Metriken & Safeguard
+# MCP-Audit – Gruppe D: Codequalität, Linter, Metriken & Verify
 
 > **Zuständigkeit:** Subagent D
-> **Tools:** `get_violations`, `safeguard`, `get_hotspots`, `find_dead_code`, `find_duplicates`, `find_magic_values`, `pattern_detect`, `metrics_tree`, `metrics_lookup`, `dependency_graph`, `search_pattern`
+> **Tools:** `verify`, `get_hotspots`, `find_duplicates`, `pattern_detect`, `metrics_tree`, `metrics_lookup`, `dependency_graph`, `search_pattern`
 > **Regeln:** Nur negative Befunde protokollieren. Keine echten Produktnamen/Pfade, nur Ziel-Labels (`SOURCE-01`, `LOCAL-01`, etc.)!
 
 ---
 
 ## 1. Übersicht & Testergebnis
 
-- **Geprüfte Tools:** 11 Analyse- und Qualitäts-Tools (TC-D01 bis TC-D11)
-- **Geprüfte Prüffälle:** Linter (Source + Assembly), Safeguard/`minScore`, Hotspots, Dead-Code, Duplikate (`minTokens`/`scopeDir`/`scopeType`), Magic Values (`scopeFilter`), Pattern-Detect, Metriken, Graph, `search_pattern`/`includePatterns`
-- **Gefundene Befunde:** 0 Critical, 2 Major, 2 Minor
+- **Geprüfte Tools:** `verify`, `get_hotspots`, `find_duplicates`, `pattern_detect`, `metrics_tree`, `metrics_lookup`, `dependency_graph`, `search_pattern` (kontextuell `get_feature_context` / `get_impact`; Live-Schema ohne Alt-Namen)
+- **Geprüfte Prüffälle:** TC-D01 bis TC-D10
+- **Schema-Check Alt-Tools:** `safeguard`, `get_violations`, `find_dead_code`, `find_magic_values` und `minLines` sind im Live-Katalog **nicht** gelistet (kein Befund).
+- **Gefundene Befunde:** 0 Critical, 4 Major, 1 Minor
+
+Kurz positiv (kein Befund): `verify` auf `LOCAL-01`/`FALSE-01` recoverable `unsupported` ohne Crash und ohne `pass`; `get_hotspots` Assembly-Modus klar; `find_duplicates` respektiert `minTokens`/`mode`; `pattern_detect` gruppiert Heuristiken; `metrics_lookup` konsumiert `h:…`; `dependency_graph` akzeptiert `symbolIdentifier` aus Handoff; kontextuelle Violations ohne Gate-Verdict.
 
 ---
 
 ## 2. Negative Befunde
 
-### [Major] D-01: `scopeType=production` liefert Top-Treffer aus Testprojekten
+### [Major] D-01: `verify`-Gate nicht ohne Freitext-Parsing auswertbar
+
+- **Betroffenes Tool / Schema**: `verify` (Parameter: `scope`)
+- **Ziel-Label**: `SOURCE-01` (Modus: Source); Formvergleich `SOURCE-02`
+- **Konkreter Aufruf**: `verify(targetPath=<SOURCE-01>)`; `verify(targetPath=<SOURCE-01>, scope=solution)`
+- **Beobachtung / Ist-Verhalten**:
+  - Default (`changes`): kompakte Zeilen `verdict: incomplete`, `completeness: incomplete`, `reason: emptychangecontext`, `recovery: scope: solution verwenden.` — **kein** eigenes `score`, **kein** `violationCount`.
+  - `scope=solution`: `verdict: failed`, `completeness: complete`, zusammengesetzte Zeile `gate: score=8.9; violations=1`, danach `findings: count=1/1`. Advisory-Kandidaten sind nicht vom Gate getrennt maschinenlesbar ausgewiesen; die Felder heißen nicht `score` / `violationCount` als Geschwister von `verdict`.
+  - `SOURCE-02` / `scope=solution`: anderes Incomplete-Profil (`reason: notconfigured`) ebenfalls ohne Gate-Tripel.
+  - Kein JSON-Objekt mit den dokumentierten Keys; Agent muss `gate:`-Freitext und abweichende Verdict-Tokens (`failed` vs. dokumentierte Prüfung auf `pass`) interpretieren.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Gate-Regel ist `pass` nur bei `verdict=pass`, `score=10.0`, `violationCount=0`. Ohne stabile, getrennte Felder kann ein Agent das Tripel nicht ohne Parsing der Content-Prosa prüfen. Ein hypothetisches `verdict=pass` bei Score &lt; 10 wäre so nicht hart abweisbar.
+  - Target-Fail (`failed`, Score &lt; 10) ist **kein** Server-Befund; der Kontraktbruch ist die fehlende maschinenlesbare Gate-Form.
+- **Empfehlung**:
+  - Im Content (oder Envelope) feste Keys `verdict`, `score`, `violationCount` als eigene Zeilen/Felder liefern; `gate:`-Sammelzeile höchstens zusätzlich. Incomplete-Fälle explizit `isGateResult=false` (oder weglassen der Score-Keys mit klarem `verdict=incomplete`).
+
+### [Major] D-02: `search_pattern` verletzt Budget-Retry-Vertrag
+
+- **Betroffenes Tool / Schema**: `search_pattern` (Parameter: `maxResponseBytes`)
+- **Ziel-Label**: `SOURCE-01` (Modus: Source)
+- **Konkreter Aufruf**: `search_pattern(targetPath=<SOURCE-01>, pattern=…, maxResponseBytes=200)`; Vergleich `maxResponseBytes=500`
+- **Beobachtung / Ist-Verhalten**:
+  - Bei 200 Bytes: Meta-Zeilen „2451 Treffer gesamt, 0 gezeigt“ und „Antwort wegen maxResponseBytes begrenzt“ — **kein** `RESPONSE_BUDGET_TOO_SMALL`, **kein** `minimumResponseBytes`, **keine** Evidenzzeile.
+  - Bei 500 Bytes: 1 Treffer gezeigt, Rest abgeschnitten; erneut nur Prosa-Hinweis, kein Retry-Wert.
+  - Fehlendes `pattern`: korrektes `[ERROR]: INVALID_ARGUMENT` mit Hint (kein Befund).
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Budgetbruch: Agent kann nicht deterministisch mit `maxResponseBytes = minimumResponseBytes` wiederholen. 0 gezeigte Treffer bei bekanntem Totaltreffer ist eine leere Nutzlast (Hülle ohne Einheit).
+- **Empfehlung**:
+  - Bei Unterschreitung: `RESPONSE_BUDGET_TOO_SMALL` plus deterministisches `minimumResponseBytes`, das beim Retry mindestens eine Treffereinheit liefert; nicht still auf 0 Treffer kollabieren.
+
+### [Major] D-03: `find_duplicates` `scopeType=production` mixcht Test-Cluster in die Top-Treffer
 
 - **Betroffenes Tool / Schema**: `find_duplicates` (Parameter: `scopeType`)
 - **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `find_duplicates(targetPath=SOURCE-01, scopeType="production", minTokens=30, maxResults=3)`
+- **Konkreter Aufruf**: `find_duplicates(targetPath=<SOURCE-01>, minTokens=40, mode=clone, scopeType=production)` vs. `scopeType=tests`
 - **Beobachtung / Ist-Verhalten**:
-  - Explizites `scopeType="production"` scannt 4018 Methoden und 98 Cluster; die drei angezeigten Top-Cluster liegen sämtlich unter `*.Tests.*`-Pfaden (Hilfsmethoden/Factories, keine `[Fact]`-Bodies).
-  - `scopeType="tests"`: 4788 Methoden / 393 Cluster; `scopeType="all"`: 8806 Methoden / 504 Cluster. 4018 + 4788 = 8806 — die Mengen sind disjunkt, aber „production“ enthält Testhilfen aus Testprojekten.
-  - Die Antwort weist den effektiven `scopeType` nicht aus (im Gegensatz zu `get_hotspots`, das `Scope-Typ: 'production'` setzt, und `find_magic_values`, das `Tests ausgeschlossen` schreibt).
-  - `minTokens` und `scopeDir` greifen; Phantom-`minLines`/`scopeFilter` werden mit `INVALID_ARGUMENT` + `fieldPath` abgewiesen (kein eigener Befund).
+  - Schema-Default und explizites `production`: 80 Cluster / 3503 Methoden; die **Top-Cluster** enthalten dennoch Test-Projekt-Pfade.
+  - `scopeType=tests`: 374 Cluster / 4418 Methoden, andere Top-Menge — der Filter existiert, `production` schließt Tests aber nicht aus der Rangliste aus.
+  - `mode=structural` ohne gesetztes `scopeType` zeigt ebenfalls Test-Support in den Top-3. `minTokens`/`mode` werden ansonsten respektiert; Treffer sind als `candidate` gekennzeichnet.
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Agenten interpretieren `production` analog zu den anderen Audit-Tools als Ausschluss von Testprojekten. Sie erhalten dann Testhilfs-Duplikate statt Produktionsfunde und können den Filter in der Antwort nicht gegenprüfen.
+  - Dokumentierter Default `production` führt zu Signal-Rausch: Agent hält Test-Klone für Produktionsfunde. Das ist ein Server-Kontrakt-/Filterproblem, kein Urteil über den Zielcode.
 - **Empfehlung**:
-  - `scopeType=production` datei-/projektbasiert wie `get_hotspots` / `find_magic_values` filtern **oder** die abweichende Semantik (Nicht-Testmethoden inkl. Testhilfen) im Schema und in der Antwort (`effectiveScope`) maschinenlesbar machen.
+  - `production` strikt auf Nicht-Test-Kompilationseinheiten begrenzen oder effektiv angewandten `scopeType` plus Zählung (production vs. tests) maschinenlesbar in der Kopfzeile ausweisen, wenn gemischt.
 
-### [Major] D-02: `enrichCSharp=true` liefert keine Symbolevidenz
+### [Major] D-04: `helperSymbol`-Handoff aus `get_impact` bricht mit irreführendem `SYMBOL_NOT_FOUND`
 
-- **Betroffenes Tool / Schema**: `search_pattern` (Parameter: `enrichCSharp`)
+- **Betroffenes Tool / Schema**: `find_duplicates` (Parameter: `helperSymbol`, `mode=refactoring-drift`)
 - **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `search_pattern(targetPath=SOURCE-01, pattern="public static void RemoveSite", includePatterns=["*.cs"], scope="San.smart.Planner.Platform.Contracts", enrichCSharp=true, maxResults=1)`
+- **Konkreter Aufruf**: `find_duplicates(targetPath=<SOURCE-01>, mode=refactoring-drift, helperSymbol=<h: aus get_impact>)`; Kontrast `helperSymbol=<h: aus find_symbol, kind=method>`
 - **Beobachtung / Ist-Verhalten**:
-  - Schema-Beschreibung: `enrichCSharp` „ergaenzt C#-Symbolevidenz (Default false)“.
-  - Treffer auf einer echten Methodendeklaration und auf `public sealed class SiteMetadata` bleiben reine `Datei:Zeile: Text`-Zeilen. Keine Symbol-ID, kein Kind, kein Handoff, kein Status `enrichment=skipped`.
-  - `includePatterns` existiert im Schema und filtert (z. B. `*.cs` vs. `*.md`) — kein Phantom-Feld.
+  - Unveränderte `h:…` einer Call-Site aus `get_impact` (Konstruktor): Auflösung zu einem Metadata-Namen, danach `[ERROR]: SYMBOL_NOT_FOUND` mit Hint „Schreibweise prüfen oder find_symbol“.
+  - Dieselbe API mit Klassen-`h:`: klares `INVALID_ARGUMENT` (nur Methode/lokale Funktion) — das ist der bessere Pfad.
+  - Methode-`h:` aus `find_symbol`: Aufruf erfolgreich, leere Kandidatenmenge mit ehrlicher Evidenzgrenze (kein Befund).
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Opt-in für Folgetools (`get_symbol_body`, `find_references`) ist beworben, bleibt aber ein stiller No-Op. Der Agent verkettet nicht und erhält keinen Hinweis, dass die Anreicherung unterblieben ist.
+  - Handoff-Bruch: `h:…` aus dem unmittelbaren Vorgänger-Tool unverändert zu übergeben ist der Vertrag; der Agent erhält eine irreführende „Symbol nicht gefunden“-Meldung statt „Konstruktor ist kein gültiger Helper“.
 - **Empfehlung**:
-  - Pro C#-Treffer kanonische Handoff-ID liefern — oder `enrichCSharp` als `unsupported` / `skipped` mit Grund markieren, statt still zu ignorieren.
+  - Aus `get_impact` stammende Konstruktor-`h:` entweder als Methode akzeptieren oder mit demselben `INVALID_ARGUMENT`-Profil wie NamedType ablehnen; Hint nicht auf Tippfehler/`find_symbol` schieben.
 
-### [Minor] D-03: Schema-`required` weicht von der Runtime-Pflicht ab
+### [Minor] D-05: Qualitäts-Trefferlisten ohne konsumierbare `h:…`
 
-- **Betroffenes Tool / Schema**: `metrics_lookup` (`symbolIdentifiers`), `dependency_graph` (`filePath` XOR `symbolIdentifier`), `search_pattern` (`pattern`)
+- **Betroffenes Tool / Schema**: `get_hotspots`, `find_duplicates`, `pattern_detect`, `metrics_tree`, `dependency_graph`, `search_pattern` (Parameter: `enrichCSharp`)
 - **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `metrics_lookup(targetPath=SOURCE-01)` · `dependency_graph(targetPath=SOURCE-01)` · `search_pattern(targetPath=SOURCE-01)`
+- **Konkreter Aufruf**: jeweilige Default-/Schema-Aufrufe auf `<SOURCE-01>`; `search_pattern(..., enrichCSharp=true)`
 - **Beobachtung / Ist-Verhalten**:
-  - JSON-Schema `required` enthält jeweils nur `targetPath`. `symbolIdentifiers` / `filePath` / `pattern` sind optional (`default: null`).
-  - Runtime: `INVALID_ARGUMENT` („Pflichtparameter 'symbolIdentifiers' fehlt“, „filePath und symbolIdentifier … genau einen angeben, nie beide oder keins“, „pattern darf nicht leer sein“) — jeweils mit brauchbarem `hint`.
+  - Treffer sind Pfad-/FQ-Name-Zeilen. Keine `h:…` in Hotspot-Tabelle, Duplikat-Clustern, Pattern-Hits, Metrik-Baum, Graph-Kanten.
+  - `enrichCSharp=true` ergänzte keine Symbol-IDs/`h:…`.
+  - `metrics_lookup(symbolIdentifiers=["h:…"])` und `dependency_graph(symbolIdentifier="h:…")` **konsumieren** Handoffs aus `find_symbol` korrekt (kein zusätzlicher Major).
 - **Soll-Verhalten / Problem aus Agentensicht**:
-  - Schema-first-Aufrufe sind laut `tools/list` gültig, scheitern aber. Ein Extra-Roundtrip ist nötig; `anyOf`/`required` im Schema würde das verhindern. Die Runtime-Fehler selbst sind klar (kein Critical).
+  - Folgeaufrufe (`metrics_lookup`, `helperSymbol`, `get_symbol_body`) erfordern manuelles Kopieren von Pfaden/Namen statt unveränderter `h:…`. Ergonomie, kein Crash.
 - **Empfehlung**:
-  - Schema an die Runtime anpassen: `metrics_lookup.symbolIdentifiers` required; `dependency_graph` `anyOf` filePath|symbolIdentifier; `search_pattern.pattern` required.
+  - Pro Trefferzeile eine `h:…` ausgeben (Datei oder Symbol); `enrichCSharp=true` muss Symbol-Evidenz plus Handoff liefern oder den Flag-Effekt klar als „nicht anwendbar“ markieren.
 
-### [Minor] D-04: `pattern_detect` markiert vollständige Läufe als `partiell`
+---
 
-- **Betroffenes Tool / Schema**: `pattern_detect` (Parameter: `patterns`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `pattern_detect(targetPath=SOURCE-01)` bzw. `pattern_detect(targetPath=SOURCE-01, scopeFilter="San.smart.Planner.Platform.Contracts")`
-- **Beobachtung / Ist-Verhalten**:
-  - Default-Lauf (6 Detectoren): `Vollstaendigkeitsstatus: partiell`, obwohl Dateiscan durch ist. Ursache: `public-without-doc` = `not_configured`, `feature-envy` = `not_decidable`.
-  - Eingeschränkt auf `patterns=["god-class","async-void"]`: klare Leer-Antwort ohne `partiell`.
-  - Ungültige IDs (`Repository`, `Factory`, `Singleton`) → `INVALID_ARGUMENT` mit gültiger Liste. Die gültigen Werte stehen nicht als JSON-Schema-`enum` an `patterns`.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Globales `partiell` wird wie Truncation/`RESPONSE_BUDGET_TOO_SMALL` gelesen; Agenten erhöhen Limits statt Regeln zu konfigurieren. Ohne Schema-Enum ist der erste Default- oder Rate-Versuch spekulativ.
-- **Empfehlung**:
-  - Gesamstatus `complete`, wenn alle angeforderten Detectoren entschieden sind (`checked` / `empty` / `not_configured` / `not_decidable`). `partiell` nur bei Truncation. `patterns.items.enum` im Schema setzen.
+## 3. Prüffall-Abgleich (ohne Target-Urteil)
+
+| TC | Ergebnis für den Server |
+|---|---|
+| TC-D01 | Envelope kompakt, kein Crash, kein falsches `pass`; Gate-Tripel fehlt (D-01). |
+| TC-D02 | `scope=solution` Abschlussform mit `verdict`/`gate`; Semantik Fail am Target erwartbar; Maschinenlesbarkeit D-01. |
+| TC-D03 | `LOCAL-01` und `FALSE-01`: `verdict: error`, `code: ASSEMBLY_TARGET_UNSUPPORTED`, Recovery auf Source-Ziel; kein Crash, kein `pass`. JSON-RPC-`isError` in der sichtbaren Tool-Antwort nicht belegt. |
+| TC-D04 | Source: MaxLineCount-Tabelle nachvollziehbar. `LOCAL-01`: `[ASSEMBLY] capability=unsupported` plus recoverable Fehler, kein Crash. |
+| TC-D05 | `minTokens`/`mode` (`clone`, `structural`, `refactoring-drift`) greifen; kein `minLines` im Schema. Filter-/Handoff-Mängel D-03/D-04. |
+| TC-D06 | Gruppierte Heuristiken (god-class, async-void, long-method, empty-catch); `not_configured`/`not_decidable` ohne globalen Clean-Claim. |
+| TC-D07 | Baum hierarchisch; Lookup konsumiert `h:…`. Emission von `h:…` im Baum fehlt (D-05). |
+| TC-D08 | `symbolIdentifier` aus Handoff akzeptiert; Kanten ohne `h:…` (D-05). |
+| TC-D09 | Schema-Suche funktioniert; leeres Pattern recoverable. Budgetvertrag D-02. |
+| TC-D10 | `get_feature_context` / `get_impact`: Arbeitsevidenz, Violations-Abschnitt ohne `verdict`/`score`. Schema bewirbt nicht `safeguard`/`get_violations`. |
