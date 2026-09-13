@@ -211,7 +211,7 @@ internal static partial class VerifyResponseFormatter
     }
 
     internal static CallToolResult Incomplete(VerifyScope scope, VerifyDecisionReason reason, string? recovery) =>
-        Text($"verdict: incomplete\ncompleteness: incomplete\nreason: {ToWire(reason)}\nscope: {ToWire(scope)}\nrecovery: {recovery ?? "scope: solution verwenden."}");
+        Text($"verdict: incomplete\ncompleteness: incomplete\nisGateResult: false\nreason: {ToWire(reason)}\nscope: {ToWire(scope)}\nrecovery: {recovery ?? "scope: solution verwenden."}");
 
     internal static CallToolResult Error(string code, string message, string recovery, string? fieldPath = null) =>
         Text(
@@ -233,7 +233,7 @@ internal static partial class VerifyResponseFormatter
         if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return text;
         return isError
             ? "verdict: error\ncode: RESPONSE_BUDGET_EXCEEDED\nrecovery: Scope präzisieren und erneut ausführen."
-            : "verdict: incomplete\ncompleteness: incomplete\nreason: gateevidenceincomplete\nscope: changes\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
+            : "verdict: incomplete\ncompleteness: incomplete\nisGateResult: false\nreason: gateevidenceincomplete\nscope: changes\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
     }
 
     private static VerifyEvidenceEntry ToEvidence(ViolationEntry violation) => new(
@@ -305,7 +305,8 @@ internal static partial class VerifyResponseFormatter
         [
             $"verdict: {ToWire(response.Verdict)}",
             $"completeness: {ToWire(response.Completeness)}",
-            $"gate: score={gate.Score!.Value.ToString("F1", CultureInfo.InvariantCulture)}; violations={gate.ViolationCount}",
+            $"score: {gate.Score!.Value.ToString("F1", CultureInfo.InvariantCulture)}",
+            $"violationCount: {gate.ViolationCount}",
             $"scope: {scope}",
         ];
     }

@@ -534,20 +534,24 @@ Impact-Dateien dienen ausschließlich der Einordnung. Änderungen an Solution-,
 Projekt-, Regel- oder Generator-Konfiguration erweitern die Population konservativ.
 Ein leerer oder nicht sicher bestimmbarer Änderungskontext ist `incomplete` und
 verweist auf `scope: "solution"`.
+Ein beurteilbares Ergebnis enthält die stabilen Content-Schlüssel `verdict`,
+`score`, `violationCount` und `scope` in eigenen Zeilen. Ein `incomplete`
+enthält stattdessen `isGateResult: false` sowie keinen Score und keine
+Violation-Anzahl.
 
 Der einzige Content-Block ist zustandsabhängig minimiert: Ein vollständiger,
-ereignisloser Pass besteht nur aus `verdict`, `completeness`, `gate` (Score und
-Violation-Count) und `scope`. Anforderungen von `10.0` und `0` sind durch den
-festen Vertrag impliziert und werden nicht wiederholt. Bei abweichendem effektivem
-Scope erscheint die Kurzform `scope: changes -> solution`; Ausschlüsse bleiben
-nur bei tatsächlichem Vorkommen sichtbar.
+ereignisloser Pass besteht nur aus `verdict`, `completeness`, `score`,
+`violationCount` und `scope`. Bei abweichendem effektivem Scope erscheint die
+Kurzform `scope: changes -> solution`; Ausschlüsse bleiben nur bei tatsächlichem
+Vorkommen sichtbar.
 
 Nur bei sichtbarer Evidenz oder Trunkierung erscheint deren Summary
 `returned=<sichtbar>/<gesamt>; truncation=<Grund>`. Jeder Finding-Eintrag enthält
 Regel, Severity, Grund und genau ein `ref`: der kanonische Positions-Handoff ist
 direkt für `get_symbol_body` verwendbar. `failed`
 enthält mindestens einen vollständigen Finding-Eintrag; andernfalls ist das
-Ergebnis `incomplete`. Dieser nennt nur `completeness`, Grund, Scope und Recovery.
+Ergebnis `incomplete`. Dieser nennt `completeness`, `isGateResult: false`, Grund,
+Scope und Recovery, aber keinen Score und keinen Violation-Count.
 Ungültige Requests, Assembly-Ziele und exogene Fehler sind `verdict=error` mit
 `isError=true`, Fehlercode, optionalem Feld und genau einer Recovery.
 

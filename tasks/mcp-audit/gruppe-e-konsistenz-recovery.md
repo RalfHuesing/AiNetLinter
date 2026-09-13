@@ -10,7 +10,7 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 1 Critical, 2 Major, 3 Minor
+- **Gefundene Befunde:** 0 Critical, 2 Major, 3 Minor
 
 Live-Katalog: 33 Fach-Tools plus Cursor-internes `mcp_auth` (generische Auth-Description, nicht als AiNetLinter-Fach-Tool beworben — kein Befund). Quality-Gate ist `verify` (`targetPath`, `scope`); keine Alt-Filter `scopeFilter` / `minScore` / `maxViolations` im Schema.
 
@@ -19,24 +19,6 @@ Ohne Befund geblieben: Typfehler (handlungsweisende JSON-Typ-Meldung, kein Stack
 ---
 
 ## 2. Negative Befunde
-
-### [Critical] E-01: `verify` liefert Fehler im Success-Envelope
-
-- **Betroffener Querschnittsbereich**: Frühvalidierung & Envelope
-- **Betroffenes Tool / Schema**: `verify` (Parameter: `targetPath`)
-- **Ziel-Label**: ungebunden / nicht existente Solution (kein gültiges `SOURCE-*`)
-- **Konkreter Aufruf**: `verify()` ohne `targetPath`; `verify(targetPath=<nicht existente .sln>)`
-- **Beobachtung / Ist-Verhalten**:
-  - Fach-Payload im **Erfolgs-Tool-Result** (kein Tool-Error-Flag / kein `[ERROR]`-Wrapper, im Gegensatz zu `find_symbol`, `inspect_assembly`, `reload_config` bei fehlendem `targetPath`).
-  - Ohne Pflichtfeld: `verdict: error`, `code: INVALID_ARGUMENT`, `message: targetPath ist erforderlich.`, `field: $.targetPath`, `recovery: …`.
-  - Nicht existente Solution: `verdict: error`, `code: SOLUTION_NOT_FOUND`, `field: $.targetPath` — ebenfalls ohne Tool-Error-Flag.
-  - Schema: `targetPath` hat Default `""` und steht **nicht** in `required`; Laufzeit weist denselben Pfad trotzdem als Pflicht zurück.
-  - Contract-v2-`navigation.status` mit `operation=error` fehlt; stattdessen flaches `verdict: error`.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - JSON-RPC-/Tool-Envelope muss bei Fehler `isError=true` setzen. Agenten, die nur das Envelope-Flag auswerten, behandeln den Fehlschlag als erfolgreiches Gate.
-  - `SOLUTION_NOT_FOUND` im Success-Body ist besonders irreführend: der Code ist korrekt, das Flag nicht.
-- **Empfehlung**:
-  - `targetPath` im Schema als `required` ohne leeren Default; Fehler ausschließlich als Tool-Error mit `isError=true`, `navigation.status.operation=error` und bestehendem `field`.
 
 ### [Major] E-02: `maxResponseBytes=500` bricht das Budget-Protokoll
 

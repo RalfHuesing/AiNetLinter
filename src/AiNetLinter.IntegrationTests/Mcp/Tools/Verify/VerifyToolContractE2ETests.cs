@@ -33,7 +33,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: pass", "completeness: complete", "gate: score=10.0; violations=0", "scope: changes");
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "completeness: complete", "score: 10.0", "violationCount: 0", "scope: changes");
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "scope: solution", "gate: score=");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "score: ", "violationCount: ", "scope: solution");
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("kind: advisory_candidate", text, StringComparison.Ordinal);
     }

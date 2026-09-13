@@ -41,7 +41,10 @@ public sealed class VerifyResponseFormatterTests
 
         var text = GetText(result);
         Assert.Contains("verdict: incomplete", text, StringComparison.Ordinal);
+        Assert.Contains("isGateResult: false", text, StringComparison.Ordinal);
         Assert.Contains("reason: gateevidenceincomplete", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("score:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("violationCount:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("verdict: failed", text, StringComparison.Ordinal);
     }
 
@@ -51,7 +54,7 @@ public sealed class VerifyResponseFormatterTests
         var result = VerifyResponseFormatter.Success(CreateParameters(CreateScore()));
 
         var text = GetText(result);
-        Assert.Equal("verdict: pass\ncompleteness: complete\ngate: score=10.0; violations=0\nscope: solution", text);
+        Assert.Equal("verdict: pass\ncompleteness: complete\nscore: 10.0\nviolationCount: 0\nscope: solution", text);
         Assert.True(Encoding.UTF8.GetByteCount(text) < 128);
     }
 
