@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,24 +20,27 @@ internal sealed record HandoffCounterState(
     [property: JsonPropertyName("lastIssued")] string LastIssued);
 
 /// <summary>
-/// Verwaltet die dauerhafte High-Water-Mark des alphabetischen Handoff-Zählers.
+/// Verwaltet die dauerhafte High-Water-Mark des alphabetischen Handoff-Zählers mit internem Prefetch-Puffer.
 /// Verhindert die Wiederverwendung von Handle-Werten über Prozessneustarts und parallele Hosts hinweg.
 /// </summary>
 internal sealed class HandoffCounterStore : IHandoffCounterStore
 {
+    internal const int DefaultBatchSize = 100;
     private static readonly Lazy<HandoffCounterStore> DefaultStore = new(() => new HandoffCounterStore(DefaultFilePath));
     private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(5);
 
     private readonly object inProcessGate = new();
+    private readonly Queue<string> preallocatedBuffer = new();
     private readonly string filePath;
     private readonly string lockFilePath;
+    private readonly int batchSize;
     private readonly TimeSpan lockTimeout;
 
-    internal HandoffCounterStore() : this(DefaultFilePath)
+    internal HandoffCounterStore() : this(DefaultFilePath, DefaultBatchSize)
     {
     }
 
-    internal HandoffCounterStore(string filePath, TimeSpan? lockTimeout = null)
+    internal HandoffCounterStore(string filePath, int batchSize = DefaultBatchSize, TimeSpan? lockTimeout = null)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {
@@ -45,6 +49,7 @@ internal sealed class HandoffCounterStore : IHandoffCounterStore
 
         this.filePath = Path.GetFullPath(filePath);
         this.lockFilePath = this.filePath + ".lock";
+        this.batchSize = batchSize > 0 ? batchSize : DefaultBatchSize;
         this.lockTimeout = lockTimeout is { } timeout && timeout > TimeSpan.Zero ? timeout : DefaultLockTimeout;
     }
 
@@ -57,33 +62,79 @@ internal sealed class HandoffCounterStore : IHandoffCounterStore
             "AiNetLinter",
             "handoff-counter.json");
 
+    internal int BufferedCount
+    {
+        get
+        {
+            lock (inProcessGate)
+            {
+                return preallocatedBuffer.Count;
+            }
+        }
+    }
+
     public Result<string> Next()
     {
         lock (inProcessGate)
         {
-            using var lockStream = AcquireCrossProcessLock(lockTimeout);
-            if (lockStream is null)
+            if (preallocatedBuffer.Count > 0)
             {
-                return Result<string>.Failure(
-                    LinterErrorCodes.HandoffCounterUnavailable,
-                    "Die High-Water-Mark-Datei ist durch einen anderen Prozess gesperrt.");
+                return Result<string>.Success(preallocatedBuffer.Dequeue());
             }
 
-            var nextCounterResult = ReadNextCounter();
-            if (!nextCounterResult.IsSuccess)
+            var refillResult = RefillBufferUnderLock();
+            if (!refillResult.IsSuccess)
             {
-                return nextCounterResult;
+                return refillResult;
             }
 
-            return PersistCounterAtomically(nextCounterResult.Value!);
+            return Result<string>.Success(preallocatedBuffer.Dequeue());
         }
     }
 
-    private Result<string> ReadNextCounter()
+    private Result<string> RefillBufferUnderLock()
+    {
+        using var lockStream = AcquireCrossProcessLock(lockTimeout);
+        if (lockStream is null)
+        {
+            return Result<string>.Failure(
+                LinterErrorCodes.HandoffCounterUnavailable,
+                "Die High-Water-Mark-Datei ist durch einen anderen Prozess gesperrt.");
+        }
+
+        var batchResult = GenerateNextBatch(batchSize);
+        if (!batchResult.IsSuccess)
+        {
+            return Result<string>.Failure(batchResult.Error!.Value);
+        }
+
+        var batch = batchResult.Value!;
+        var persistResult = PersistCounterAtomically(batch[^1]);
+        if (!persistResult.IsSuccess)
+        {
+            return persistResult;
+        }
+
+        foreach (var counter in batch)
+        {
+            preallocatedBuffer.Enqueue(counter);
+        }
+
+        return Result<string>.Success(batch[0]);
+    }
+
+    private Result<IReadOnlyList<string>> GenerateNextBatch(int count)
     {
         if (!File.Exists(filePath))
         {
-            return Result<string>.Success(HandoffCounterAlphabet.FirstCounter);
+            var initialBatch = new List<string>(count) { HandoffCounterAlphabet.FirstCounter };
+            var currentCounter = HandoffCounterAlphabet.FirstCounter;
+            for (var i = 1; i < count; i++)
+            {
+                currentCounter = HandoffCounterAlphabet.GetNext(currentCounter);
+                initialBatch.Add(currentCounter);
+            }
+            return Result<IReadOnlyList<string>>.Success(initialBatch);
         }
 
         try
@@ -91,7 +142,7 @@ internal sealed class HandoffCounterStore : IHandoffCounterStore
             var json = File.ReadAllText(filePath);
             if (string.IsNullOrWhiteSpace(json))
             {
-                return Result<string>.Failure(
+                return Result<IReadOnlyList<string>>.Failure(
                     LinterErrorCodes.HandoffCounterUnavailable,
                     "Die Handoff-Counter-Datei ist leer oder beschädigt.");
             }
@@ -103,23 +154,31 @@ internal sealed class HandoffCounterStore : IHandoffCounterStore
             }
             catch (JsonException)
             {
-                return Result<string>.Failure(
+                return Result<IReadOnlyList<string>>.Failure(
                     LinterErrorCodes.HandoffCounterUnavailable,
                     "Die Handoff-Counter-Datei enthält kein gültiges JSON.");
             }
 
             if (state is null || state.FormatVersion != 1 || !HandoffCounterAlphabet.IsValidCounter(state.LastIssued))
             {
-                return Result<string>.Failure(
+                return Result<IReadOnlyList<string>>.Failure(
                     LinterErrorCodes.HandoffCounterUnavailable,
                     "Die Handoff-Counter-Datei enthält eine ungültige Formatversion oder einen inkonsistenten Zählerwert.");
             }
 
-            return Result<string>.Success(HandoffCounterAlphabet.GetNext(state.LastIssued));
+            var batch = new List<string>(count);
+            var current = state.LastIssued;
+            for (var i = 0; i < count; i++)
+            {
+                current = HandoffCounterAlphabet.GetNext(current);
+                batch.Add(current);
+            }
+
+            return Result<IReadOnlyList<string>>.Success(batch);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return Result<string>.Failure(
+            return Result<IReadOnlyList<string>>.Failure(
                 LinterErrorCodes.HandoffCounterUnavailable,
                 $"Fehler beim Lesen der High-Water-Mark-Datei: {ex.Message}");
         }
@@ -154,7 +213,6 @@ internal sealed class HandoffCounterStore : IHandoffCounterStore
             TryDeleteFile(tempFilePath);
         }
     }
-
 
     private FileStream? AcquireCrossProcessLock(TimeSpan timeout)
     {

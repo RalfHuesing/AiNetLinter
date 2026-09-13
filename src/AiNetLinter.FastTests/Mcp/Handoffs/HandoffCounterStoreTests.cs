@@ -16,40 +16,57 @@ namespace AiNetLinter.FastTests.Mcp.Handoffs;
 public sealed class HandoffCounterStoreTests
 {
     [Fact]
-    public void Next_FirstCall_InitializesFileAtomicallyWithA()
+    public void Next_FirstCall_InitializesFileAtomicallyWithBatchHighWaterMark()
     {
         using var temp = TestTempDirectory.Create("counter-store-");
         var filePath = temp.GetPath("handoff-counter.json");
-        var store = new HandoffCounterStore(filePath);
+        const int batchSize = 10;
+        var store = new HandoffCounterStore(filePath, batchSize: batchSize);
 
         var result = store.Next();
 
         Assert.True(result.IsSuccess);
         Assert.Equal("a", result.Value);
+        Assert.Equal(batchSize - 1, store.BufferedCount);
         Assert.True(File.Exists(filePath));
 
         var json = File.ReadAllText(filePath);
         var state = JsonSerializer.Deserialize<HandoffCounterState>(json);
         Assert.NotNull(state);
         Assert.Equal(1, state.FormatVersion);
-        Assert.Equal("a", state.LastIssued);
+
+        // Bei batchSize=10: 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j' -> High-Water-Mark ist 'j'
+        Assert.Equal("j", state.LastIssued);
     }
 
     [Fact]
-    public void Next_ConsecutiveCalls_AdvanceSequentiallyWithoutDebounce()
+    public void Next_ServesConsecutiveCallsFromBufferWithoutDiskWrites()
     {
         using var temp = TestTempDirectory.Create("counter-store-");
         var filePath = temp.GetPath("handoff-counter.json");
-        var store = new HandoffCounterStore(filePath);
+        const int batchSize = 5;
+        var store = new HandoffCounterStore(filePath, batchSize: batchSize);
 
         Assert.Equal("a", store.Next().Value);
+        var writeTimeAfterFirstCall = File.GetLastWriteTimeUtc(filePath);
+
+        // Die nächsten 4 Aufrufe kommen direkt aus dem RAM-Puffer
         Assert.Equal("b", store.Next().Value);
         Assert.Equal("c", store.Next().Value);
+        Assert.Equal("d", store.Next().Value);
+        Assert.Equal("e", store.Next().Value);
+
+        Assert.Equal(0, store.BufferedCount);
+        Assert.Equal(writeTimeAfterFirstCall, File.GetLastWriteTimeUtc(filePath));
+
+        // 6. Aufruf leert den Puffer und holt einen neuen Batzen von Disk ('f'..'j')
+        Assert.Equal("f", store.Next().Value);
+        Assert.Equal(batchSize - 1, store.BufferedCount);
 
         var json = File.ReadAllText(filePath);
         var state = JsonSerializer.Deserialize<HandoffCounterState>(json);
         Assert.NotNull(state);
-        Assert.Equal("c", state.LastIssued);
+        Assert.Equal("j", state.LastIssued);
     }
 
     [Fact]
@@ -61,11 +78,35 @@ public sealed class HandoffCounterStoreTests
         var initialState = new HandoffCounterState(1, "z");
         File.WriteAllText(filePath, JsonSerializer.Serialize(initialState));
 
-        var store = new HandoffCounterStore(filePath);
+        var store = new HandoffCounterStore(filePath, batchSize: 3);
         var result = store.Next();
 
         Assert.True(result.IsSuccess);
+        // Hinter 'z' kommen '0', '1', '2'
         Assert.Equal("0", result.Value);
+        Assert.Equal(2, store.BufferedCount);
+
+        var json = File.ReadAllText(filePath);
+        var state = JsonSerializer.Deserialize<HandoffCounterState>(json);
+        Assert.NotNull(state);
+        Assert.Equal("2", state.LastIssued);
+    }
+
+    [Fact]
+    public void Next_WithBatchSize1_WorksSequentially()
+    {
+        using var temp = TestTempDirectory.Create("counter-store-");
+        var filePath = temp.GetPath("handoff-counter.json");
+        var store = new HandoffCounterStore(filePath, batchSize: 1);
+
+        Assert.Equal("a", store.Next().Value);
+        Assert.Equal("b", store.Next().Value);
+        Assert.Equal("c", store.Next().Value);
+
+        var json = File.ReadAllText(filePath);
+        var state = JsonSerializer.Deserialize<HandoffCounterState>(json);
+        Assert.NotNull(state);
+        Assert.Equal("c", state.LastIssued);
     }
 
     [Theory]
@@ -98,7 +139,7 @@ public sealed class HandoffCounterStoreTests
     {
         using var temp = TestTempDirectory.Create("counter-store-");
         var filePath = temp.GetPath("handoff-counter.json");
-        var store = new HandoffCounterStore(filePath);
+        var store = new HandoffCounterStore(filePath, batchSize: 10);
 
         const int count = 50;
         var results = new ConcurrentBag<string>();
