@@ -4,7 +4,7 @@
 - [X] 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
 - [X] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 - [X] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
-- [ ] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
+- [X] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 - [ ] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 
 ## Durchführungsprotokoll
@@ -35,7 +35,9 @@
 
 ### 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 
-- Ausstehend.
+- MCP-Dokumentation erklärt Handles, Neustart, Counter-State, Reset und Wiederermittlung.
+- Reproduzierbare Messsuite belegt ≥25 % UTF-8-, ≥70 % ID-Zeichen- und Tokenersparnis bei Inhaltsgleichheit.
+- Audit 12/12 und 17/17 PASS; Build, `verify(changes)`, 1.845 Unit- und 6 Doku-Integrationstests grün.
 
 ### 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 

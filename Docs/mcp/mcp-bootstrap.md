@@ -103,8 +103,13 @@ Mit demselben Request und Snapshot ist dieser Mindestwert unmittelbar als
 `maxResponseBytes` wiederholbar; ausschließlich der sichtbare Content wird in
 UTF-8 gemessen.
 
-Stabile Handoff-IDs werden aus der im Content explizit als Handoff-ID
-ausgewiesenen Zeile übernommen, nie aus einem Anzeigenamen. Bei Assembly-Tools trennt
+Ein Handoff-Handle hat das Format `h:…` und wird aus der im Content explizit als
+Handoff-ID ausgewiesenen Zeile unverändert übernommen, nie aus einem Anzeigenamen.
+Es ist nur eine technische Adresse: Symbolart, Name/Signatur und Fundort bleiben
+im umgebenden Content sichtbar. Das Mapping gilt für die Laufzeit des MCP-Hosts.
+Nach einem Host-Neustart liefert ein alter Handle `HANDOFF_UNKNOWN`; das Symbol
+anhand der sichtbaren Informationen erneut mit einem passenden Producer (etwa
+`find_symbol` oder `get_file_skeleton`) ermitteln. Bei Assembly-Tools trennt
 `includeReferences` die Suchbreite: `false` bleibt für eine Root-ID root-only
 und öffnet für eine verifizierte Referenz-ID ausschließlich deren Owner;
 `true` erlaubt die begrenzte Referenz-Closure. Die Antwort weist angeforderten

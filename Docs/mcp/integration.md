@@ -88,7 +88,18 @@ Beginne bei physischer Discovery mit `get_file_tree`: Das read-only Tool liefert
 
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 
-Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen `maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, die stabile Symbol-ID oder den passenden Typ ermitteln und erst danach Bodies, Referenzen oder weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
+### Opaque Handoff-Handles
+
+Ein im Content markiertes `h:…` ist ein kopierbarer, opaquer Symbol-Handle und
+nicht selbst eine lesbare Symbolidentität. Nur während desselben MCP-Hostlaufs
+kann er unverändert an einen passenden Symbolparameter weitergegeben werden;
+die Antwort zeigt deshalb zusätzlich Symbolart, Signatur und Fundort. Nach
+Daemon- oder Stdio-Neustart sind frühere Handles bewusst ungültig
+(`HANDOFF_UNKNOWN`). Dann das Symbol mit den sichtbaren Angaben erneut über
+`find_symbol`, `get_file_skeleton` oder einen passenden Producer ermitteln.
+Alte öffentliche Handoff-Formate werden absichtlich nicht unterstützt.
+
+Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen `maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, den passenden Handle oder Typ ermitteln und erst danach Bodies, Referenzen oder weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
 
 1. **Zuerst** `get_file_tree(view: "summary")` für die Dateityp- und Routingübersicht, danach C#-Symbole mit `find_symbol` und den semantischen Folge-Tools. Das vermeidet, dass Nicht-C#-Dateien als leere C#-Symbolabfrage fehlinterpretiert werden.
 2. **Für Nicht-C# oder Textsuche** (z. B. `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit dem kanonischen `pattern` und `scopeType` (`production`, `tests` oder `all`); Include-/Exclude-Globs laufen über `includePatterns`/`excludePatterns`. Der Default ist `maxResults=20` und `maxResponseBytes=8192`; serverseitige Caps sind 2000 Treffer und 65536 Bytes. `completeness.totalCount`/`returnedCount`/`truncatedBy` sowie der eine `next`-Hinweis sind zu prüfen. Aliasfelder wie `query`, `searchPattern`, `fileFilter` und `includePattern` gehören nicht zum Vertrag. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.

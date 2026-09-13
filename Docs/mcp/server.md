@@ -59,6 +59,26 @@ Der Server-Handshake (`initialize` bzw. `server/discover`) antwortet **sofort**.
 - Konkurrierende Detached-Starts werden pro Benutzer serialisiert und vor dem Spawn nochmals gegen den bestehenden Daemon geprüft.
 - `welcome` liefert die identifizierte Daemon-PID und `connectionId` für Diagnose und sichere Beendigung.
 
+### Opaque Handoff-Handles und Neustart
+
+Der Daemon besitzt genau eine flüchtige Handoff-Registry für alle parallelen
+Verbindungen; der direkte Stdio-Modus besitzt eine pro Hostprozess. Ein
+ausgegebenes `h:…` bleibt bis zum Host-Shutdown auflösbar, auch wenn eine
+Solution- oder Assembly-Session aus ihrem TTL-Cache entfernt und später neu
+geladen wird. Beim Shutdown werden die Zuordnungen verworfen. Alte Handles
+liefern danach `HANDOFF_UNKNOWN` und können nie auf ein neues Symbol zeigen;
+der Agent ermittelt das Symbol über die weiterhin sichtbare Signatur und
+Fundstelle erneut.
+
+Nur die globale High-Water-Mark der Vergabe bleibt updatefest unter
+`%LOCALAPPDATA%\RalfHuesing\AiNetLinter\handoff-counter.json` erhalten.
+Die Datei enthält keine Symbol-, Pfad-, Target- oder Snapshotdaten. Normale
+Updates lassen sie unverändert. Ihr manuelles Löschen ist ein destruktiver
+Identitätsreset: frühere Werte können wieder vergeben werden. Deshalb danach
+keine alten Chat-Handoffs weiterverwenden und die benötigten Symbole neu
+ermitteln. Ist der Counter-State nicht sicher les- oder schreibbar, erzeugt
+der Server keine neuen Handles und meldet `HANDOFF_COUNTER_UNAVAILABLE`.
+
 ---
 
 ## 4. Parent-Prozess-Überwachung (Watchdog)
