@@ -8,6 +8,9 @@
 - [X] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
 - [X] 7. Rot-Test vom Marker-Check zum ausführbaren MCP-Handoff-Vertragsaudit erweitern
 - [X] 8. Gefundene Toolketten reparieren und unabhängigen Abschlussaudit durchführen
+- [X] 9. Assembly-Referenz-Handoffs bis zu allen Folge-Consumern reparieren
+- [ ] 10. Öffentlichen Legacy-Vertrag vollständig entfernen
+- [ ] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
 
 ## Durchführungsprotokoll
 
@@ -58,3 +61,17 @@
 - Ursache behoben: `find_duplicates` reicht die restaurierte Target-Identität bis zum Resolver weiter.
 - Reale MCP-E2E-Kette `find_symbol → find_duplicates` ergänzt; Audit PASS (12/14/7, alle Ketten grün).
 - Release-Gate grün: Build, beide `verify`-Scopes, 2.648 FastTests und IntegrationTests non-Stress.
+
+### 9. Assembly-Referenz-Handoffs bis zu allen Folge-Consumern reparieren
+
+- Aktueller Daemon 1.0.204: Inspect → References → Body/Context/Call-Tree vollständig reproduzierbar grün.
+- Cross-Assembly-Owner-Handoff ebenfalls korrekt; kein Rot-Fall im aktuellen HEAD belegbar.
+- Kein spekulativer Fix oder Test ohne reproduzierbaren Fehler; nur MCP-Blackbox-Audit.
+
+### 10. Öffentlichen Legacy-Vertrag vollständig entfernen
+
+- Ausstehend.
+
+### 11. Harter-Schnitt-Audit und Release-Gate wiederholen
+
+- Ausstehend.
