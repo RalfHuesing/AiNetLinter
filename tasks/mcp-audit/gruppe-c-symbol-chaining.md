@@ -22,25 +22,6 @@
 
 ## 2. Negative Befunde
 
-### [Critical] C-02: CHAIN-04 — `search_assembly` liefert keine durchreichbare Symbol-ID
-
-- **Betroffenes Tool / Schema**: `search_assembly` (Parameter: `pattern`, `kind`) → `get_symbol_body` (`symbolIdentifiers`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf / Kette**: `inspect_assembly(targetPath=<LOCAL-01>)` → Typ mit `h:…` → `search_assembly(pattern=h:…|FQ-Name|Kurzname)` → `get_symbol_body`
-- **Beobachtung / Ist-Verhalten**:
-  - `inspect_assembly` stellt Typ- und Member-`h:…` aus; Direktaufruf `get_symbol_body(symbolIdentifiers=["h:…"])` auf `LOCAL-01` funktioniert, kein `TARGET_MISMATCH`.
-  - `search_assembly(pattern=<h:…>, kind=type)`: **0 Treffer**, keine Diagnose „Identifier nicht als Suchmuster“.
-  - `search_assembly` mit dem vollqualifizierten Typnamen aus `inspect_assembly` plus `kind=type` / `declarationOnly=true`: ebenfalls **0 Treffer**.
-  - Textsuche mit dem Kurznamen: Treffer als `pfad:zeile: quelltext`, **ohne** `handoffId`.
-  - `get_symbol_body` akzeptiert eine **zugeschnittene** `pfad:zeile`-Location und gibt dann erst eine `h:…` zurück. Die rohe Trefferzeile (mit angehängtem Quelltext) ist kein gültiger Identifier.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Output Schritt N muss unverändert Input N+1 sein. Hier muss der Agent den Anzeigenamen umbauen, `kind`/Filter raten und die Trefferzeile manuell trimmen.
-  - Stille 0-Treffer bei Übergabe einer gültigen `h:…` suggerieren „Typ existiert nicht“.
-- **Empfehlung**:
-  - Navigierbare `search_assembly`-Treffer mit `h:…` für `get_symbol_body.symbolIdentifiers`.
-  - `h:…` als `pattern` entweder auflösen oder mit klarer Diagnose ablehnen (`UNSUPPORTED_IDENTIFIER`).
-  - FQ-Name aus `inspect_assembly` als Typsuche treffen oder `kind=type` dokumentiert auf Symbolgraph statt Volltext legen.
-
 ### [Major] C-03: `get_file_skeleton` akzeptiert keine Datei-Handoff-ID
 
 - **Betroffenes Tool / Schema**: `get_file_skeleton` (Parameter: `filePaths`)
