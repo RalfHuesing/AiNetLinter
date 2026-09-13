@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -86,11 +87,39 @@ public sealed class SearchPatternToolContractTests
 
         var limited = await SearchPatternTool.ExecuteAsync(
             state,
-            new SearchPatternToolArguments("anchor", false, 1, 1, 1, 200, null, null, null),
+            new SearchPatternToolArguments("anchor", false, 1, 1, 1, 1_000, null, null, null),
             CancellationToken.None);
         var text = TextOf(limited);
         Assert.Contains("maxFiles", text, StringComparison.Ordinal);
         Assert.Contains("maxResults", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ResponseBudgetHidesEveryHit_ReturnsRetryableMinimumProjection()
+    {
+        using var scenario = CreateScenario("anchor");
+        using var state = CreateServer(scenario.Solution);
+        var requestedBytes = 200;
+
+        var tooSmall = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("anchor", false, 50, 0, 0, requestedBytes, null, null, null),
+            CancellationToken.None);
+
+        var errorText = TextOf(tooSmall);
+        Assert.True(tooSmall.IsError);
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", errorText, StringComparison.Ordinal);
+        Assert.Contains($"requestedBytes: {requestedBytes}", errorText, StringComparison.Ordinal);
+        var minimumBytes = int.Parse(Regex.Match(errorText, @"minimumResponseBytes: (\d+)").Groups[1].Value);
+
+        var retry = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("anchor", false, 50, 0, 0, minimumBytes, null, null, null),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, retry.IsError);
+        Assert.Contains("Greeter.cs", TextOf(retry), StringComparison.Ordinal);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(TextOf(retry)) <= minimumBytes);
     }
 
     private static SearchPatternScenario CreateScenario(string content)

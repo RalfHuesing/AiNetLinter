@@ -49,7 +49,8 @@ internal sealed record SearchPatternScanResult(
     int MaxResponseBytes,
     string Pattern = "",
     bool? IsRegex = null,
-    bool IsRegexAutoPromoted = false);
+    bool IsRegexAutoPromoted = false,
+    int? MinimumResponseBytes = null);
 
 internal sealed record SearchPatternFileScanResult(
     SearchPatternFileScanStatus Status,
@@ -137,7 +138,8 @@ internal sealed record SearchPatternResponseBudgetParameters(
 
 internal sealed record SearchPatternResponseBudgetResult(
     IReadOnlyList<SearchPatternMatch> Matches,
-    SearchPatternCompleteness Completeness);
+    SearchPatternCompleteness Completeness,
+    int? MinimumResponseBytes);
 
 internal sealed record SearchPatternScanFlags
 {

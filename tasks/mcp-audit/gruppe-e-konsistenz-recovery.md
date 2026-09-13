@@ -10,7 +10,7 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 2 Major, 3 Minor
+- **Gefundene Befunde:** 0 Critical, 0 Major, 2 Minor
 
 Live-Katalog: 33 Fach-Tools plus Cursor-internes `mcp_auth` (generische Auth-Description, nicht als AiNetLinter-Fach-Tool beworben — kein Befund). Quality-Gate ist `verify` (`targetPath`, `scope`); keine Alt-Filter `scopeFilter` / `minScore` / `maxViolations` im Schema.
 
@@ -19,37 +19,6 @@ Ohne Befund geblieben: Typfehler (handlungsweisende JSON-Typ-Meldung, kein Stack
 ---
 
 ## 2. Negative Befunde
-
-### [Major] E-02: `maxResponseBytes=500` bricht das Budget-Protokoll
-
-- **Betroffener Querschnittsbereich**: Response-Budget-Recovery
-- **Betroffenes Tool / Schema**: `find_symbol`, `get_class_structure` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `find_symbol(targetPath=SOURCE-01, pattern=…, maxResponseBytes=500)`; `get_class_structure(targetPath=SOURCE-01, symbolIdentifier=h:…, maxResponseBytes=500)`
-- **Beobachtung / Ist-Verhalten**:
-  - Beide Tools: `INVALID_ARGUMENT` — `maxResponseBytes muss zwischen 512 und 65536 Bytes liegen.` JSON-Schema der Properties enthält **kein** `minimum: 512`.
-  - Dieselben 500 Bytes bei `get_file_tree(targetPath=SOURCE-01, view=summary)` und `inspect_assembly(targetPath=LOCAL-01)`: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes` und Retry-Hinweis.
-  - Ab 512 Bytes: `find_symbol` → `RESPONSE_BUDGET_TOO_SMALL` (`minimumResponseBytes=10054`, inkl. `Status: operation=error`); `get_class_structure` → Erfolg mit 1 Member (Budget-Kürzung, mindestens 1 Einheit).
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Der dokumentierte Probe-Wert 500 soll entweder Wire-treu beantwortet oder mit `RESPONSE_BUDGET_TOO_SMALL` + deterministischem `minimumResponseBytes` quittiert werden. Ein hartes `INVALID_ARGUMENT` unterhalb eines undokumentierten Floors verhindert den einheitlichen Retry-Pfad.
-- **Empfehlung**:
-  - Floor 512 im JSON-Schema exponieren **oder** Werte &lt; 512 wie bei `get_file_tree`/`inspect_assembly` in `RESPONSE_BUDGET_TOO_SMALL` überführen (`minimumResponseBytes` ≥ 512). Verhalten über alle budgetfähigen Tools angleichen.
-
-### [Major] E-03: Retry mit `minimumResponseBytes` hält das Wire-Budget nicht ein
-
-- **Betroffener Querschnittsbereich**: Deterministisches Budget-Retry
-- **Betroffenes Tool / Schema**: `inspect_assembly`, `get_file_tree` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `LOCAL-01` (Assembly) / `SOURCE-01` (Source)
-- **Konkreter Aufruf**: `inspect_assembly(targetPath=LOCAL-01, maxResponseBytes=500)` → Retry exakt `maxResponseBytes=2048`; `get_file_tree(targetPath=SOURCE-01, view=summary, maxResponseBytes=500)` → Retry exakt `maxResponseBytes=2090`
-- **Beobachtung / Ist-Verhalten**:
-  - Erster Call jeweils korrekt `RESPONSE_BUDGET_TOO_SMALL` mit `requestedBytes`, `minimumResponseBytes`, `retry`.
-  - Retry `inspect_assembly` mit 2048: **Erfolg**, mindestens 1 API-Typ — aber Nutzlast weit oberhalb 2048 (gekürzte Typen plus lange Referenz-/Diagnoseblöcke, Continuation). Kein erneutes `RESPONSE_BUDGET_TOO_SMALL`.
-  - Retry `get_file_tree` mit 2090: **Erfolg** mit vollständiger Summary-Landkarte plus Warn-/Next-Zeilen; sichtbare Nutzlast über dem gemeldeten Minimum. Der erste Hinweis versprach die „vollständige wertvolle Dateilandkarte“ bei genau diesem Wert.
-  - Kontrast: `get_class_structure(maxResponseBytes=512)` kürzt auf 1 Member und bleibt nah am Cap.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - `minimumResponseBytes` muss die kleinste **wire-konforme** Nutzlast mit ≥1 Einheit beschreiben. Liefert der Retry mehr als `maxResponseBytes` ohne neuen Budget-Fehler, ist das Cap unbrauchbar und das Minimum nicht deterministisch.
-- **Empfehlung**:
-  - Retry hart auf `maxResponseBytes` kappen oder erneut `RESPONSE_BUDGET_TOO_SMALL` mit höherem, ehrlichem `minimumResponseBytes` liefern. Referenz-/Diagnoseblöcke nicht ungekürzt in die Minimalprojektion ziehen.
 
 ### [Minor] E-04: `navigation.status` nur bei einem Teil der Fehler
 

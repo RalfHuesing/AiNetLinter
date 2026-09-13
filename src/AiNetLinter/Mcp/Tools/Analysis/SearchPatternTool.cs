@@ -72,6 +72,17 @@ internal static class SearchPatternTool
         }
 
         var text = SearchPatternTextFormatter.Format(scan);
+        if (scan.MinimumResponseBytes is { } minimumResponseBytes)
+        {
+            return McpToolResults.Error(
+                LinterErrorCodes.ResponseBudgetTooSmall,
+                $"maxResponseBytes={arguments.MaxResponseBytes} ist zu klein für eine vollständige Trefferzeile.",
+                new McpErrorParameters(
+                    Hint: "maxResponseBytes erhöhen; Treffer werden nur als vollständige Zeilen ausgegeben.",
+                    FieldPath: "$.maxResponseBytes",
+                    RequestedBytes: arguments.MaxResponseBytes,
+                    MinimumResponseBytes: minimumResponseBytes));
+        }
         if (scan.Payload.Completeness.CancellationRequested)
         {
             return McpToolResults.Text(text);

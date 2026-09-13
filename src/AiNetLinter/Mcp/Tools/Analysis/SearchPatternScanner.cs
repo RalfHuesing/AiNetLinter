@@ -204,6 +204,7 @@ internal static partial class SearchPatternScanner
         IReadOnlyList<SearchPatternMatch> visibleMatches =
             SelectVisibleMatches(visibleFiles, options.ScannerParameters.MaxResults, options.ScannerParameters.ContextLines);
         var visibleFileLines = visibleFiles.Sum(file => file.Lines.Count);
+        int? minimumResponseBytes = null;
         var reasons = SearchPatternScannerCompleteness.DetermineTruncationReasons(new(
             totalLines,
             options.ScannerParameters.MaxResults,
@@ -238,6 +239,7 @@ internal static partial class SearchPatternScanner
                 options.ExcludePatterns));
             visibleMatches = budgetResult.Matches;
             completeness = budgetResult.Completeness;
+            minimumResponseBytes = budgetResult.MinimumResponseBytes;
         }
 
         var payload = BuildPayload(
@@ -256,7 +258,8 @@ internal static partial class SearchPatternScanner
             options.ScannerParameters.MaxResponseBytes,
             options.ScannerParameters.Pattern,
             effectiveIsRegex ?? options.ScannerParameters.IsRegex,
-            isAutoPromoted);
+            isAutoPromoted,
+            minimumResponseBytes);
     }
 
     private static SearchPatternFileScanResult ScanFile(SearchPatternScanFileParameters options)

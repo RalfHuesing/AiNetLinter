@@ -82,12 +82,20 @@ internal static class SearchPatternScannerCompleteness
             options.Completeness.CancellationRequested,
             options.Completeness.ProductionMatchedFileCount,
             options.Completeness.TestMatchedFileCount));
-        return new SearchPatternResponseBudgetResult(visible, completeness);
+        var minimumResponseBytes = visible.Count == 0 && options.Matches.Count > 0
+            ? (int?)ResponseBytes(options with { Matches = [options.Matches[0]] })
+            : null;
+        return new SearchPatternResponseBudgetResult(visible, completeness, minimumResponseBytes);
     }
 
     private static bool ExceedsResponseBudget(SearchPatternResponseBudgetParameters options)
     {
         if (options.ScannerParameters.MaxResponseBytes <= 0) return false;
+        return ResponseBytes(options) > options.ScannerParameters.MaxResponseBytes;
+    }
+
+    private static int ResponseBytes(SearchPatternResponseBudgetParameters options)
+    {
         var shown = Create(new(
             options.Completeness.TotalMatchedLineCount,
             options.Completeness.MatchedFileCount,
@@ -117,8 +125,7 @@ internal static class SearchPatternScannerCompleteness
             options.ScannerParameters.MaxResponseBytes,
             options.ScannerParameters.Pattern,
             options.ScannerParameters.IsRegex);
-        return Encoding.UTF8.GetByteCount(SearchPatternTextFormatter.Format(result))
-            > options.ScannerParameters.MaxResponseBytes;
+        return Encoding.UTF8.GetByteCount(SearchPatternTextFormatter.Format(result));
     }
 
     private static IReadOnlyList<string> AddReason(IReadOnlyList<string> reasons, string reason) =>
