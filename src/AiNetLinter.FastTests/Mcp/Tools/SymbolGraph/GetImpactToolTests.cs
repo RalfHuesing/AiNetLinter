@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -81,6 +83,47 @@ public sealed class GetImpactToolTests
         Assert.Contains("Betroffene Projekte", textContent.Text, StringComparison.Ordinal);
 
         Assert.Contains("Test", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolIdentifier_ImpactSummaryUsesProjectsBeyondVisibleCallSites()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("Contracts", [("Contract.cs", "namespace Contracts; public static class Api { public static void Run() { } }")]),
+            new ProjectSpec("Host", [("Host.cs", "namespace Host; public class Entry { public void Call() => Contracts.Api.Run(); }")], ["Contracts"]),
+            new ProjectSpec("Tests", [("Tests.cs", "namespace Tests; public class ApiTests { public void Call() => Contracts.Api.Run(); }")], ["Contracts"])));
+        var result = await GetImpactTool.ExecuteAsync(
+            context.CreateServer(), new GetImpactInput(null, "Contracts.Api.Run", 1, 1), CancellationToken.None);
+
+        var text = TextOf(result);
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains(
+            "risk=high; completeness=complete; directCallSites=2; transitiveCallSites=0; affectedProjectCount=3; shownCallSites=1",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains("**Betroffene Projekte (3):** Contracts, Host, Tests", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AssemblySymbolIdentifier_ReportsUndecidableProjectImpact()
+    {
+        using var temp = TestTempDirectory.Create("impact-assembly-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ImpactProbe",
+            "namespace Probe; public class Api { public void Run() { } } public class Consumer { public void Call() => new Api().Run(); }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.NotNull(leaseResult.Lease);
+        using var lease = leaseResult.Lease!;
+
+        var result = await GetImpactTool.ExecuteAsync(
+            lease, new GetImpactInput(null, "Probe.Api.Run", 50, 1), CancellationToken.None);
+
+        var text = TextOf(result);
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("risk=not_decidable", text, StringComparison.Ordinal);
+        Assert.Contains("**Betroffene Projekte:** `not_decidable`", text, StringComparison.Ordinal);
     }
 
     [Fact]

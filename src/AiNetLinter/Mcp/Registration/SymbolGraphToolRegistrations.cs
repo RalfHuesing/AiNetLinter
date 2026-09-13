@@ -250,6 +250,7 @@ internal static class SymbolGraphToolRegistrations
         "detailLevel: 'callers' [Default] oder 'change-context' (Git-Diff-Modus: geaenderte Symbole, Call-Sites, Tests, Violations, dotnet-test-Filter). " +
         "depth: Tiefe im Symbol-Modus (Default 1, Cap 3, max. 200 Knoten). " +
         "maxResults: Trefferlimit (Default 50). " +
+        "Der Symbol-Modus liefert eine statische Impact-Summary mit Risiko, Vollständigkeit sowie direkten/transitiven Call-Sites. " +
         "maxChangedSymbols (Default 20, Cap 100), maxTestsPerSymbol (Default 10, Cap 50). " +
         "includeReferences (Default false): bei Assemblies Referenzen einbeziehen.";
 

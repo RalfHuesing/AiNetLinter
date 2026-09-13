@@ -207,24 +207,14 @@ internal static partial class GetImpactTool
                 AssemblySymbolIdentity: assemblyIdentity));
 
         var testCoverage = await TestCoverageScanner.FindTestsForSymbolAsync(symbol!, solution, ct);
-        var affectedProjects = TransitiveCallGraphFormatter.ResolveAffectedProjects(solution, symbol, traversal.CallSites);
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
                 ? $"Keine Aufrufstellen gefunden fuer '{symbol!.ToDisplayString()}'"
                 : null);
 
-        var finalBody = TransitiveCallGraphFormatter.FormatSymbolImpactText(
-            symbol!, affectedProjects, testCoverage, formatted);
-
-        var payload = new SymbolImpactPayload(
-            traversal.CallSites,
-            traversal.Completeness,
-            affectedProjects,
-            DetermineImpactStatus(traversal.CallSites.Count),
-            new SymbolTestImpactDto(testCoverage.TotalMatchingTests, testCoverage.TestFiles.Count, testCoverage.TestFiles),
-            traversal.Navigation,
-            formatted.StructuredPayload.Handoff);
+        var finalBody = SymbolImpactFormatter.FormatSource(
+            solution, symbol!, testCoverage, formatted);
 
         return McpToolResults.Text(finalBody);
     }
@@ -258,7 +248,7 @@ internal static partial class GetImpactTool
                 ? $"Keine Aufrufstellen gefunden fuer '{target!.Symbol.ToDisplayString()}'"
                 : null);
 
-        return McpToolResults.Text(formatted.Text);
+        return McpToolResults.Text(SymbolImpactFormatter.FormatAssembly(target!.Symbol, formatted));
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)

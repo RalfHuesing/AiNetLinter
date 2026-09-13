@@ -360,7 +360,7 @@ internal static class CallGraphTraversal
                 ordered.Count > maxResults,
                 TruncatedByNodeLimit,
                 requestedDepth != effectiveDepth);
-            return new ReferenceTraversalResult(shown, completeness);
+            return new ReferenceTraversalResult(shown, completeness, AllCallSites: ordered);
         }
 
         private static int ProjectRank(string? scopeType) => scopeType switch

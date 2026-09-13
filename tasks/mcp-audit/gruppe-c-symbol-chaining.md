@@ -14,27 +14,13 @@
   - CHAIN-02: Klassen-Exploration zu Member-Body (`find_symbol` -> `get_class_structure` -> `get_symbol_body`)
   - CHAIN-03: Typ-Hierarchie zu Implementierungen (`get_type_hierarchy` -> `find_implementations` -> `resolve_type_origin`)
   - CHAIN-04: Assembly-Exploration (`inspect_assembly` -> `search_assembly` -> `get_symbol_body`)
-- **Gefundene Befunde:** 0 Critical, 3 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 2 Major, 1 Minor
 
 CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und CHAIN-04 sind durchgängig möglich.
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-04: `get_impact` ohne Risiko-Einstufung, irreführende Projektliste (TC-C09)
-
-- **Betroffenes Tool / Schema**: `get_impact` (Parameter: `symbolIdentifier`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source); Gegenprobe `LOCAL-01`
-- **Konkreter Aufruf**: `get_impact(targetPath=SOURCE-01, symbolIdentifier=<SiteComponentHandler-handoffId>, maxResults=50)`
-- **Beobachtung / Ist-Verhalten**:
-  - Keine Trennung direkt/transitiv, keine Risiko-Stufe.
-  - Kopfzeile „Betroffene Projekte (2)“ nennt nur Contracts- und Test-Assembly; `find_references` auf **dieselbe** ID zeigt Produktions-Host-Treffer bereits unter den ersten 20 Hits. Auch bei 50 Impact-Zeilen bleibt der Host unsichtbar, die Liste ist testlastig.
-  - Auf `LOCAL-01` degeneriert die Antwort zu einer Call-Site-Liste ohne Risiko, Tests oder Projekt-Aggregation; Header bleibt `completeness=partial`.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Impact ist die Entscheidungsgrundlage vor Änderungen. Eine unvollständige Projektliste plus fehlende Risiko-Kennzahl führt zu Unterschätzung der Produktionswirkung.
-- **Empfehlung**:
-  - Projekte aus der **vollen** Treffermenge ableiten (nicht aus den ersten N Zeilen). Risiko und direkt vs. transitiv maschinenlesbar ausweisen.
 
 ### [Major] C-05: `get_call_tree` ohne Node-Handoffs; Incoming vermischt Overrides (TC-C08)
 
@@ -80,6 +66,6 @@ CHAIN-01 (gleiche kanonische `handoffId` weiterreichen), CHAIN-02, CHAIN-03 und 
 
 ---
 
-Gruppe C: 0 Critical, 3 Major, 1 Minor
-IDs: C-04, C-05, C-06, C-07
+Gruppe C: 0 Critical, 2 Major, 1 Minor
+IDs: C-05, C-06, C-07
 Blocker: none

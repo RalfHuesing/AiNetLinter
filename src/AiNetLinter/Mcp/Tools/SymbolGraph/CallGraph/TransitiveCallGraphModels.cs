@@ -67,7 +67,8 @@ internal sealed record ReferenceTraversalResult(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
     TraversalCompleteness Completeness,
     AssemblyNavigationSummary? Navigation = null,
-    FindSymbolScopeDto? Scope = null);
+    FindSymbolScopeDto? Scope = null,
+    IReadOnlyList<TransitiveCallSiteEntry>? AllCallSites = null);
 
 internal sealed record ReferenceTraversalRequest(
     Solution Solution,
@@ -79,23 +80,9 @@ internal sealed record ReferenceTraversalRequest(
     AnalysisSymbolIdentity? AssemblySymbolIdentity = null,
     McpScopeFilter? ScopeFilter = null);
 
-internal sealed record SymbolImpactPayload(
-    IReadOnlyList<TransitiveCallSiteEntry> CallSites,
-    TraversalCompleteness Completeness,
-    IReadOnlyList<string> AffectedProjects,
-    string ImpactStatus,
-    SymbolTestImpactDto? TestImpact = null,
-    AssemblyNavigationSummary? Navigation = null,
-    SymbolHandoffPayload? Handoff = null);
-
 /// <summary>Schlanker Git-Diff-Vertrag für den callers-Zweig von <c>get_impact</c>.</summary>
 internal sealed record GitImpactPayload(
     string ImpactStatus,
     IReadOnlyList<CallSiteEntry> CallSites,
     int TotalCount,
     int ShownCount);
-
-internal sealed record SymbolTestImpactDto(
-    int TotalMatchingTests,
-    int TotalTestFiles,
-    IReadOnlyList<AiNetLinter.Core.TestCoverage.TestFileCoverageResult> TestFiles);
