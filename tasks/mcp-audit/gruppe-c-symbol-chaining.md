@@ -16,7 +16,7 @@
   - CHAIN-03 (`LOCAL-01`): Hierarchie-Basis ohne konsumierbare `h:…` — **Bruch**
   - CHAIN-04 (`LOCAL-01`): `inspect_assembly` → `search_assembly` → `get_symbol_body` — **Bruch** (Direktpfad `inspect_assembly`-`h:…` → `get_symbol_body` funktioniert)
 - **FALSE-01:** recoverable `INVALID_ASSEMBLY`, kein Crash
-- **Gefundene Befunde:** 2 Critical, 6 Major, 2 Minor
+- **Gefundene Befunde:** 0 Critical, 6 Major, 2 Minor
 
 ---
 
