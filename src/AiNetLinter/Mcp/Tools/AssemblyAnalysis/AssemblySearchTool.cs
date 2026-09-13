@@ -468,25 +468,7 @@ internal static partial class AssemblySearchTool
             lines.Skip(lineIndex + 1).Take(afterEnd - lineIndex - 1).ToArray());
     }
 
-    private static string RenderText(AssemblySearchPayload payload)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"Assembly-Suche: {payload.SearchKind}; {payload.ReturnedCount} von {payload.TotalCount}");
-        builder.AppendLine($"Scope: {payload.Scope}; Vollständigkeit: {payload.Completeness}");
-        foreach (var match in payload.Results)
-        {
-            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}{FormatHandoffSuffix(match.HandoffId)}");
-        }
 
-        if (payload.IsTruncated)
-        {
-            builder.AppendLine($"Ergebnis gekürzt ({string.Join(", ", payload.TruncatedBy)}); " +
-                               (payload.ContinuationToken is null ? payload.DetailHint :
-                               $"continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
-        }
-
-        return builder.ToString().TrimEnd();
-    }
 
     private static bool IsMinified(string relativePath) =>
         MinifiedMarkers.Any(marker => relativePath.Contains(marker, StringComparison.OrdinalIgnoreCase));

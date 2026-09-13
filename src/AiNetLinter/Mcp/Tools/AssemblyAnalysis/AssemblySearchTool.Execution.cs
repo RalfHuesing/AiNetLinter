@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -206,4 +207,92 @@ internal static partial class AssemblySearchTool
         string.IsNullOrWhiteSpace(handoffId)
             ? string.Empty
             : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(handoffId)}`";
+
+    internal static string RenderText(AssemblySearchPayload payload)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Assembly-Suche: {payload.SearchKind}; {payload.ReturnedCount} von {payload.TotalCount}");
+        builder.AppendLine($"Scope: {payload.Scope}; Vollständigkeit: {payload.Completeness}");
+
+        foreach (var fileGroup in payload.Results.GroupBy(match => match.FilePath, StringComparer.OrdinalIgnoreCase))
+        {
+            RenderFileMatches(builder, fileGroup);
+        }
+
+        if (payload.IsTruncated)
+        {
+            AppendTruncationHint(builder, payload);
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static void RenderFileMatches(StringBuilder builder, IGrouping<string, AssemblySearchMatch> fileGroup)
+    {
+        var matchLines = fileGroup.Select(match => match.Line).ToHashSet();
+        var lastPrintedLine = -1;
+
+        foreach (var match in fileGroup)
+        {
+            lastPrintedLine = RenderContextBefore(builder, match, matchLines, lastPrintedLine);
+            lastPrintedLine = RenderMatchLine(builder, match, lastPrintedLine);
+            lastPrintedLine = RenderContextAfter(builder, match, matchLines, lastPrintedLine);
+        }
+    }
+
+    private static int RenderContextBefore(
+        StringBuilder builder,
+        AssemblySearchMatch match,
+        HashSet<int> matchLines,
+        int lastPrintedLine)
+    {
+        for (var i = 0; i < match.ContextBefore.Count; i++)
+        {
+            var line = match.Line - match.ContextBefore.Count + i;
+            if (line > lastPrintedLine && !matchLines.Contains(line))
+            {
+                builder.AppendLine($"{match.FilePath}-{line}- {match.ContextBefore[i]}");
+                lastPrintedLine = line;
+            }
+        }
+
+        return lastPrintedLine;
+    }
+
+    private static int RenderMatchLine(StringBuilder builder, AssemblySearchMatch match, int lastPrintedLine)
+    {
+        if (match.Line > lastPrintedLine)
+        {
+            builder.AppendLine($"{match.FilePath}:{match.Line}: {match.LineText}{FormatHandoffSuffix(match.HandoffId)}");
+            return match.Line;
+        }
+
+        return lastPrintedLine;
+    }
+
+    private static int RenderContextAfter(
+        StringBuilder builder,
+        AssemblySearchMatch match,
+        HashSet<int> matchLines,
+        int lastPrintedLine)
+    {
+        for (var i = 0; i < match.ContextAfter.Count; i++)
+        {
+            var line = match.Line + 1 + i;
+            if (line > lastPrintedLine && !matchLines.Contains(line))
+            {
+                builder.AppendLine($"{match.FilePath}-{line}- {match.ContextAfter[i]}");
+                lastPrintedLine = line;
+            }
+        }
+
+        return lastPrintedLine;
+    }
+
+    private static void AppendTruncationHint(StringBuilder builder, AssemblySearchPayload payload)
+    {
+        builder.AppendLine($"Ergebnis gekürzt ({string.Join(", ", payload.TruncatedBy)}); " +
+                           (payload.ContinuationToken is null ? payload.DetailHint :
+                           $"continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
+    }
 }

@@ -139,4 +139,76 @@ public sealed partial class AssemblyAnalysisToolTests
         var wildcardPayload = AssemblySearchTool.Scan(temp.DirectoryPath, wildcardArgs, CancellationToken.None);
         Assert.Single(wildcardPayload.Results);
     }
+
+    [Fact]
+    public void AssemblySearch_RendersContextLinesBeforeAndAfterMatch()
+    {
+        using var temp = TestTempDirectory.Create("asm-search-context-");
+        var filePath = Path.Combine(temp.DirectoryPath, "Service.cs");
+        File.WriteAllText(filePath, "line 1: alpha\nline 2: beta\nline 3: TARGET MATCH\nline 4: delta\nline 5: epsilon");
+
+        var args = new AssemblySearchArguments(
+            "TARGET",
+            IsRegex: false,
+            SearchKind: "text",
+            MaxResults: 50,
+            MaxFiles: 0,
+            ContextLines: 2,
+            MaxResponseBytes: 0,
+            FileFilter: null,
+            Cursor: null);
+
+        var payload = AssemblySearchTool.Scan(temp.DirectoryPath, args, CancellationToken.None);
+        var match = Assert.Single(payload.Results);
+        Assert.Equal(3, match.Line);
+        Assert.Equal(new[] { "line 1: alpha", "line 2: beta" }, match.ContextBefore);
+        Assert.Equal(new[] { "line 4: delta", "line 5: epsilon" }, match.ContextAfter);
+
+        var rendered = AssemblySearchTool.RenderText(payload);
+        Assert.Contains("Service.cs-1- line 1: alpha", rendered, StringComparison.Ordinal);
+        Assert.Contains("Service.cs-2- line 2: beta", rendered, StringComparison.Ordinal);
+        Assert.Contains("Service.cs:3: line 3: TARGET MATCH", rendered, StringComparison.Ordinal);
+        Assert.Contains("Service.cs-4- line 4: delta", rendered, StringComparison.Ordinal);
+        Assert.Contains("Service.cs-5- line 5: epsilon", rendered, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AssemblySearch_DeduplicatesOverlappingContextLinesAcrossMatches()
+    {
+        using var temp = TestTempDirectory.Create("asm-search-overlap-");
+        var filePath = Path.Combine(temp.DirectoryPath, "Service.cs");
+        File.WriteAllText(filePath, "line 1\nline 2 MATCH\nline 3\nline 4 MATCH\nline 5");
+
+        var args = new AssemblySearchArguments(
+            "MATCH",
+            IsRegex: false,
+            SearchKind: "text",
+            MaxResults: 50,
+            MaxFiles: 0,
+            ContextLines: 1,
+            MaxResponseBytes: 0,
+            FileFilter: null,
+            Cursor: null);
+
+        var payload = AssemblySearchTool.Scan(temp.DirectoryPath, args, CancellationToken.None);
+        Assert.Equal(2, payload.Results.Count);
+
+        var rendered = AssemblySearchTool.RenderText(payload);
+        var expectedLines = new[]
+        {
+            "Service.cs-1- line 1",
+            "Service.cs:2: line 2 MATCH",
+            "Service.cs-3- line 3",
+            "Service.cs:4: line 4 MATCH",
+            "Service.cs-5- line 5",
+        };
+
+        foreach (var expected in expectedLines)
+        {
+            Assert.Contains(expected, rendered, StringComparison.Ordinal);
+        }
+
+        var countLine3 = rendered.Split('\n').Count(l => l.Contains("line 3", StringComparison.Ordinal));
+        Assert.Equal(1, countLine3);
+    }
 }
