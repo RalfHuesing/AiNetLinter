@@ -88,7 +88,9 @@ internal static class ProjectAnalysisDispatcher
                 options.PostNavigationResponseBudget);
         }
 
-        return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
+        var unsupportedResult = options.AssemblyUnsupportedResult?.Invoke(target.CanonicalPath)
+            ?? UnsupportedAssemblyTarget(target.CanonicalPath);
+        return McpToolResults.WithNavigation(unsupportedResult, target);
     }
 
     internal static async Task<CallToolResult> ExecuteFilesystemAsync(
@@ -329,29 +331,6 @@ internal static class AnalysisToolCall
             ? assemblyRoute(canonicalRequest)
             : sourceRoute(canonicalRequest);
     };
-
-    /// <summary>
-    /// Gemeinsamer Lint-Einstieg fuer den neuen Vertrag. Decompiled-Targets
-    /// werden strukturell als unsupported gemeldet und nie an den Source-Lease
-    /// weitergereicht.
-    /// </summary>
-    internal static async Task<CallToolResult> ExecuteLintAsync(
-        AnalysisTargetRequest request,
-        Func<AnalysisTarget, Task<CallToolResult>> sourceCall)
-    {
-        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
-        if (resolution.Error is not null)
-        {
-            return resolution.Error;
-        }
-
-        var target = resolution.Target!;
-        return target.Origin == AnalysisTargetOrigin.Decompiled
-            ? McpToolResults.WithNavigation(
-                AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget(target.CanonicalPath),
-                target)
-            : McpToolResults.WithNavigation(await sourceCall(target), target);
-    }
 
     internal static AnalysisToolRoute CreateTargetRoute(
         AnalysisToolRoute projectRoute,

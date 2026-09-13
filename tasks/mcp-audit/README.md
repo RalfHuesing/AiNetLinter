@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **28 Befunde:** 1 Critical, 20 Major, 7 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **26 Befunde:** 1 Critical, 19 Major, 6 Minor. Kein Server-Crash.
 
 ---
 
@@ -43,14 +43,12 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Major | C-04 | `get_impact` | Keine Risiko-Stufe; Projektliste unvollständig (Host fehlt) | Unterschätzung der Produktionswirkung | [C](gruppe-c-symbol-chaining.md) |
 | Major | C-06 | `find_symbol`, `find_references`, `get_symbol_body` | Assembly: `partial` vs. Body-`complete`; `includeReferences` ohne Scope-Objekt | Lease/„keine Treffer“/Cap nicht unterscheidbar | [C](gruppe-c-symbol-chaining.md) |
 | Major | B-02 | `inspect_assembly` u. a. | Volle Systempfade in Envelope, Referenzen, Fehler-`context` | IP-/Pfadleak in Agent-Logs | [B](gruppe-b-discovery.md) |
-| Major | A-05 | `reload_config` | Erfolg nur als Prosazeile | Chaining Reload→Lint braucht Sprach-Parsing | [A](gruppe-a-health-handshake.md) |
 | Major | B-04 | `get_assembly_context` | Übersicht ohne Identität, TFM, Verweise (`48 von 48` leer) | Composite-Einstieg unbrauchbar | [B](gruppe-b-discovery.md) |
 | Major | B-05 | `get_assembly_context` | `includeMetrics` → Solution-`NOT_CONFIGURED` | Irreführender Rules-Hint am Assembly-Target | [B](gruppe-b-discovery.md) |
 | Major | B-07 | `get_namespace_tree` | Source + `includeTypes=true`: Zähler ohne Typnamen; Tipp ist No-Op | Drilldown nicht abschließbar | [B](gruppe-b-discovery.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | E-05 | `find_dead_code` | Ungültiges `kind`/`accessibility` ohne Werteliste | Agent muss Enum raten | [E](gruppe-e-konsistenz-recovery.md) |
-| Minor | A-08 | `reload_config` | Assembly-Ablehnung mit Hint „Roslyn-Abfrage“ | Falscher nächster Tool-Typ | [A](gruppe-a-health-handshake.md) |
 | Minor | B-08 | `get_namespace_tree` | Assembly-Fehler spricht von „Solution“ | Falsches Target-Modell | [B](gruppe-b-discovery.md) |
 | Minor | C-07 | `find_references`, `get_feature_context`, `get_test_context` | Call-Sites/Tests ohne eigene Handoff-IDs; 0/29 Evidenzzeilen | Vertiefen in Caller braucht Parsing | [C](gruppe-c-symbol-chaining.md) |
 | Minor | D-03 | `metrics_lookup`, `dependency_graph`, `search_pattern` | Schema-`required` nur `targetPath`, Runtime verlangt weitere Felder | Extra-Roundtrip nach Schema-first | [D](gruppe-d-qualitaet-metriken.md) |
@@ -64,7 +62,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 2. **Einheitlicher Budget-Vertrag** — B-01/E-02, B-03/E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
 3. **Handoff schließen** — C-01, C-03/B-06, C-02/E-04 (Member-, Search- und Origin-IDs).
 4. **Pfad-Redaktion** — B-02.
-5. **Health-Reload-Contract** — A-05.
 
 ---
 

@@ -324,6 +324,29 @@ public sealed class WiringProjectContractTests
     }
 
     [Fact]
+    public async Task ReloadConfig_ReturnsCompactMachineReadableSummary()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-reload-config-");
+        var solutionPath = CreateSolutionPath(tempDir, "reload-config");
+        await using var registry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var leaseResult = registry.Lease(solutionPath);
+        Assert.True(leaseResult.Succeeded);
+        using var lease = leaseResult.Lease!;
+
+        var result = await ReloadConfigTool.ExecuteAsync(
+            lease.Server,
+            RulesPath(solutionPath),
+            CancellationToken.None);
+
+        var text = TextOf(result);
+        Assert.StartsWith("operation=ok", text, StringComparison.Ordinal);
+        Assert.Contains("enabledRuleChecks=", text, StringComparison.Ordinal);
+        Assert.Contains("metricLimits=", text, StringComparison.Ordinal);
+        Assert.Contains("snapshotChanged=", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Config neu geladen:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Health_ProjectTarget_LoadsOnDemandViaDaemonLeaseProviderWhenSnapshotNotPresent()
     {
         using var tempDir = TestTempDirectory.Create("wiring-health-daemon-ondemand-");

@@ -10,7 +10,7 @@
 
 ## 2. Gesamtfortschritt der Audit-Gruppen
 
-- [x] **Gruppe A: Health, Handshake & Runtime-Config** (Tools 1–3) -> Bericht: [gruppe-a-health-handshake.md](gruppe-a-health-handshake.md) — 0 Critical, 2 Major, 1 Minor (A-05, A-08); TC-A04 ohne Befund
+- [x] **Gruppe A: Health, Handshake & Runtime-Config** (Tools 1–3) -> Bericht: [gruppe-a-health-handshake.md](gruppe-a-health-handshake.md) — 0 Critical, 0 Major, 0 Minor; TC-A04 ohne Befund
 - [x] **Gruppe B: Discovery, Scope & Assembly-Inspektion** (Tools 4–10) -> Bericht: [gruppe-b-discovery.md](gruppe-b-discovery.md) — 0 Critical, 7 Major, 1 Minor (B-01–B-08)
 - [x] **Gruppe C: Semantische Symbol-Tools & Chaining-Ketten** (Tools 11–22) -> Bericht: [gruppe-c-symbol-chaining.md](gruppe-c-symbol-chaining.md) — 0 Critical, 6 Major, 1 Minor (C-01–C-07); CHAIN-01 durchgängig, CHAIN-02–04 mit manuellem Parsing
 - [x] **Gruppe D: Codequalität, Linter, Metriken & Safeguard** (Tools 23–33) -> Bericht: [gruppe-d-qualitaet-metriken.md](gruppe-d-qualitaet-metriken.md) — 0 Critical, 2 Major, 2 Minor (D-01–D-04)

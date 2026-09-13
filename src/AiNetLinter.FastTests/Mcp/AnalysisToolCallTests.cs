@@ -112,6 +112,31 @@ public sealed class AnalysisToolCallTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_AssemblyTargetUsesToolSpecificUnsupportedResult()
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-dispatch-tool-specific-assembly-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.dll");
+        File.WriteAllBytes(assemblyPath, [0]);
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+
+        var result = await ProjectAnalysisDispatcher.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest(assemblyPath),
+            _ => Task.FromResult(McpToolResults.Text("unerwartet")),
+            new ProjectAnalysisExecutionOptions(
+                AssemblyUnsupportedResult: targetPath => McpToolResults.Recoverable(
+                    LinterErrorCodes.AssemblyTargetUnsupported,
+                    "tool unterstützt ausschließlich Solution-Ziele.",
+                    context: targetPath,
+                    hint: "targetPath auf eine .sln oder .slnx setzen.")));
+
+        var text = TextOf(result);
+        Assert.Contains("tool unterstützt ausschließlich Solution-Ziele.", text, StringComparison.Ordinal);
+        Assert.Contains("targetPath auf eine .sln oder .slnx setzen.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Roslyn-Abfrage", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ProjectTargetPassesCanonicalPathToExistingRegistryLease()
     {
         using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");

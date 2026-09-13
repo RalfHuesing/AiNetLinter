@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -57,10 +58,19 @@ internal static class ServerMaintenanceToolRegistrations
                     lease => ReloadConfigTool.ExecuteAsync(
                         lease.Server,
                         Path.Combine(Path.GetDirectoryName(targetPath)!, ConfigLoader.FileName),
-                        ct));
+                        ct),
+                    new ProjectAnalysisExecutionOptions(
+                        AssemblyUnsupportedResult: ReloadConfigAssemblyTargetUnsupported));
             },
             TargetPathToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));
     }
+
+    private static CallToolResult ReloadConfigAssemblyTargetUnsupported(string targetPath) =>
+        McpToolResults.Recoverable(
+            LinterErrorCodes.AssemblyTargetUnsupported,
+            "reload_config unterstützt ausschließlich Solution-Ziele.",
+            context: targetPath,
+            hint: "targetPath auf eine .sln oder .slnx setzen.");
 
     private const string ReloadConfigDescription =
         "Laedt ainetlinter-rules.json der adressierten Solution neu, um geaenderte Regeln ohne Server-Neustart sofort zu aktivieren.";

@@ -80,9 +80,10 @@ internal static class ReloadConfigTool
 
     private static string BuildSummary(ReloadConfigPayload payload)
     {
-        return $"Config neu geladen: {payload.EnabledRuleCheckCount} aktivierte Regelchecks, " +
-               $"{payload.EffectiveMetricThresholdCount} wirksame Metrikgrenzwerte, " +
-               $"Snapshot {(payload.SnapshotChanged ? "geändert" : "unverändert")}.";
+        return $"operation=ok\n" +
+               $"enabledRuleChecks={payload.EnabledRuleCheckCount}\n" +
+               $"metricLimits={payload.EffectiveMetricThresholdCount}\n" +
+               $"snapshotChanged={payload.SnapshotChanged.ToString().ToLowerInvariant()}";
     }
 
     /// <summary>

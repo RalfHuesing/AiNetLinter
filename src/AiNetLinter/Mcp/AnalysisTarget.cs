@@ -73,8 +73,6 @@ internal sealed record AnalysisTarget(
         new(AnalysisCapabilityStatus.Supported, AnalysisCapabilityStatus.Unsupported);
 }
 
-internal sealed record ResolvedAnalysisContext(AnalysisTarget Target);
-
 internal sealed record AnalysisTargetResolution(
     AnalysisTarget? Target,
     CallToolResult? Error);
@@ -101,4 +99,5 @@ internal sealed record AssemblyAnalysisExecutionOptions(
 
 internal sealed record ProjectAnalysisExecutionOptions(
     int MaxResponseBytes = 0,
-    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null);
+    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null,
+    Func<string, CallToolResult>? AssemblyUnsupportedResult = null);
