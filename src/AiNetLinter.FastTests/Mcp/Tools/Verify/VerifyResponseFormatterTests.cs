@@ -26,9 +26,7 @@ public sealed class VerifyResponseFormatterTests
         var text = GetText(first);
         Assert.Equal(text, GetText(second));
         Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
-        Assert.Contains("truncationReason: response_budget", text, StringComparison.Ordinal);
-        Assert.Contains("gateTotalCount: 2", text, StringComparison.Ordinal);
-        Assert.Contains("gateReturnedCount: 1", text, StringComparison.Ordinal);
+        Assert.Contains("evidence: returned=1/2; truncation=response_budget", text, StringComparison.Ordinal);
         Assert.Contains(firstReason, text, StringComparison.Ordinal);
         Assert.DoesNotContain("src/Second.cs", text, StringComparison.Ordinal);
     }
@@ -43,7 +41,7 @@ public sealed class VerifyResponseFormatterTests
 
         var text = GetText(result);
         Assert.Contains("verdict: incomplete", text, StringComparison.Ordinal);
-        Assert.Contains("decisionReason: gateevidenceincomplete", text, StringComparison.Ordinal);
+        Assert.Contains("reason: gateevidenceincomplete", text, StringComparison.Ordinal);
         Assert.DoesNotContain("verdict: failed", text, StringComparison.Ordinal);
     }
 
@@ -53,9 +51,36 @@ public sealed class VerifyResponseFormatterTests
         var result = VerifyResponseFormatter.Success(CreateParameters(CreateScore()));
 
         var text = GetText(result);
-        Assert.Contains("verdict: pass", text, StringComparison.Ordinal);
-        Assert.Contains("truncationReason: none", text, StringComparison.Ordinal);
-        Assert.True(Encoding.UTF8.GetByteCount(text) < 1_024);
+        Assert.Equal("verdict: pass\ncompleteness: complete\ngate: score=10.0; violations=0\nscope: solution", text);
+        Assert.True(Encoding.UTF8.GetByteCount(text) < 128);
+    }
+
+    [Fact]
+    public void Success_AdvisoryUsesOneDirectReferenceWithoutRepeatedUncertaintyMetadata()
+    {
+        var advisory = new VerifyAdvisoryProjection(
+            1,
+            [new VerifyEvidenceEntry(
+                "advisory_candidate",
+                "dead_code",
+                "advisory",
+                "src/Probe.cs",
+                42,
+                "Keine Referenzen gefunden.",
+                "src/Probe.cs:42",
+                RequiresAgentJudgment: true,
+                Confidence: "low",
+                EvidenceBoundary: "statisch",
+                CounterIndicators: ["Reflection"])],
+            "complete");
+
+        var text = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), advisory)));
+
+        Assert.Contains("advisories: count=1; completeness=complete; review_required; static_evidence", text, StringComparison.Ordinal);
+        Assert.Contains("- category=dead_code; ref=src/Probe.cs:42; confidence=low; reason=Keine Referenzen gefunden.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("source:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("counterIndicators:", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -73,12 +98,14 @@ public sealed class VerifyResponseFormatterTests
         Assert.Contains("RESPONSE_BUDGET_EXCEEDED", text, StringComparison.Ordinal);
     }
 
-    private static VerifySuccessParameters CreateParameters(ScoreResult score) => new(
+    private static VerifySuccessParameters CreateParameters(
+        ScoreResult score,
+        VerifyAdvisoryProjection? advisory = null) => new(
         VerifyScope.Solution,
         new VerifyScopeProjection(VerifyScope.Solution, VerifyScope.Solution, ["solution"], []),
         score,
         [],
-        VerifyAdvisoryProjection.Empty);
+        advisory ?? VerifyAdvisoryProjection.Empty);
 
     private static ScoreResult CreateScore(params ViolationEntry[] violations) => new(
         Passed: violations.Length == 0,

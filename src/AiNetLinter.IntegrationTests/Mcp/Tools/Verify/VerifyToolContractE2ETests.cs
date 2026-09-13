@@ -33,7 +33,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: pass", "requiredScore: 10.0", "requiredViolationCount: 0", "score: 10.0", "violationCount: 0", "operation:", "completeness:", "evidence:", "scope:");
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "completeness: complete", "gate: score=10.0; violations=0", "scope: changes");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: pass", "populations: [src/BaselineMini/FirstProbe.cs, src/BaselineMini/SecondProbe.cs]");
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "scope: changes");
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "requested: changes", "effective: solution", "populations: [solution]");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "scope: changes -> solution");
     }
 
     [Fact]
@@ -92,7 +92,13 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "violationCount:", "entries:", "handoffId:", "operation:", "completeness:");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "completeness: complete", "findings: count=", "ref=");
+        var reference = ExtractReference(result, "- rule=");
+        var body = await host.CallToolAsync(
+            "get_symbol_body",
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { reference } });
+
+        AssertVerifyResult(body, expectedError: false, "UnsealedProbe");
     }
 
     [Fact]
@@ -112,7 +118,7 @@ public sealed class VerifyToolContractE2ETests
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
-        Assert.Contains("truncationReason: none", text, StringComparison.Ordinal);
+        Assert.Contains("truncation=none", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -123,7 +129,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: incomplete", "decisionReason:", "scope: solution", "operation:", "completeness:");
+        AssertVerifyResult(result, expectedError: false, "verdict: incomplete", "completeness: incomplete", "reason:", "scope: changes", "recovery:");
     }
 
     [Fact]
@@ -134,11 +140,11 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "diff" });
 
-        AssertVerifyResult(result, expectedError: true, "verdict: error", "operation=error", "completeness=not_applicable", "INVALID_ARGUMENT", "fieldPath: $.scope");
+        AssertVerifyResult(result, expectedError: true, "verdict: error", "INVALID_ARGUMENT", "field: $.scope");
 
         var validResult = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope:", "requested: solution");
+        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution");
     }
 
     [Theory]
@@ -165,15 +171,13 @@ public sealed class VerifyToolContractE2ETests
             result,
             expectedError: true,
             "verdict: error",
-            "operation=error",
-            "completeness=not_applicable",
             expectedCode,
-            "fieldPath: $.targetPath",
+            "field: $.targetPath",
             "recovery:");
 
         var validResult = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "requested: solution");
+        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution");
     }
 
     [Fact]
@@ -186,7 +190,7 @@ public sealed class VerifyToolContractE2ETests
             "verify",
             new Dictionary<string, object?> { ["targetPath"] = Path.Combine(fixture.RootPath, "artifacts", "probe.dll") });
 
-        AssertVerifyResult(result, expectedError: true, "verdict: error", "operation=error", "completeness=not_applicable", "ASSEMBLY_TARGET_UNSUPPORTED");
+        AssertVerifyResult(result, expectedError: true, "verdict: error", "ASSEMBLY_TARGET_UNSUPPORTED");
     }
 
     [Fact]
@@ -197,7 +201,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "requested: solution", "effective: solution", "score:", "violationCount:");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "scope: solution", "gate: score=");
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("kind: advisory_candidate", text, StringComparison.Ordinal);
     }
@@ -225,19 +229,14 @@ public sealed class VerifyToolContractE2ETests
 
         AssertVerifyResult(first, expectedError: false,
             "verdict: pass",
-            "kind: advisory_candidate",
-            "requiresAgentJudgment: true",
-            "confidence:",
-            "evidenceBoundary:",
-            "counterIndicators: [Reflection, DI, Generatoren",
-            "category: dead_code",
-            "category: magic_value:",
-            "advisoryTotalCount: 2",
-            "advisoryCompleteness: complete");
+            "advisories: count=2; completeness=complete; review_required; static_evidence",
+            "category=dead_code",
+            "category=magic_value:",
+            "ref=");
         var firstText = Assert.IsType<TextContentBlock>(Assert.Single(first.Content)).Text;
         Assert.True(
-            firstText.IndexOf("category: dead_code", StringComparison.Ordinal)
-            < firstText.IndexOf("category: magic_value:", StringComparison.Ordinal));
+            firstText.IndexOf("category=dead_code", StringComparison.Ordinal)
+            < firstText.IndexOf("category=magic_value:", StringComparison.Ordinal));
         Assert.Equal(firstText, Assert.IsType<TextContentBlock>(Assert.Single(second.Content)).Text);
     }
 
@@ -253,8 +252,7 @@ public sealed class VerifyToolContractE2ETests
 
         AssertVerifyResult(result, expectedError: false,
             "verdict: pass",
-            "advisoryTotalCount: 4",
-            "advisoryCompleteness: complete");
+            "advisories: count=4; completeness=complete; review_required; static_evidence");
     }
 
     [Fact]
@@ -301,6 +299,17 @@ public sealed class VerifyToolContractE2ETests
             public string Secondary => "https://example.invalid/{{route}}";
         }
         """;
+
+    private static string ExtractReference(CallToolResult result, string entryPrefix)
+    {
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var entry = Assert.Single(text.Split('\n').Where(line => line.StartsWith(entryPrefix, StringComparison.Ordinal)));
+        const string prefix = "; ref=";
+        const string suffix = "; reason=";
+        var start = entry.IndexOf(prefix, StringComparison.Ordinal) + prefix.Length;
+        var end = entry.IndexOf(suffix, StringComparison.Ordinal);
+        return entry[start..end];
+    }
 
     private static void AssertVerifyResult(CallToolResult result, bool expectedError, params string[] expectedContent)
     {

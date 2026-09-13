@@ -519,21 +519,28 @@ Projekt-, Regel- oder Generator-Konfiguration erweitern die Population konservat
 Ein leerer oder nicht sicher bestimmbarer Änderungskontext ist `incomplete` und
 verweist auf `scope: "solution"`.
 
-Der einzige Content-Block markiert `verdict`, `gate` (Score, feste Anforderungen,
-Violation-Count und Entscheidungsgrund), `evidence` (vollständige und sichtbare
-Counts einschließlich `truncationReason`) sowie den angeforderten und effektiven
-`scope`. Die serverseitige Projektion misst den finalen UTF-8-Text gegen das feste
-4-KiB-Budget und nimmt nur ganze, deterministisch priorisierte Evidenzeinheiten auf.
-`failed` enthält mindestens
-eine vollständige Evidenzeinheit mit kopierbarer Handoff-ID; andernfalls ist das
-Ergebnis `incomplete`. Ungültige Requests, Assembly-Ziele und exogene Fehler sind
-`verdict=error` mit `isError=true`, Fehlercode, Feldpfad und genau einer Recovery.
+Der einzige Content-Block ist zustandsabhängig minimiert: Ein vollständiger,
+ereignisloser Pass besteht nur aus `verdict`, `completeness`, `gate` (Score und
+Violation-Count) und `scope`. Anforderungen von `10.0` und `0` sind durch den
+festen Vertrag impliziert und werden nicht wiederholt. Bei abweichendem effektivem
+Scope erscheint die Kurzform `scope: changes -> solution`; Ausschlüsse bleiben
+nur bei tatsächlichem Vorkommen sichtbar.
 
-Nur bei `changes` können zusätzlich begrenzte Einträge mit
-`kind=advisory_candidate` und `requiresAgentJudgment=true` erscheinen. Sie nennen
-Confidence, Evidenzgrenze und Gegenindikatoren; sie sind weder Lösch- oder
-Änderungsanweisungen noch Teil des Gate-Entscheids. `solution` enthält diese
-Heuristik-Kandidaten nicht.
+Nur bei sichtbarer Evidenz oder Trunkierung erscheint deren Summary
+`returned=<sichtbar>/<gesamt>; truncation=<Grund>`. Jeder Finding-Eintrag enthält
+Regel, Severity, Grund und genau ein `ref`: der kanonische Positions-Handoff ist
+direkt für `get_symbol_body` verwendbar. `failed`
+enthält mindestens einen vollständigen Finding-Eintrag; andernfalls ist das
+Ergebnis `incomplete`. Dieser nennt nur `completeness`, Grund, Scope und Recovery.
+Ungültige Requests, Assembly-Ziele und exogene Fehler sind `verdict=error` mit
+`isError=true`, Fehlercode, optionalem Feld und genau einer Recovery.
+
+Nur bei `changes` können zusätzliche Advisory-Einträge erscheinen. Ihre gemeinsame
+Zeile markiert `review_required` und `static_evidence`; pro Eintrag bleiben nur
+Kategorie, `ref`, Confidence und Grund sichtbar. Die ausführliche Unsicherheits-
+und Gegenindikator-Policy wird nicht je Eintrag wiederholt. Advisorys sind weder
+Lösch- oder Änderungsanweisungen noch Teil des Gate-Entscheids. `solution`
+enthält diese Heuristik-Kandidaten nicht.
 
 **`pattern_detect` — Content im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`) und `feature-envy` (`AvoidExcessiveMiddleMen`). Der Content nennt:
 

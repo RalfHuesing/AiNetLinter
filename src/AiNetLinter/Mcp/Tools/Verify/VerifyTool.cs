@@ -211,11 +211,11 @@ internal static partial class VerifyResponseFormatter
     }
 
     internal static CallToolResult Incomplete(VerifyScope scope, VerifyDecisionReason reason, string? recovery) =>
-        Text($"verdict: incomplete\nstatus:\n  operation: verify\n  completeness: incomplete\ngate:\n  score: null\n  requiredScore: 10.0\n  violationCount: null\n  requiredViolationCount: 0\n  decisionReason: {ToWire(reason)}\nevidence:\n  totalCount: 0\n  returnedCount: 0\n  entries: []\nscope:\n  requested: {ToWire(scope)}\n  effective: {ToWire(scope)}\n  populations: []\n  exclusions: []\nrecovery: {recovery ?? "scope: solution verwenden."}");
+        Text($"verdict: incomplete\ncompleteness: incomplete\nreason: {ToWire(reason)}\nscope: {ToWire(scope)}\nrecovery: {recovery ?? "scope: solution verwenden."}");
 
     internal static CallToolResult Error(string code, string message, string recovery, string? fieldPath = null) =>
         Text(
-            $"verdict: error\nstatus: operation=error, completeness=not_applicable\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfieldPath: {fieldPath}")}\nrecovery: {recovery}",
+            $"verdict: error\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfield: {fieldPath}")}\nrecovery: {recovery}",
             isError: true);
 
     private static CallToolResult Text(string text, bool isError = false)
@@ -232,8 +232,8 @@ internal static partial class VerifyResponseFormatter
     {
         if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return text;
         return isError
-            ? "verdict: error\nstatus: operation=error, completeness=not_applicable\ncode: RESPONSE_BUDGET_EXCEEDED\nmessage: Die Verify-Fehlerantwort überschreitet das feste Antwortbudget.\nrecovery: Scope präzisieren und erneut ausführen."
-            : "verdict: incomplete\nstatus:\n  operation: verify\n  completeness: incomplete\ngate:\n  score: null\n  requiredScore: 10.0\n  violationCount: null\n  requiredViolationCount: 0\n  decisionReason: gateevidenceincomplete\nevidence:\n  totalCount: 0\n  returnedCount: 0\n  entries: []\nscope:\n  requested: changes\n  effective: changes\n  populations: []\n  exclusions: []\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
+            ? "verdict: error\ncode: RESPONSE_BUDGET_EXCEEDED\nrecovery: Scope präzisieren und erneut ausführen."
+            : "verdict: incomplete\ncompleteness: incomplete\nreason: gateevidenceincomplete\nscope: changes\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
     }
 
     private static VerifyEvidenceEntry ToEvidence(ViolationEntry violation) => new(
@@ -286,54 +286,78 @@ internal static partial class VerifyResponseFormatter
         VerifyAdvisoryProjection advisory,
         string truncationReason)
     {
-        var gate = response.Gate;
-        var advisoryReturnedCount = response.Evidence.Count(entry => entry.Kind == "advisory_candidate");
-        var lines = new List<string>
-        {
-            $"verdict: {ToWire(response.Verdict)}",
-            "status:",
-            "  operation: verify",
-            $"  completeness: {ToWire(response.Completeness)}",
-            "gate:",
-            $"  score: {gate.Score!.Value.ToString("F1", CultureInfo.InvariantCulture)}",
-            "  requiredScore: 10.0",
-            $"  violationCount: {gate.ViolationCount}",
-            "  requiredViolationCount: 0",
-            $"  decisionReason: {ToWire(gate.DecisionReason)}",
-            "evidence:",
-            $"  totalCount: {response.EvidenceTotalCount}",
-            $"  returnedCount: {response.Evidence.Count}",
-            $"  gateTotalCount: {gateTotalCount}",
-            $"  gateReturnedCount: {response.Evidence.Count(entry => entry.Kind == "gate_violation")}",
-            $"  advisoryTotalCount: {advisory.TotalCount}",
-            $"  advisoryReturnedCount: {advisoryReturnedCount}",
-            $"  advisoryCompleteness: {advisory.Completeness}",
-            $"  truncationReason: {truncationReason}",
-            "  entries:",
-        };
-        foreach (var entry in response.Evidence)
-        {
-            lines.Add($"  - kind: {entry.Kind}");
-            lines.Add(entry.Kind == "advisory_candidate"
-                ? $"    category: {entry.RuleOrCategory}"
-                : $"    rule: {entry.RuleOrCategory}");
-            lines.Add($"    severity: {entry.Severity}");
-            lines.Add($"    source: {entry.SourcePath}:{entry.Line}");
-            lines.Add($"    reason: {entry.Reason}");
-            lines.Add($"    handoffId: {entry.HandoffId}");
-            if (entry.Kind != "advisory_candidate") continue;
-            lines.Add($"    requiresAgentJudgment: {entry.RequiresAgentJudgment.ToString().ToLowerInvariant()}");
-            lines.Add($"    confidence: {entry.Confidence}");
-            lines.Add($"    evidenceBoundary: {entry.EvidenceBoundary}");
-            lines.Add($"    counterIndicators: [{string.Join(", ", entry.CounterIndicators ?? [])}]");
-        }
-        if (response.Evidence.Count == 0) lines.Add("  []");
-        lines.Add("scope:");
-        lines.Add($"  requested: {ToWire(response.Scope.Requested)}");
-        lines.Add($"  effective: {ToWire(response.Scope.Effective)}");
-        lines.Add($"  populations: [{string.Join(", ", response.Scope.Populations)}]");
-        lines.Add($"  exclusions: [{string.Join(", ", exclusions)}]");
+        var lines = CreateSummary(response, exclusions);
+        AppendEvidence(lines, response, gateTotalCount, advisory, truncationReason);
         return string.Join("\n", lines);
+    }
+
+    private static List<string> CreateSummary(VerifyResponse response, IReadOnlyList<string> exclusions)
+    {
+        var gate = response.Gate;
+        var scope = ToWire(response.Scope.Requested);
+        if (response.Scope.Requested != response.Scope.Effective)
+        {
+            scope += $" -> {ToWire(response.Scope.Effective)}";
+        }
+
+        if (exclusions.Count > 0) scope += $"; exclusions=[{string.Join(", ", exclusions)}]";
+        return
+        [
+            $"verdict: {ToWire(response.Verdict)}",
+            $"completeness: {ToWire(response.Completeness)}",
+            $"gate: score={gate.Score!.Value.ToString("F1", CultureInfo.InvariantCulture)}; violations={gate.ViolationCount}",
+            $"scope: {scope}",
+        ];
+    }
+
+    private static void AppendEvidence(
+        List<string> lines,
+        VerifyResponse response,
+        int gateTotalCount,
+        VerifyAdvisoryProjection advisory,
+        string truncationReason)
+    {
+        if (response.Evidence.Count > 0 || truncationReason != "none")
+        {
+            lines.Add($"evidence: returned={response.Evidence.Count}/{response.EvidenceTotalCount}; truncation={truncationReason}");
+        }
+
+        AppendFindings(lines, response.Evidence, gateTotalCount);
+        AppendAdvisories(lines, response.Evidence, advisory);
+    }
+
+    private static void AppendFindings(
+        List<string> lines,
+        IReadOnlyList<VerifyEvidenceEntry> evidence,
+        int gateTotalCount)
+    {
+        var findings = evidence.Where(entry => entry.Kind == "gate_violation").ToList();
+        if (findings.Count == 0) return;
+
+        lines.Add($"findings: count={findings.Count}/{gateTotalCount}");
+        foreach (var entry in findings)
+        {
+            lines.Add($"- rule={entry.RuleOrCategory}; severity={entry.Severity}; ref={entry.HandoffId}; reason={entry.Reason}");
+        }
+    }
+
+    private static void AppendAdvisories(
+        List<string> lines,
+        IReadOnlyList<VerifyEvidenceEntry> evidence,
+        VerifyAdvisoryProjection advisory)
+    {
+        var advisories = evidence.Where(entry => entry.Kind == "advisory_candidate").ToList();
+        if (advisories.Count == 0)
+        {
+            if (advisory.Completeness != "not_requested") lines.Add($"advisories: {advisory.Completeness}");
+            return;
+        }
+
+        lines.Add($"advisories: count={advisories.Count}; completeness={advisory.Completeness}; review_required; static_evidence");
+        foreach (var entry in advisories)
+        {
+            lines.Add($"- category={entry.RuleOrCategory}; ref={entry.HandoffId}; confidence={entry.Confidence}; reason={entry.Reason}");
+        }
     }
 
     private static string ToWire(object value) => value.ToString()!.ToLowerInvariant();
