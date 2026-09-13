@@ -37,7 +37,8 @@ internal static class StructuralDuplicateDetector
                 method.LineNumber,
                 method.SignatureName,
                 method.TokenCount,
-                profiles[index].Summary));
+                profiles[index].Summary,
+                method.Symbol.TryGetDocCommentId()));
         return new DuplicateDetectionScanResult(clusters, eligible.Count);
     }
 

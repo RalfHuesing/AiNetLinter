@@ -1,9 +1,11 @@
 #nullable enable
 
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.TestKit;
@@ -98,6 +100,25 @@ public sealed class DuplicateDetectionToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Duplikat-Kandidatencluster", text, StringComparison.Ordinal);
         Assert.Contains("exact", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExactClone_EmitsReusableOpaqueHandoffs()
+    {
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var handoffId = Regex.Match(text, @"handoffId: `(?<id>h:[^`]+)`").Groups["id"].Value;
+        Assert.NotEmpty(handoffId);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
+
+        var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
+        Assert.NotEqual(true, body.IsError);
+        Assert.Contains("static int", Assert.IsType<TextContentBlock>(Assert.Single(body.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]

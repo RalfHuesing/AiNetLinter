@@ -10,4 +10,5 @@ internal sealed record RefactoringDriftScanResultForTool(
     IReadOnlyList<Core.DuplicateDetection.RefactoringDriftCandidate> ShownCandidates,
     int TotalCandidates,
     int MethodsScanned,
-    bool Truncated);
+    bool Truncated,
+    AnalysisSymbolIdentity? HandoffSymbolIdentity = null);

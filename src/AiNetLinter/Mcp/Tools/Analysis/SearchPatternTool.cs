@@ -71,7 +71,7 @@ internal static class SearchPatternTool
                 hint: hint);
         }
 
-        var text = SearchPatternTextFormatter.Format(scan);
+        var text = SearchPatternTextFormatter.Format(scan, state.HandoffSymbolIdentity);
         if (scan.MinimumResponseBytes is { } minimumResponseBytes)
         {
             return McpToolResults.Error(

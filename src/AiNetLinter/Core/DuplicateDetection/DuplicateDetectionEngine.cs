@@ -57,7 +57,8 @@ internal static class DuplicateDetectionEngine
                 fingerprint.FilePath,
                 fingerprint.LineNumber,
                 fingerprint.SignatureName,
-                fingerprint.TokenCount));
+                fingerprint.TokenCount,
+                SymbolId: fingerprint.Symbol.TryGetDocCommentId()));
         return new DuplicateDetectionScanResult(clusters, fingerprints.Count);
     }
 

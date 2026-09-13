@@ -95,7 +95,8 @@ internal sealed record DuplicateClusterMember(
     int LineNumber,
     string SignatureName,
     int TokenCount,
-    string? StructureProfile = null);
+    string? StructureProfile = null,
+    string? SymbolId = null);
 
 /// <summary>
 /// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare).
@@ -132,7 +133,8 @@ internal sealed record RefactoringDriftCandidate(
     int LineNumber,
     string SignatureName,
     int TokenCount,
-    double Score);
+    double Score,
+    string? SymbolId = null);
 
 /// <summary>Gesamtergebnis von <see cref="RefactoringDriftDetector.FindSimilarToAsync"/>.
 /// <see cref="Candidates"/> ist unbegrenzt und absteigend nach <see cref="RefactoringDriftCandidate.Score"/>

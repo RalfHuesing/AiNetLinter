@@ -4,12 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
 
 internal static class SearchPatternTextFormatter
 {
-    internal static string Format(SearchPatternScanResult result)
+    internal static string Format(
+        SearchPatternScanResult result,
+        AnalysisSymbolIdentity? handoffSymbolIdentity = null)
     {
         var completeness = result.Payload.Completeness;
         if (completeness.TotalMatchedLineCount == 0)
@@ -24,7 +27,7 @@ internal static class SearchPatternTextFormatter
         }
 
         var hitLines = result.Payload.Matches
-            .Select(match => $"{match.FilePath}:{match.Line}: {match.LineText.TrimEnd()}")
+            .Select(match => FormatMatch(match, handoffSymbolIdentity))
             .ToList();
         var formatted = FormatHitLines(result, hitLines);
         if (result.IsRegexAutoPromoted)
@@ -45,6 +48,25 @@ internal static class SearchPatternTextFormatter
             && !reasons.Contains("maxResponseBytes");
         if (!onlyMaxResults) return string.Join("\n", hitLines);
         return McpTruncation.TruncateLines(hitLines, result.TotalMatchedLineCount, result.MaxResults);
+    }
+
+    private static string FormatMatch(
+        SearchPatternMatch match,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
+    {
+        var prefix = $"{match.FilePath}:{match.Line}: {match.LineText.TrimEnd()}";
+        var semantic = match.Semantic;
+        if (semantic is null) return prefix + "; handoff: not_applicable";
+
+        if (semantic.Resolution != "resolved" || string.IsNullOrWhiteSpace(semantic.SymbolId))
+        {
+            return prefix + $"; handoff: {semantic.Resolution}";
+        }
+
+        var internalId = handoffSymbolIdentity?.Format(semantic.SymbolId);
+        if (string.IsNullOrWhiteSpace(internalId)) return prefix + "; handoff: unavailable";
+
+        return prefix + $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`";
     }
 
     private static string AppendHints(

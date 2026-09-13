@@ -65,30 +65,34 @@ internal static class MetricsTreeProjection
 /// </summary>
 internal static class MetricsTreeRenderer
 {
-    internal static string Render(MetricsTreeNode root, int topN, bool sortDescending)
+    internal static string Render(MetricsTreeNode root, int topN, bool sortDescending) =>
+        Render(root, new MetricsTreeRenderOptions(topN, sortDescending));
+
+    internal static string Render(MetricsTreeNode root, MetricsTreeRenderOptions options)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(FormatNode(root));
-        RenderChildren(sb, root, "", topN, sortDescending);
+        sb.AppendLine(FormatNode(root, options.IncludeHandoffStatus));
+        RenderChildren(sb, root, "", options);
         return sb.ToString().TrimEnd();
     }
 
     private static void RenderChildren(
         StringBuilder sb, MetricsTreeNode owner, string prefix,
-        int topN, bool sortDescending)
+        MetricsTreeRenderOptions options)
     {
         var children = owner.Children;
-        var sorted = sortDescending
+        var sorted = options.SortDescending
             ? children.OrderByDescending(c => c.SortValue).ThenBy(c => c.RelativePath, System.StringComparer.OrdinalIgnoreCase).ToList()
             : children.OrderBy(c => c.SortValue).ThenBy(c => c.RelativePath, System.StringComparer.OrdinalIgnoreCase).ToList();
-        var visible = sorted.Take(topN).ToList();
+        var visible = sorted.Take(options.TopN).ToList();
 
         for (var i = 0; i < visible.Count; i++)
         {
             var isLast = i == visible.Count - 1 && visible.Count == sorted.Count;
-            AppendNodeLine(sb, visible[i], prefix, isLast);
+            var branch = isLast ? "└── " : "├── ";
+            sb.AppendLine($"{prefix}{branch}{FormatNode(visible[i], options.IncludeHandoffStatus)}");
             var childPrefix = prefix + (isLast ? "    " : "│   ");
-            RenderChildren(sb, visible[i], childPrefix, topN, sortDescending);
+            RenderChildren(sb, visible[i], childPrefix, options);
         }
 
         var hiddenCount = owner.HiddenChildCount + Math.Max(0, sorted.Count - visible.Count);
@@ -98,14 +102,14 @@ internal static class MetricsTreeRenderer
         }
     }
 
-    private static void AppendNodeLine(StringBuilder sb, MetricsTreeNode node, string prefix, bool isLast)
+    private static string FormatNode(MetricsTreeNode node, bool includeHandoffStatus)
     {
-        var branch = isLast ? "└── " : "├── ";
-        sb.AppendLine($"{prefix}{branch}{FormatNode(node)}");
-    }
-
-    private static string FormatNode(MetricsTreeNode node)
-    {
-        return $"{node.Name} — {node.DisplayLine}";
+        return $"{node.Name} — {node.DisplayLine}" +
+            (includeHandoffStatus ? "; handoff: not_applicable" : string.Empty);
     }
 }
+
+internal sealed record MetricsTreeRenderOptions(
+    int TopN,
+    bool SortDescending,
+    bool IncludeHandoffStatus = false);

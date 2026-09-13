@@ -233,7 +233,7 @@ internal static class PatternDetectScanner
     private static string FormatLine(string solutionDir, RuleViolation v)
     {
         var relativePath = Path.GetRelativePath(solutionDir, v.FilePath).Replace('\\', '/');
-        return $"{relativePath}:{v.LineNumber} - {v.RuleName}: {v.Details}";
+        return $"{relativePath}:{v.LineNumber} - {v.RuleName}: {v.Details}; handoff: not_applicable";
     }
 
     private static string FormatReport(

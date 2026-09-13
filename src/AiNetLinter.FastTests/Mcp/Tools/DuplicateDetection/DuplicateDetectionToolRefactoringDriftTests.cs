@@ -191,6 +191,8 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("BuildDefault", text, StringComparison.Ordinal);
         Assert.Contains("DriftedA", text, StringComparison.Ordinal);
+        Assert.Contains("handoffId: `h:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", text, StringComparison.Ordinal);
     }
 
     [Fact]

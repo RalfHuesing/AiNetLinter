@@ -47,6 +47,27 @@ public sealed class SearchPatternToolContractTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_EnrichedCSharpMatches_EmitsHandleOnlyForResolvedSymbols()
+    {
+        const string source = "namespace Project; public sealed class Target { // Target comment\n public Target Create() => new(); }";
+        using var scenario = CreateScenario(source);
+        using var state = CreateServer(scenario.Solution);
+
+        var resolved = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("Target", false, 50, 0, 0, 8_192, null, null, null, EnrichCSharp: true),
+            CancellationToken.None);
+        var comment = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("comment", false, 50, 0, 0, 8_192, null, null, null, EnrichCSharp: true),
+            CancellationToken.None);
+
+        Assert.Contains("handoffId: `h:", TextOf(resolved), StringComparison.Ordinal);
+        Assert.DoesNotContain("handoffId: `i:", TextOf(resolved), StringComparison.Ordinal);
+        Assert.Contains("handoff: not_applicable", TextOf(comment), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_InvalidArguments_ReturnPreciseRecoverablePayload()
     {
         using var scenario = CreateScenario("Greeter");

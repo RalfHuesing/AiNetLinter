@@ -16,7 +16,14 @@ internal static class HotspotTableFormatter
         StringBuilder sb,
         string heading,
         IEnumerable<(string RelativePath, int Lines)> files,
-        int maxLineCount)
+        int maxLineCount) =>
+        AppendSection(sb, heading, files, new HotspotTableOptions(maxLineCount));
+
+    internal static void AppendSection(
+        StringBuilder sb,
+        string heading,
+        IEnumerable<(string RelativePath, int Lines)> files,
+        HotspotTableOptions options)
     {
         var mb = new MarkdownBuilder();
         mb.Heading(2, heading).BlankLine();
@@ -34,14 +41,18 @@ internal static class HotspotTableFormatter
                  .AddColumn("Zeilen", ColumnAlign.Right)
                  .AddColumn("Auslastung", ColumnAlign.Right)
                  .AddColumn("Verbleibend", ColumnAlign.Right);
+                if (options.IncludeHandoffStatus) t.AddColumn("Handoff");
 
                 foreach (var (relativePath, lines) in list
                     .OrderByDescending(x => x.Lines)
                     .ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase))
                 {
-                    var pct = (double)lines / maxLineCount * 100;
-                    var remaining = maxLineCount - lines;
-                    t.AddRow(relativePath, lines, $"{pct:F0} %", $"{remaining} Zeilen");
+                    var pct = (double)lines / options.MaxLineCount * 100;
+                    var remaining = options.MaxLineCount - lines;
+                    var cells = options.IncludeHandoffStatus
+                        ? new object?[] { relativePath, lines, $"{pct:F0} %", $"{remaining} Zeilen", "not_applicable" }
+                        : [relativePath, lines, $"{pct:F0} %", $"{remaining} Zeilen"];
+                    t.AddRow(cells);
                 }
             });
         }
@@ -50,3 +61,7 @@ internal static class HotspotTableFormatter
         sb.AppendLine();
     }
 }
+
+internal sealed record HotspotTableOptions(
+    int MaxLineCount,
+    bool IncludeHandoffStatus = false);

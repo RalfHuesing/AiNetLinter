@@ -191,8 +191,16 @@ internal static class GetHotspotsScanner
         sb.AppendLine($"Gescannt: {report.Files.Count} .cs-Dateien | MaxLineCount: {report.MaxLineCount} | Scope-Typ: '{report.ScopeType}'{scopeSuffix}");
         sb.AppendLine();
 
-        HotspotTableFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", report.Critical.Select(f => (f.RelativePath, f.Lines)), report.MaxLineCount);
-        HotspotTableFormatter.AppendSection(sb, $"Warnungs-Dateien (>= {FormatPercentage(report.MinLinePercentage)}% des Limits)", report.Warning.Select(f => (f.RelativePath, f.Lines)), report.MaxLineCount);
+        HotspotTableFormatter.AppendSection(
+            sb,
+            "Kritische Dateien (>=95% des Limits)",
+            report.Critical.Select(f => (f.RelativePath, f.Lines)),
+            new HotspotTableOptions(report.MaxLineCount, IncludeHandoffStatus: true));
+        HotspotTableFormatter.AppendSection(
+            sb,
+            $"Warnungs-Dateien (>= {FormatPercentage(report.MinLinePercentage)}% des Limits)",
+            report.Warning.Select(f => (f.RelativePath, f.Lines)),
+            new HotspotTableOptions(report.MaxLineCount, IncludeHandoffStatus: true));
 
         if (report.TotalHotspots == 0)
         {

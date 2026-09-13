@@ -286,6 +286,6 @@ internal static class DependencyGraphTool
     private static string FormatEdgeLine(DependencyEdge edge, string otherFile)
     {
         var typeLabel = edge.TypeNames.Count == 1 ? "Typ" : "Typen";
-        return $"- {otherFile} ({edge.TypeNames.Count} {typeLabel}: {string.Join(", ", edge.TypeNames)})";
+        return $"- {otherFile} ({edge.TypeNames.Count} {typeLabel}: {string.Join(", ", edge.TypeNames)}); handoff: not_applicable";
     }
 }

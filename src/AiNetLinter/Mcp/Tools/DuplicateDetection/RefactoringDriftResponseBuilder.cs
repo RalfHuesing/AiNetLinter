@@ -3,6 +3,7 @@
 using System.Linq;
 using System.Text;
 using AiNetLinter.Core.DuplicateDetection;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -48,6 +49,7 @@ internal static class RefactoringDriftResponseBuilder
             var relativePath = PathNormalizer.ToRelative(solutionDir, candidate.FilePath);
             sb.Append($"\n{index}. {candidate.SignatureName} ({relativePath}:{candidate.LineNumber}, " +
                       $"{candidate.TokenCount} Tokens, Score {candidate.Score:F2}) ruft '{result.HelperSymbolDisplayName}' nicht auf.");
+            AppendHandoff(sb, candidate, result.HandoffSymbolIdentity);
         }
 
         if (result.Truncated)
@@ -58,5 +60,16 @@ internal static class RefactoringDriftResponseBuilder
         }
 
         return sb.ToString();
+    }
+
+    private static void AppendHandoff(
+        StringBuilder sb,
+        RefactoringDriftCandidate candidate,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
+    {
+        var internalId = handoffSymbolIdentity?.Format(candidate.SymbolId);
+        sb.Append(string.IsNullOrWhiteSpace(internalId)
+            ? "; handoff: not_applicable"
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`");
     }
 }

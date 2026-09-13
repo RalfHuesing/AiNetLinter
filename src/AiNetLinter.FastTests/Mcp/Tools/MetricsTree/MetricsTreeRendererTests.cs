@@ -127,4 +127,17 @@ public sealed class MetricsTreeRendererTests
         Assert.DoesNotContain(handoffId, text, StringComparison.Ordinal);
         Assert.Equal(handoffId, structured.GetProperty("id").GetString());
     }
+
+    [Fact]
+    public void Render_WithHandoffStatus_MarksAggregatedNodesAsNotApplicable()
+    {
+        var root = new MetricsTreeNode(
+            "root", "", 1, 1, "1 Datei", Array.Empty<MetricsTreeNode>());
+
+        var text = MetricsTreeRenderer.Render(
+            root,
+            new MetricsTreeRenderOptions(TopN: 10, SortDescending: true, IncludeHandoffStatus: true));
+
+        Assert.Contains("handoff: not_applicable", text, StringComparison.Ordinal);
+    }
 }

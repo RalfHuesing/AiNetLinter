@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core.DuplicateDetection;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -68,7 +69,7 @@ internal static class DuplicateDetectionTool
             {
                 DuplicateDetectionMode.RefactoringDrift => await ExecuteRefactoringDriftAsync(
                     new RefactoringDriftToolRequest(solution, config, input, state.HandoffSymbolIdentity), ct),
-                _ => await ExecuteClusterScanAsync(new ClusterScanRequest(solution, config, input, mode.Value), ct),
+                _ => await ExecuteClusterScanAsync(new ClusterScanRequest(solution, config, input, mode.Value, state.HandoffSymbolIdentity), ct),
             };
         }
         catch (System.Exception ex) when (ex is not System.OperationCanceledException)
@@ -81,7 +82,8 @@ internal static class DuplicateDetectionTool
         Microsoft.CodeAnalysis.Solution Solution,
         Configuration.GlobalConfig Config,
         DuplicateDetectionInput Input,
-        DuplicateDetectionMode Mode);
+        DuplicateDetectionMode Mode,
+        AnalysisSymbolIdentity? HandoffSymbolIdentity);
 
     private sealed record RefactoringDriftToolRequest(
         Microsoft.CodeAnalysis.Solution Solution,
@@ -101,7 +103,11 @@ internal static class DuplicateDetectionTool
         var result = isStructural
             ? await StructuralDuplicateScanner.ScanAsync(request.Solution, request.Config, request.Input, minBucket, ct)
             : await DuplicateDetectionScanner.ScanAsync(request.Solution, request.Config, request.Input, minBucket, ct);
-        return BuildResponse(request.Solution, result, isStructural ? DuplicateDetectionModeLabels.Structural : DuplicateDetectionModeLabels.Clone);
+        return BuildResponse(
+            request.Solution,
+            result,
+            isStructural ? DuplicateDetectionModeLabels.Structural : DuplicateDetectionModeLabels.Clone,
+            request.HandoffSymbolIdentity);
     }
 
     private static async Task<CallToolResult> ExecuteRefactoringDriftAsync(
@@ -147,10 +153,13 @@ internal static class DuplicateDetectionTool
     }
 
     private static CallToolResult BuildResponse(
-        Microsoft.CodeAnalysis.Solution solution, DuplicateDetectionScanResultForTool result, string mode)
+        Microsoft.CodeAnalysis.Solution solution,
+        DuplicateDetectionScanResultForTool result,
+        string mode,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        var body = RenderText(solutionDir, result, mode);
+        var body = RenderText(solutionDir, result, mode, handoffSymbolIdentity);
         return McpToolResults.Text(body);
     }
 
@@ -161,7 +170,11 @@ internal static class DuplicateDetectionTool
         _ => "fuzzy",
     };
 
-    private static string RenderText(string solutionDir, DuplicateDetectionScanResultForTool result, string mode)
+    private static string RenderText(
+        string solutionDir,
+        DuplicateDetectionScanResultForTool result,
+        string mode,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
     {
         var isStructural = mode == DuplicateDetectionModeLabels.Structural;
         if (result.ShownClusters.Count == 0)
@@ -202,7 +215,7 @@ internal static class DuplicateDetectionTool
         foreach (var cluster in result.ShownClusters)
         {
             index++;
-            AppendCluster(sb, solutionDir, index, cluster);
+            AppendCluster(sb, solutionDir, index, cluster, handoffSymbolIdentity);
         }
 
         if (result.Truncated)
@@ -214,13 +227,19 @@ internal static class DuplicateDetectionTool
         return sb.ToString();
     }
 
-    private static void AppendCluster(StringBuilder sb, string solutionDir, int index, DuplicateCluster cluster)
+    private static void AppendCluster(
+        StringBuilder sb,
+        string solutionDir,
+        int index,
+        DuplicateCluster cluster,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
     {
         sb.Append($"\n\n## {index}. {BucketLabel(cluster.Bucket)} (Score {cluster.Score:F2}, {cluster.Members.Count} Methoden)");
         foreach (var member in cluster.Members)
         {
             var relativePath = PathNormalizer.ToRelative(solutionDir, member.FilePath);
             sb.Append($"\n- {member.SignatureName} ({relativePath}:{member.LineNumber}, {member.TokenCount} Tokens) — candidate, confidence={ConfidenceFor(member)}");
+            AppendHandoff(sb, member, handoffSymbolIdentity);
             if (!string.IsNullOrEmpty(member.StructureProfile))
             {
                 sb.Append($"\n  Profil: {member.StructureProfile}");
@@ -229,4 +248,15 @@ internal static class DuplicateDetectionTool
     }
 
     private static string ConfidenceFor(DuplicateClusterMember member) => member.TokenCount >= 80 ? "high" : "medium";
+
+    private static void AppendHandoff(
+        StringBuilder sb,
+        DuplicateClusterMember member,
+        AnalysisSymbolIdentity? handoffSymbolIdentity)
+    {
+        var internalId = handoffSymbolIdentity?.Format(member.SymbolId);
+        sb.Append(string.IsNullOrWhiteSpace(internalId)
+            ? "; handoff: not_applicable"
+            : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`");
+    }
 }

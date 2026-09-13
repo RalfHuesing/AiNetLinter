@@ -36,7 +36,8 @@ internal static class RefactoringDriftDetector
             .Where(f => !callerSet.Contains(f.Symbol))
             .Select(f => new RefactoringDriftCandidate(
                 f.FilePath, f.LineNumber, f.SignatureName, f.TokenCount,
-                DuplicateDetectionEngine.ComputeJaccard(helperFingerprint.NgramHashes, f.NgramHashes)))
+                DuplicateDetectionEngine.ComputeJaccard(helperFingerprint.NgramHashes, f.NgramHashes),
+                f.Symbol.TryGetDocCommentId()))
             .Where(c => c.Score >= options.NearThreshold)
             .OrderByDescending(c => c.Score)
             .ThenBy(c => c.FilePath, System.StringComparer.OrdinalIgnoreCase)

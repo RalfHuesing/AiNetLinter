@@ -70,7 +70,12 @@ internal static class RefactoringDriftScanner
         var truncated = candidates.Count > effectiveMax;
 
         return (new RefactoringDriftScanResultForTool(
-            helper.ToDisplayString(), shown, candidates.Count, scanResult.MethodsScanned, truncated), null);
+            helper.ToDisplayString(),
+            shown,
+            candidates.Count,
+            scanResult.MethodsScanned,
+            truncated,
+            request.HandoffSymbolIdentity), null);
     }
 
     private static string DescribeKind(ISymbol symbol) => symbol switch

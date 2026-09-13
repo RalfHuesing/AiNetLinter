@@ -65,7 +65,9 @@ internal static class MetricsTreeTool
         var next = truncated
             ? new MetricsTreeNext("request_detail", "topN erhöhen oder root/fileFilter verfeinern, um weitere Knoten zu sehen.")
             : new MetricsTreeNext("none", "Kein weiterer Schritt erforderlich.");
-        var text = MetricsTreeRenderer.Render(visibleTree, int.MaxValue, sortDescending);
+        var text = MetricsTreeRenderer.Render(
+            visibleTree,
+            new MetricsTreeRenderOptions(int.MaxValue, sortDescending, IncludeHandoffStatus: true));
         var withHint = McpDrillDownHints.Append(text, args.Depth);
         return McpToolResults.Text(
             withHint);
