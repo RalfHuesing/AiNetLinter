@@ -201,12 +201,13 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
 
     /// <summary>
     /// Ersetzt die resident gehaltene Config-Instanz zur Laufzeit (<c>reload_config</c>-Tool).
-    /// <paramref name="newConfig"/> ist bereits erfolgreich geladen/validiert. Unter <see cref="_lock"/>
+    /// <paramref name="newConfig"/> ist entweder bereits erfolgreich geladen/validiert oder
+    /// <see langword="null"/> fuer den gueltigen Zustand ohne Regeldatei. Unter <see cref="_lock"/>
     /// wie <see cref="GetConfigSnapshot"/> — NICHT weil das <see cref="GetCurrentSolution"/> schuetzt
     /// (der liest Config gar nicht), sondern damit Snapshot-Leser nie eine halb ausgetauschte
     /// Kombination der drei Felder sehen.
     /// </summary>
-    internal void ReloadConfig(ILinterEngineConfig newConfig, string? resolvedConfigPath)
+    internal void ReloadConfig(ILinterEngineConfig? newConfig, string? resolvedConfigPath)
     {
         lock (_lock)
         {

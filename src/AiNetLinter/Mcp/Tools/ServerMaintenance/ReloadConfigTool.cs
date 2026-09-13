@@ -23,9 +23,8 @@ internal static class ReloadConfigTool
 {
     /// <summary>
     /// Lädt ausschließlich die optionale, zur adressierten Solution benachbarte Regeldatei.
-    /// Datei fehlt oder ist ungueltiges JSON:
-    /// <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive Config bleibt
-    /// unveraendert, kein Datenverlust, kein Absturz.
+    /// Fehlt die Datei bei inaktivem Lint, wird der gueltige Zustand <c>not_configured</c>
+    /// bestaetigt. Bei aktiver Config oder ungueltigem JSON bleibt die vorhandene Config erhalten.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
@@ -38,6 +37,14 @@ internal static class ReloadConfigTool
 
         if (!File.Exists(rulesPath))
         {
+            var (oldConfig, oldResolvedConfigPath) = state.GetConfigSnapshot();
+            if (oldConfig is null && oldResolvedConfigPath is null)
+            {
+                state.ReloadConfig(null, resolvedConfigPath: null);
+                await state.ReloadSolutionAsync(ct);
+                return McpToolResults.Text(BuildNotConfiguredSummary());
+            }
+
             return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigNotFound,
                 $"Optionale Regeldatei nicht gefunden: {rulesPath}",
@@ -85,6 +92,11 @@ internal static class ReloadConfigTool
                $"metricLimits={payload.EffectiveMetricThresholdCount}\n" +
                $"snapshotChanged={payload.SnapshotChanged.ToString().ToLowerInvariant()}";
     }
+
+    private static string BuildNotConfiguredSummary() =>
+        "operation=ok\n" +
+        "configState=not_configured\n" +
+        "snapshotChanged=false";
 
     /// <summary>
     /// Grobe, aber wartungsarme Kennzahl fuer "aktivierte Regeln": zaehlt <see langword="true"/>-
