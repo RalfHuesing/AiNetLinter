@@ -85,8 +85,8 @@ Die XML-Dokumentation von `GetOrCreateOpaqueHandleForOutput` muss ausdrücklich 
 Die Registry ist die einzige Source of Truth für beide Richtungen:
 
 ```text
-internalToExternal: Dictionary<string, string>
-externalToInternal: Dictionary<string, string>
+internalToExternal: ConcurrentDictionary<string, string>
+externalToInternal: ConcurrentDictionary<string, string>
 ```
 
 Beide Dictionaries verwenden Ordinal-Vergleich.
@@ -102,25 +102,33 @@ Die beiden Richtungen müssen jederzeit eine konsistente Bijektion bilden.
 - Zwei parallele Registrierungen desselben internen Werts erzeugen nicht zwei Handles.
 - Ein neu erzeugter externer Wert wird erst sichtbar, wenn beide Richtungen eingetragen sind.
 
-Zwei unabhängige `ConcurrentDictionary.GetOrAdd`-Aufrufe reichen dafür nicht aus. Die Erstellung eines neuen Mappings wird gemeinsam synchronisiert, beispielsweise mit einem kurzen Lock. Bereits vorhandene Zuordnungen dürfen ohne exklusiven Schreibpfad gelesen werden.
+Zwei unabhängige `ConcurrentDictionary.GetOrAdd`-Aufrufe reichen dafür nicht aus. Die Erstellung eines neuen Mappings wird durch einen gemeinsamen kurzen Lock synchronisiert. Innerhalb dieses Locks wird die interne ID erneut gesucht, der nächste externe Wert reserviert und dauerhaft geschrieben und anschließend werden beide Mappingrichtungen ergänzt. Bereits vorhandene Zuordnungen dürfen ohne exklusiven Schreibpfad gelesen werden.
 
 ### 3.4 Handleformat
 
 ```text
-h:<sessionNonce>.<counter>
+h:<alphabetischerZaehler>
 ```
 
-- `sessionNonce`: beim Hoststart einmalig mit CSPRNG erzeugte 128 Bit, Base64url ohne Padding.
-- `counter`: hostweit atomar steigender `UInt64`, Base36 ohne führende Nullen.
-- Groß-/Kleinschreibung ist signifikant.
-- Erlaubte Zeichen, Länge und genau ein Trennpunkt werden strikt geprüft.
-- Bei Zählerüberlauf oder einer festen Sicherheitsgrenze schlagen nur neue Registrierungen mit `HANDOFF_CAPACITY_EXCEEDED` fehl.
+- Der erste auf einer frischen Installation ausgegebene Wert ist `h:a`.
+- Der letzte ausgegebene Zählerstring wird dauerhaft gespeichert; ein numerischer Counter ist nicht erforderlich.
+- Alphabet, in dieser Reihenfolge: `abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
+- `a` ist das erste, `Z` das letzte Zeichen. Groß-/Kleinschreibung ist signifikant.
+- Inkrementiert wird von rechts. `Z` wird zu `a` und erzeugt einen Übertrag nach links; bei einem Übertrag über die erste Stelle wird links `a` ergänzt.
+- Beispiele: `h:a -> h:b`, `h:z -> h:0`, `h:9 -> h:A`, `h:Z -> h:aa` und `h:aaZaZ -> h:aaZba`.
+- Gültig ist ausschließlich `h:` gefolgt von mindestens einem Zeichen des Alphabets.
 
-Ein Zufallswert pro Handle ist nicht erforderlich. Session-Nonce plus Zähler ist kürzer, innerhalb der Sitzung kollisionsfrei und nach einem Neustart praktisch eindeutig.
+Der persistierte Wert ist eine globale High-Water-Mark: Ein einmal reservierter Zählerwert wird nie wieder vergeben, auch wenn das zugehörige flüchtige Mapping nach einem Neustart nicht mehr existiert. Eine Lücke nach erfolgreicher Persistierung und anschließendem Prozessabbruch ist erlaubt; Wiederverwendung ist verboten.
 
-Entschieden: Der kryptographisch zufällige 128-Bit-Session-Nonce gilt als ausreichende operative Garantie gegen eine falsche Auflösung nach einem Neustart. Eine persistente Zustandsablage ist dafür nicht erforderlich.
+Die kleine Zustandsdatei liegt updatefest unter `LocalApplicationData/RalfHuesing/AiNetLinter/handoff-counter.json`, also im bereits verwendeten per-user Daemon-State-Verzeichnis und nicht im austauschbaren EXE-Verzeichnis. Sie enthält ausschließlich Formatversion und zuletzt reservierten Zählerwert, beispielsweise `{ "formatVersion": 1, "lastIssued": "aaZaZ" }`, niemals interne IDs, Targets, Pfade oder Symbolinformationen.
 
 Ein Windows-Pfad wie `h:\...` darf nicht als Handle erkannt werden. Nur das vollständig gültige Format aktiviert die Registry-Auflösung.
+
+Beim ersten Start ohne Zustandsdatei wird diese atomar angelegt und `h:a` als erster Wert reserviert. Ein neuer Wert darf erst nach erfolgreicher atomarer Persistierung in den Dictionaries sichtbar und im MCP-Content ausgegeben werden. Die Persistierung darf nicht debounced werden. Bei vorhandenem, aber nicht lesbarem, inkonsistentem oder nicht schreibbarem Counter-State werden keine neuen Handles vergeben und der Server liefert `HANDOFF_COUNTER_UNAVAILABLE`; er setzt niemals still auf `a` zurück.
+
+Derselbe Allocator muss bei möglichen parallelen Hostprozessen den Dateizugriff prozessübergreifend serialisieren. Unter diesem exklusiven Zugriff liest er die aktuelle High-Water-Mark erneut von der Datei, inkrementiert sie und ersetzt die Datei atomar. So können weder zwei Prozesse noch mehrere Thin-Client-Requests denselben Wert reservieren.
+
+Das manuelle Löschen der Counter-Datei ist ein expliziter destruktiver Identitätsreset außerhalb des normalen Betriebsvertrags. Es kann frühere Werte erneut verfügbar machen und muss daher zusammen mit der Anweisung dokumentiert werden, alte Chats danach nicht weiterzuverwenden. Normale Binärupdates lassen das per-user State-Verzeichnis unangetastet.
 
 ### 3.5 Lebensdauer
 
@@ -129,13 +137,13 @@ Es gibt genau eine Registry pro MCP-Hostlauf:
 - im Daemon gemeinsam für alle parallelen MCP-Verbindungen;
 - im direkten stdio-Betrieb für die Laufzeit dieses Hostprozesses.
 
-Jedes ausgegebene Handle bleibt bis zum Host-Shutdown in beiden Dictionaries erhalten.
+Jedes ausgegebene Handle bleibt bis zum Host-Shutdown in beiden Dictionaries erhalten. Beim Host-Shutdown werden beide Dictionaries verworfen; nur die High-Water-Mark bleibt bestehen.
 
 Wichtig: Das Entfernen einer Solution- oder Assembly-Session aus dem bestehenden TTL-Cache löscht deren Handle-Mappings nicht. Andernfalls würde ein bereits ausgegebenes Handle vorzeitig ungültig und eine Agenten-Toolkette könnte nach einer Leerlaufphase brechen.
 
-Das ist speicherseitig vertretbar, weil die Registry nur zwei Strings je Mapping hält. Sie hält keine Roslyn-Symbole, Compilations, Solutions, Leases oder Cache-Sessions fest. Nach einem TTL-Reload wird die restaurierte interne ID wie heute vom bestehenden Resolver geprüft.
+Das ist speicherseitig vertretbar, weil die Registry nur zwei Strings je Mapping hält. Sie hält keine Roslyn-Symbole, Compilations, Solutions, Leases oder Cache-Sessions fest. Nach einem TTL-Reload innerhalb desselben Hostlaufs wird die restaurierte interne ID wie heute vom bestehenden Resolver geprüft.
 
-Die Registry wird erst beim Host-Shutdown verworfen. Nach einem Neustart ist sie leer; alte Handles dürfen niemals auf neue Einträge zeigen.
+Nach einem Daemon- oder stdio-Host-Neustart sind alte Handles bewusst nicht mehr auflösbar. Da die persistierte High-Water-Mark eine erneute Vergabe verhindert, liefern sie immer `HANDOFF_UNKNOWN` und können niemals auf ein neues Symbol zeigen. Der Agent ermittelt das Symbol anhand des weiterhin sichtbaren Namens, der Signatur und des Fundorts erneut.
 
 ## 4. Öffentlicher Vertrag
 
@@ -150,7 +158,7 @@ Die Registry wird erst beim Host-Shutdown verworfen. Nach einem Neustart ist sie
 Ein unverständlicher Output wie
 
 ```text
-h:Abc.7 Ok
+h:aaZaZ Ok
 ```
 
 ist unzulässig. Er muss mindestens die heute vorhandene fachliche Bedeutung behalten, zum Beispiel:
@@ -158,7 +166,7 @@ ist unzulässig. Er muss mindestens die heute vorhandene fachliche Bedeutung beh
 ```text
 method HandoffHandleRegistry.RestoreInternalHandoffForInput(string externalHandleOrSemanticInput)
 src/AiNetLinter/Mcp/.../HandoffHandleRegistry.cs:73
-handoffId: h:Abc.7
+handoffId: h:aaZaZ
 ```
 
 ### 4.2 Eingabe
@@ -264,12 +272,11 @@ Die Registry erzeugt nur mapperbezogene Fehler. Target-, Snapshot-, Symbolart- u
 |---|---|
 | `INVALID_HANDOFF` | `h:…` ist syntaktisch ungültig. |
 | `UNSUPPORTED_HANDOFF_FORMAT` | Eine öffentliche alte `s:`-/`a:`-ID wurde übergeben. |
-| `HANDOFF_SESSION_MISMATCH` | Session-Nonce gehört nicht zum laufenden Host. |
-| `HANDOFF_UNKNOWN` | Format und Session passen, aber das Mapping fehlt. |
-| `HANDOFF_CAPACITY_EXCEEDED` | Kein neues Mapping kann sicher angelegt werden. |
+| `HANDOFF_UNKNOWN` | Das flüchtige Mapping fehlt, typischerweise nach einem Host-Neustart. |
+| `HANDOFF_COUNTER_UNAVAILABLE` | Die High-Water-Mark kann nicht sicher gelesen oder atomar fortgeschrieben werden. |
 | bestehende Fehler, z. B. `TARGET_MISMATCH` oder `STALE_SNAPSHOT` | Restaurierte interne ID wurde vom bestehenden Resolver abgelehnt. |
 
-Fehlertexte geben keine vollständige interne ID aus. Ein unbekanntes oder altes Handle nennt als nächste Aktion die erneute Symbolermittlung.
+Fehlertexte geben keine vollständige interne ID aus. `HANDOFF_UNKNOWN` erklärt, dass der MCP-Host möglicherweise neu gestartet wurde und fordert zur erneuten Symbolermittlung über `find_symbol`, `get_file_skeleton` oder einen anderen passenden Producer auf.
 
 ## 7. Muss-Kriterien
 
@@ -278,6 +285,8 @@ Fehlertexte geben keine vollständige interne ID aus. Ein unbekanntes oder altes
 - [ ] Es gibt genau eine zentrale `HandoffHandleRegistry` pro Hostlauf.
 - [ ] Die Registry mappt ausschließlich String zu String und kennt keine Symbolsemantik.
 - [ ] Beide Mappingrichtungen bleiben unter Parallelität konsistent.
+- [ ] Nur die alphabetische High-Water-Mark wird dauerhaft gespeichert; die Mappings bleiben flüchtig.
+- [ ] Ein externer Wert wird über Host-Neustarts hinweg niemals wiederverwendet.
 - [ ] Kein Handle wird wegen Solution-/Assembly-TTL entfernt.
 - [ ] Kein Registry-Eintrag hält Roslyn- oder Cache-Objekte am Leben.
 - [ ] Alle Producer und Consumer verwenden die zentrale Registry.
@@ -293,7 +302,10 @@ Fehlertexte geben keine vollständige interne ID aus. Ein unbekanntes oder altes
 - [ ] Für jedes Mapping sind beide Dictionary-Richtungen vorhanden und konsistent.
 - [ ] Roundtrip `intern -> extern -> intern` liefert exakt denselben String.
 - [ ] Ordinal-Vergleich verhindert kulturabhängiges Verhalten.
-- [ ] Zählerüberlauf und Sicherheitsgrenze verändern keine bestehenden Mappings.
+- [ ] Die festgelegten Alphabetgrenzen und Überträge liefern exakt `z -> 0`, `9 -> A`, `Z -> aa` und `aaZaZ -> aaZba`.
+- [ ] Ein neuer Wert wird erst nach erfolgreicher atomarer Persistierung ausgegeben.
+- [ ] Parallele Registrierungen reservieren keinen Wert doppelt.
+- [ ] Ein Persistierungsfehler liefert `HANDOFF_COUNTER_UNAVAILABLE` und setzt den Zähler niemals zurück.
 
 ### 8.2 Lebenszyklus
 
@@ -302,7 +314,10 @@ Fehlertexte geben keine vollständige interne ID aus. Ein unbekanntes oder altes
 - [ ] Solution-TTL-Eviction entfernt die Session, nicht das Mapping.
 - [ ] Ein Handle funktioniert nach TTL-Reload weiterhin oder liefert den bisherigen internen Snapshotfehler.
 - [ ] Alle Handles bleiben bis Host-Shutdown registriert.
-- [ ] Nach Neustart liefert ein altes Handle `HANDOFF_SESSION_MISMATCH` und niemals ein neues Symbol.
+- [ ] Nach Neustart sind beide Dictionaries leer und die Vergabe beginnt hinter der gespeicherten High-Water-Mark.
+- [ ] Ein altes Handle liefert nach Neustart `HANDOFF_UNKNOWN` und niemals ein neues Symbol.
+- [ ] Die Counter-Datei enthält keine internen IDs, Targets, Pfade oder Symbolinformationen.
+- [ ] Normale EXE-Updates ersetzen die Counter-Datei im per-user State-Verzeichnis nicht.
 - [ ] 10.000 und 100.000 Mappings werden hinsichtlich Speicher, Registrierungszeit und Lookup-Latenz gemessen.
 
 ### 8.3 Öffentlicher Vertrag
@@ -343,6 +358,7 @@ Auf dem festgeschriebenen Baseline-Datensatz:
 - Keine neue Symbolidentität und kein Ersatz der internen `s:`-/`a:`-Logik.
 - Keine Änderung der Roslyn-Analyse oder ihrer Ergebnisse.
 - Keine persistente Handle-Datenbank.
+- Keine persistente Zuordnung von externen zu internen IDs.
 - Keine TTL-/LRU-Eviction für Handle-Mappings.
 - Keine Umstellung von Paging-Tokens oder Positionsreferenzen.
 - Keine zusätzliche Kürzung, Zusammenfassung oder Umordnung fachlicher Toolantworten.
@@ -352,14 +368,15 @@ Auf dem festgeschriebenen Baseline-Datensatz:
 
 - [ ] Vollständige Producer-/Consumer-Inventur erstellen.
 - [ ] `HandoffHandleRegistry` mit zentralem Lebenszyklus und Parallelitätstests implementieren.
+- [ ] alphabetischen Zähler und atomaren High-Water-Mark-Store im bestehenden per-user Daemon-State-Verzeichnis implementieren.
 - [ ] alle Ausgaben unmittelbar vor dem Rendern externalisieren.
 - [ ] alle Symbolparameter unmittelbar nach der Argumentvalidierung restaurieren.
 - [ ] direkte semantische Eingaben unverändert durchreichen.
 - [ ] öffentliche Altformat-Annahme und -Ausgabe entfernen, interne Resolver erhalten.
 - [ ] semantischen Begleittext jeder Ausgabestelle prüfen.
 - [ ] FastTests für Mapping, Format, Parallelität und Renderer ergänzen.
-- [ ] Integrationstests für MCP-Wire, Toolketten, TTL und Neustart ergänzen.
-- [ ] MCP-Dokumentation, Agent-Guide und Beispiele auf `h:…` aktualisieren.
+- [ ] Integrationstests für MCP-Wire, Toolketten, TTL, Neustart, Persistierungsfehler und mögliche parallele Hostprozesse ergänzen.
+- [ ] MCP-Dokumentation, Agent-Guide und Beispiele auf `h:…` aktualisieren; Lebensdauer, Neustartfehler, Counter-State-Pfad und Wiederermittlung ausdrücklich dokumentieren.
 - [ ] vollständige Non-Stress-Testgates, `dotnet build` und MCP-`verify(scope: solution)` erfolgreich ausführen.
 - [ ] Code-/Textsuche bestätigt: keine öffentliche interne ID und keine unverdrahtete Handoff-Stelle.
 - [ ] Baseline-Messung bestätigt Tokenersparnis ohne Informationsverlust.
