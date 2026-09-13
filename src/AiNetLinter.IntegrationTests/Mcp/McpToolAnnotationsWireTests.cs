@@ -35,6 +35,29 @@ public sealed class McpToolAnnotationsWireTests
         AssertAnnotation(initialize, "reload_config", readOnly: false, destructive: false, idempotent: true, openWorld: false);
     }
 
+    [Fact]
+    public async Task GetCallTreeSchema_DoesNotExposeInternalRequestContext()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+
+        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            fixture.SolutionPath,
+            McpRawWireTestHarness.BuildDiscoveryFrames(modern: false));
+        var response = McpRawWireTestHarness.FindResponse(lines, 2);
+        var tool = response.GetProperty("result").GetProperty("tools")
+            .EnumerateArray()
+            .Single(candidate => candidate.GetProperty("name").GetString() == "get_call_tree");
+        var schema = tool.GetProperty("inputSchema");
+        var properties = schema.GetProperty("properties");
+
+        Assert.False(properties.TryGetProperty("context", out _));
+        Assert.Equal(
+            new[] { "targetPath" },
+            schema.GetProperty("required").EnumerateArray()
+                .Select(property => property.GetString())
+                .OrderBy(name => name, StringComparer.Ordinal));
+    }
+
     private static async Task<IReadOnlyDictionary<string, JsonElement>> ReadToolAnnotationsAsync(
         string targetPath,
         bool modern)

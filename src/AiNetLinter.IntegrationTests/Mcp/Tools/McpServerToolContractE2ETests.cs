@@ -126,5 +126,32 @@ public sealed class McpServerToolContractE2ETests
         Assert.DoesNotContain("HANDOFF_UNKNOWN", text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task FindSymbolHandle_PassesUnchangedToCallTreeWithoutInternalContext()
+    {
+        var discovery = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new[] { "Greet" },
+                ["kind"] = "method",
+                ["maxResults"] = 1,
+            });
+        var handle = McpHandoffTestHelper.Extract(discovery);
+
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = handle,
+            });
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.NotEqual(true, result.IsError);
+        Assert.DoesNotContain("Invalid parameters", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("context", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("HANDOFF_UNKNOWN", text, StringComparison.Ordinal);
+    }
+
 }
 

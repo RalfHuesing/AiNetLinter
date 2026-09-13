@@ -13,6 +13,7 @@
 - [X] 11. Harter-Schnitt-Audit und Release-Gate wiederholen
 - [X] 12. MCP-Toolbeschreibungen für direkte Handle-Übergabe verdichten
 - [X] 13. Exponierte MCP-Toolverträge und Beschreibungen konsistent machen
+- [X] 14. Call-Tree-Transportvertrag ohne internes Request-Kontextfeld absichern
 
 ## Durchführungsprotokoll
 
@@ -93,3 +94,9 @@
 - Öffentlicher Referenzaufruf ist ohne internes Zusatzfeld per MCP-Prozesskette abgesichert.
 - Assembly-Kontext startet ohne unpassenden Metrikabschnitt; Beschreibungen sind zentral entdoppelt.
 - Build, `verify(changes)` sowie gezielte Vertrags-, Prozess- und Doku-Tests grün.
+
+### 14. Call-Tree-Transportvertrag ohne internes Request-Kontextfeld absichern
+
+- `context` als internes SDK-RequestContext identifiziert; kein öffentlicher Parameter und kein dokumentationswürdiger Eingabewert.
+- Prozesskette `find_symbol → get_call_tree` ohne Kontext sowie raw `tools/list` gegen fehlendes Schemafeld abgesichert.
+- Kein Produktionsfix: der aktuelle Wire-Vertrag war bereits korrekt; gezielte Integrationstests grün.
