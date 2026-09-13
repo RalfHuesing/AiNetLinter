@@ -1,9 +1,7 @@
 ---
 status: draft
-execution_mode: requires_user_decision
-open_questions:
-  - "Soll ein kompakter Handle nach einem Daemon-Neustart bewusst ablaufen oder persistent wiederherstellbar sein? Empfehlung: bewusst ablaufen lassen."
-  - "Soll die kanonische v2-Handoff-ID weiterhin als öffentliche Eingabe akzeptiert werden? Empfehlung: ja, als kompatibler Fallback."
+execution_mode: autonomous
+open_questions: []
 ---
 
 # Konzept: Kompakte MCP-Handoff-Handles
@@ -12,12 +10,14 @@ open_questions:
 
 AiNetLinter soll Symbol- und Handoff-Referenzen in MCP-Antworten deutlich
 tokenärmer machen, ohne semantische Navigation, Target-Bindung,
-Snapshot-Prüfung oder Tool-Komposabilität zu verlieren.
+Snapshot-Prüfung, Informationsgehalt oder Tool-Komposabilität zu verlieren.
 
 Die heutige Handoff-ID enthält zwei opaque, selbstprüfbare Token für Target und
 Snapshot sowie eine Roslyn-`DocumentationCommentId`. Sie ist damit zugleich
 Adressierung, Versionsprüfung und Symbolbeschreibung. Das ist robust und
-zustandslos, bläht aber Antworten mit vielen Symbolen erheblich auf.
+zustandslos, bläht aber Antworten mit vielen Symbolen erheblich auf. Dieser
+Vertrag wird bewusst vollständig ersetzt; es gibt keinen Migrationspfad und
+keine Altformat-Kompatibilität.
 
 Live-Messungen am laufenden MCP-Server gegen `AiNetLinter.slnx`:
 
@@ -77,63 +77,77 @@ Aufruf. Ein Modell darf weder aus Anzeige noch Handle eine Identität erraten.
 
 ### Zentrale Source of Truth
 
-Eine zentrale, daemon-residente Klasse (Arbeitsname
-`CompactHandoffRegistry`) ist allein zuständig für die Abbildung:
+Eine zentrale, daemon-residente Klasse (Arbeitsname `HandoffRegistry`) ist
+allein zuständig für die Abbildung:
 
 ```text
-registriere(kanonische Handoff-Identität, Target, Snapshot, Art)
-  -> h:<zufälliger-Base64Url-Handle>
+registriere(Origin, kanonisches Target, Snapshot, DocumentationCommentId, Art)
+  -> h:<Daemon-Epoch>-<laufende-Nummer>
 
 auflösen(h:<…>, erwartetes Target, aktueller Snapshot)
-  -> kanonische Handoff-Identität | definierter Fehler
+  -> gespeicherte Symbolidentität | definierter Fehler
 ```
 
 Sie kapselt insbesondere:
 
-- Handle-Erzeugung mit ausreichend großem, nicht erratbarem Namensraum
-  (Empfehlung: mindestens 64 Bit, Base64Url; kein fünfstelliger Zähler und
-  keine Bedeutung im Handle),
+- eine pro Daemonstart frische, kurze Epoch (zufällig erzeugt) und einen ab
+  `1` laufenden Zähler. Die Registry startet nach jedem Neustart leer und der
+  Zähler wieder bei `1`; die Epoch verhindert, dass ein im Modellkontext noch
+  vorhandenes altes `h:1` versehentlich auf ein neues Symbol zeigt,
 - Zuordnung zu Origin (`source`/`assembly`), kanonischem Target,
-  Snapshot-Fingerprint und Roslyn-`DocumentationCommentId`,
-- begrenzten Cache mit TTL und LRU-Eviction,
+  Snapshot-Fingerprint, Roslyn-`DocumentationCommentId` und der nötigen
+  Handle-Art,
+- vollständige Retention aller während der Daemon-Lebenszeit ausgegebenen
+  Handles: kein TTL- oder LRU-Eviction, das eine lang laufende Session brechen
+  könnte,
 - atomare, nebenläufig sichere Registrierung und Auflösung,
-- klare Fehlertypen für unbekannte/abgelaufene Handles,
-  Target-Mismatch und stale Snapshot,
+- klare Fehlertypen für unbekannte Handles, falsches Target und stale
+  Snapshot,
 - einheitliche Darstellung und Parser-/Resolver-Einstiege für sämtliche
   Producer und Consumer.
 
-Der bestehende `SymbolHandoffIdentifier` bleibt zunächst der kanonische,
-selbstvalidierende Datenträger hinter dem Registry-Eintrag. Das vermeidet eine
-gleichzeitige Neudefinition von Roslyn-Symbolauflösung und Handle-Lifecycle.
+`SymbolHandoffIdentifier` und sein öffentliches `s:`/`a:`-Wireformat werden
+nicht als Fallback fortgeführt. Die Registry speichert die zur Auflösung
+erforderlichen Daten direkt. Bestehende interne Roslyn-Auflösung darf dabei
+weiterhin mit einer `DocumentationCommentId` arbeiten, erhält diese aber nur
+aus der Registry und nie aus einem Toolargument.
 
 ### Lebensdauer und Ownership
 
-Empfohlene Semantik für den ersten Release:
+Festgelegte Semantik:
 
 - Die Registry gehört dem `DaemonHost`, nicht einem einzelnen Tool und nicht
   einem einzelnen `McpCodeGraphServer`-Aufruf.
-- Ein Handle bleibt während der Daemon-Lebensdauer nutzbar, sofern es nicht
-  per TTL/LRU evicted wurde.
-- Nach Daemon-Neustart, TTL oder Eviction ist ein Handle absichtlich nicht mehr
-  gültig. Der Server liefert einen recoverable, eindeutig benannten Fehler mit
+- Jedes ausgegebene Handle bleibt bis zum Daemon-Shutdown auflösbar. Handles
+  ändern sich innerhalb einer laufenden Daemon-Session nicht und werden nicht
+  evicted.
+- Nach Daemon-Neustart beginnt die Registry leer und mit einem neuen
+  Epoch-Präfix. Alte Handles sind damit sicher unbekannt, statt zufällig auf
+  einen nach Neustart erneut bei `1` vergebenen Zählerwert zu zeigen. Der
+  Server liefert einen recoverable, eindeutig benannten Fehler mit
   `next.kind=refine_scope` bzw. dem Hinweis, die Ermittlung erneut auszuführen.
 - Bei der Auflösung prüft der Server weiterhin das übergebene `targetPath` und
   den aktuellen Snapshot. Ein bestehender Handle wird dadurch nicht zu einer
   Umgehung von `TARGET_MISMATCH` oder `STALE_SNAPSHOT`.
 - Die Registry wird beim Daemon-Shutdown verworfen; es gibt keine persistente
-  Ablage und keine Wiederherstellung aus MRU- oder Log-Dateien.
+  Ablage, keine Wiederherstellung aus MRU- oder Log-Dateien und keine
+  Kompatibilität zu vorigen Daemon-Sessions.
 
 Diese Wahl passt zur bestehenden daemon-residenten Projekt- und Assembly-Cache-
-Architektur. Persistenz wäre ein eigenständiger Sicherheits-, Invalidierungs-
-und Datenschutzvertrag und ist kein nötiger Teil der Token-Optimierung.
+Architektur. Der Speicherbedarf der monoton wachsenden Registry wird
+gemessen und observierbar gemacht, aber nicht durch den Verlust bereits
+ausgegebener Handles begrenzt. Persistenz wäre ein eigenständiger Sicherheits-,
+Invalidierungs- und Datenschutzvertrag und ist kein Teil dieser Optimierung.
 
 ## Vertragsumfang: vollständig durch Producer und Consumer
 
-Der Umbau darf nicht nur `find_symbol` ändern. Er umfasst jede öffentliche
-Stelle, die eine Handoff-ID ausgibt, sowie jede Stelle, die sie als
-`symbolIdentifier` oder `symbolIdentifiers` konsumiert. Vor Umsetzung wird
-eine codegestützte Inventur aller heutigen `handoffId`-, `id`- und
-`SymbolHandoffIdentifier`-Projektionen als verbindliche Migrationsliste
+Der Umbau darf nicht nur `find_symbol` ändern. Er ist ein harter, vollständiger
+Vertragswechsel für jede öffentliche Stelle, die eine Handoff-ID ausgibt oder
+sie als `symbolIdentifier` bzw. `symbolIdentifiers` konsumiert. Wenn Tool A
+einen Handle ausgibt, muss jeder Toolparameter von Tool B, der heute diese
+Symbolart akzeptiert, exakt diesen unveränderten Handle akzeptieren. Vor
+Umsetzung wird eine codegestützte Inventur aller heutigen `handoffId`-, `id`-
+und `SymbolHandoffIdentifier`-Projektionen als verbindliche Migrationsliste
 erstellt.
 
 Mindestens zu prüfen und über die zentrale Registry zu führen sind:
@@ -154,20 +168,24 @@ Mindestens zu prüfen und über die zentrale Registry zu führen sind:
 - Alle Registrierungen, Dokumentationstexte, Agent-Guide-Hinweise und
   Fast-/Integrationstests, die das bisherige Wireformat `s:`/`a:` erwarten.
 
-`continuationToken` bleibt zunächst **kein** Symbol-Handoff: Er besitzt eigene
-Paging-Semantik. Ob er separat verdichtet werden soll, ist erst nach der
-Inventur zu entscheiden und darf den Symbol-Refactor nicht unsichtbar
-vergrößern.
+`continuationToken` bleibt **kein** Symbol-Handoff: Er besitzt eigene
+Paging-Semantik und wird durch diesen Vertrag weder geändert noch als Legacy-
+Fallback mitgeführt.
 
-### Rückwärtskompatibilität
+### Harter Schnitt ohne Altformat
 
-Empfehlung: Neue Antworten geben ausschließlich `h:…` aus. Eingaben
-akzeptieren vorübergehend sowohl `h:…` als auch die bisherige kanonische
-`s:`/`a:`-Form. Letztere behält damit ihre Stärke als zustandsloser Fallback
-für gespeicherte Agentenartefakte, während neue Interaktionen tokenarm sind.
+Das zuvor erwähnte "kanonische v2-Format als Eingabe-Fallback" hätte bedeutet,
+dass das neue System zusätzlich zu `h:…` weiterhin die bisherigen langen
+`s:`/`a:`-IDs parst und auflöst, etwa aus alten Chat-Kontexten oder Dokumenten.
+Das findet ausdrücklich nicht statt.
 
-Ob und wann der v2-Fallback entfernt werden darf, ist eine bewusst zu
-entscheidende Kompatibilitätsfrage.
+- Neue Toolantworten geben ausschließlich `h:…` aus.
+- Toolparameter, die einen Handoff akzeptieren, akzeptieren ausschließlich
+  `h:…`; `s:`/`a:` und alle früheren Formen sind ungültig.
+- Dokumentation, Agent-Guide, Tests, Parser und Renderer werden in demselben
+  Refactoring vollständig auf den neuen Vertrag umgestellt.
+- Ein Handle aus einer beendeten Daemon-Session ist kein Sonderfall für
+  Kompatibilitätscode, sondern ein klarer erneuter Discovery-Fall.
 
 ## Konkrete Beispiele
 
@@ -228,15 +246,17 @@ Handle statt den Handle des Wurzelsymbols zu wiederholen.
 ## Muss-Kriterien
 
 - Jede neu ausgegebene Symbol-Handoff-ID ist kurz, opaque und zentral erzeugt.
-- Jede relevante Tool-Eingabe akzeptiert den neuen Handle konsistent.
+- Jeder passende Toolparameter akzeptiert einen von einem anderen Tool
+  ausgegebenen neuen Handle unverändert und ohne agentische Transformation.
 - Anzeige-Semantik wird nicht reduziert: Name/Signatur, Symbolart und bei
   Fundstellen der nützliche Pfad/Ort bleiben erhalten.
 - Target- und Snapshot-Validierung bleiben semantisch identisch zu heute.
 - Alle erwartbaren Fehlfälle sind recoverable und unterscheiden mindestens
-  unbekannt/abgelaufen, falsches Target und veralteten Snapshot.
+  unbekanntes Handle (einschließlich alter Daemon-Session), falsches Target und
+  veralteten Snapshot.
 - Producer und Consumer verwenden keine separaten Ad-hoc-Maps.
-- Die Registry ist begrenzt, thread-safe und beendet sich ohne Leaks mit dem
-  Daemon.
+- Die Registry ist thread-safe, hält alle ausgegebenen Handles bis zum
+  Daemonende und beendet sich ohne Leaks mit dem Daemon.
 - Toolantworten bleiben Content-only und ohne `structuredContent`.
 - Redundante Root-Handoffs werden nicht pro Listenzeile wiederholt.
 
@@ -247,14 +267,14 @@ Handle statt den Handle des Wurzelsymbols zu wiederholen.
   passendem `targetPath`.
 - Ein Handle gegen ein anderes Target liefert `TARGET_MISMATCH`; ein Handle
   nach einer relevanten Source-/Assembly-Änderung liefert `STALE_SNAPSHOT`.
-- Ein evicteter oder nach Neustart verwendeter Handle liefert den festgelegten
-  recoverable Ablauf-Fehler samt erneuter Discovery-Anweisung.
+- Ein nach Neustart verwendeter Handle liefert den festgelegten recoverable
+  Unbekannt-Fehler samt erneuter Discovery-Anweisung.
 - Die gemessenen drei Beispielantworten reduzieren die Handoff-Zeichen um
   mindestens 80 %, ohne Namen, Signaturen oder Fundorte aus der Anzeige zu
   entfernen.
 - Die 50er-Referenzliste publiziert den Root-Handle nur einmal.
-- Bestehende kanonische IDs bleiben, falls die offene Kompatibilitätsfrage wie
-  empfohlen entschieden wird, als Eingabe funktionsfähig.
+- Die bisherigen `s:`/`a:`-Formen werden von keinem öffentlichen Tool mehr
+  ausgegeben oder als Handoff akzeptiert.
 - Fast-Tests decken Registry, Parser, Target-/Snapshot-/Expiry-Fälle,
   Kollisionsbehandlung und Renderer ab; Integrationstests decken den echten
   MCP-Wire über mehrere Tools und Daemon-Lebenszyklen ab.
@@ -265,6 +285,8 @@ Handle statt den Handle des Wurzelsymbols zu wiederholen.
 - Kein Ersatz semantischer Anzeigenamen durch Handles.
 - Keine persistente Handle-Datenbank, keine Telemetrie der Handles und keine
   Protokollierung vollständiger Handoff-Payloads.
+- Keine Rückwärtskompatibilität, kein Dual-Parser und kein Migrationspfad für
+  `s:`/`a:`-Handoffs.
 - Keine ungetrennte Umstellung von `continuationToken` ohne eigene Analyse.
 - Keine Änderung von Linter-Regeln, CLI-Konfiguration oder Analysealgorithmen,
   sofern sie nicht für den MCP-Vertrag zwingend notwendig ist.
@@ -273,11 +295,11 @@ Handle statt den Handle des Wurzelsymbols zu wiederholen.
 
 | Option | Vorteil | Nachteil | Bewertung |
 |---|---|---|---|
-| Heutige kanonische IDs behalten | zustandslos, restartfest | großer Kontextverbrauch | nicht ausreichend |
-| Nur IDs aus Listen de-duplizieren | kleinster Eingriff | Skeletons und einzigartige Symbole bleiben lang | sofort sinnvoll, aber nicht ausreichend |
-| Deterministisch kürzere Hashes | kein Registry-Zustand | Symbolsignatur bleibt lang; Kollisions-/Vertragsfragen | geringe Wirkung |
-| Zentraler daemon-residenter Handle | größte Einsparung, saubere Trennung von Anzeige und Adresse | TTL/Restart-Lifecycle nötig | empfohlen |
-| Persistente Handle-Registry | Handles überleben Neustarts | komplexe Invalidierung und gespeicherte Codeidentitäten | vorerst nicht empfohlen |
+| Heutige kanonische IDs behalten | zustandslos, restartfest | großer Kontextverbrauch, Legacy-Vertrag | verworfen |
+| Nur IDs aus Listen de-duplizieren | kleinster Eingriff | Skeletons und einzigartige Symbole bleiben lang | zusätzlicher Optimierungsschritt |
+| Deterministisch kürzere Hashes | kein Registry-Zustand | Symbolsignatur bleibt lang; Kollisions-/Vertragsfragen | verworfen |
+| Zentraler daemon-residenter Handle | größte Einsparung, saubere Trennung von Anzeige und Adresse | Registry lebt nur bis Shutdown | beschlossen |
+| Persistente Handle-Registry | Handles überleben Neustarts | komplexe Invalidierung und gespeicherte Codeidentitäten | verworfen |
 
 ## Verifikation und Dokumentation
 
@@ -290,8 +312,9 @@ für einen konkret benannten Ziel-Tokenizer als ergänzende Metrik geführt.
 Nach der Umsetzung sind mindestens erforderlich:
 
 - Fast-Tests für die zentrale Registry und alle Parser-/Resolverpfade,
-- Integrationstests für Raw-MCP-Wire, Tool-zu-Tool-Handoff, Prozess-/Daemon-
-  Neustart, Eviction sowie Source- und Assembly-Staleness,
+- Integrationstests für Raw-MCP-Wire, Tool-zu-Tool-Handoff über alle
+  passenden Producer/Consumer, Prozess-/Daemon-Neustart sowie Source- und
+  Assembly-Staleness,
 - vollständige Non-Stress-Gates und `dotnet build`, einschließlich MCP-
   `verify`-Gate gemäß Projektregeln,
 - Synchronisierung von `Docs/mcp/tools.md`, `Docs/mcp/server.md`,
@@ -302,10 +325,10 @@ Nach der Umsetzung sind mindestens erforderlich:
 
 - Die bisherige ID wurde bewusst so entworfen, dass sie nach Cache-Eviction und
   Restart aus Target, Snapshot und DocCommentId erneut geprüft werden kann.
-  Der Handle-Entwurf tauscht diese Eigenschaft gegen einen kontrollierten,
-  klar kommunizierten Ablaufvertrag.
+  Der neue harte Schnitt ersetzt diese Eigenschaft absichtlich durch einen
+  Sessionvertrag: neue Daemon-Session, neue Discovery.
 - Die Projektregel fordert Zero-Transformation für Folgecalls. Das bleibt
   erfüllt, wenn der exakt angezeigte `h:…`-String unverändert als
   `symbolIdentifier` genutzt wird.
-- Die zentrale Klasse sollte generisch genug für Source und Assembly sein,
-  aber nicht voreilig Paging- oder beliebige Diagnose-Token übernehmen.
+- Die zentrale Klasse muss Source und Assembly vollständig abdecken, aber
+  Paging- oder beliebige Diagnose-Token nicht voreilig übernehmen.
