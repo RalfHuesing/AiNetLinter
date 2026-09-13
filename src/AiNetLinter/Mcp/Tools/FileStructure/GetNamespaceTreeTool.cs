@@ -82,7 +82,9 @@ internal static class GetNamespaceTreeTool
         if (string.IsNullOrWhiteSpace(execution.Input.Project))
         {
             var result = string.IsNullOrWhiteSpace(execution.Input.NamespacePrefix)
-                ? await ExecuteSolutionOverviewAsync(execution, ct)
+                ? execution.IsAssemblyTarget
+                    ? await ExecuteAssemblyRootDrilldownAsync(execution, ct)
+                    : await ExecuteSolutionOverviewAsync(execution, ct)
                 : await ExecuteAutoProjectDrilldownAsync(execution, ct);
             return AddAssemblyOverviewHeader(state, execution.Solution, result, execution.Input.MaxResponseBytes);
         }
@@ -150,6 +152,16 @@ internal static class GetNamespaceTreeTool
             overviewPayload,
             execution.Input.MaxResponseBytes,
             execution.Input.DeferResponseBudgetToNavigation);
+    }
+
+    private static Task<CallToolResult> ExecuteAssemblyRootDrilldownAsync(
+        NamespaceTreeExecutionContext execution,
+        CancellationToken ct)
+    {
+        var rootProject = execution.Solution.Projects.FirstOrDefault();
+        return rootProject is null
+            ? ExecuteSolutionOverviewAsync(execution, ct)
+            : ExecuteProjectDrilldownInternalAsync(execution, rootProject, ct);
     }
 
     private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(

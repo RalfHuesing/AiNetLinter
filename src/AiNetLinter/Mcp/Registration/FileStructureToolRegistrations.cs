@@ -140,7 +140,7 @@ internal static class FileStructureToolRegistrations
 
     private static readonly string GetNamespaceTreeDescription =
         "Hierarchische semantische Exploration (Solution -> Projekte -> Namespaces -> Typen). " +
-        "Ohne Filter: Projektuebersicht. project: Projektfilter. namespacePrefix: Namespace-Drilldown. " +
+        "Ohne Filter: bei Solutions Projektuebersicht, bei Assemblies Namespace-Baum. project: Projektfilter. namespacePrefix: Namespace-Drilldown. " +
         "depth: 1-3 (Default 1). includeTypes: Typen anzeigen (Default true). " +
         "kind: class/interface/record/struct/enum/all (Default all). " +
         "maxResults (Default 50, Cap 200), maxResponseBytes (Default 16384).";

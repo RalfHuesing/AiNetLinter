@@ -64,6 +64,34 @@ public sealed class GetNamespaceTreeHandoffTests
         Assert.Contains("class Api", TextOf(body), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    public async Task ExecuteAsync_AssemblyWithoutFilters_ListsNamespaces(int depth, bool includeTypes)
+    {
+        using var snapshot = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\NamespaceTreeProbe.slnx",
+            new ProjectSpec("NamespaceTreeProbe", [
+                ("Api.cs", "namespace Probe.Api; public sealed class Api { }")
+            ]));
+        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(
+                Catalog: null,
+                ReadOnlySolutionSnapshot: snapshot.Solution,
+                AssemblySymbolIdentity: AnalysisSymbolIdentity.ForAssembly(
+                    @"C:\virtual\NamespaceTreeProbe.dll",
+                    "A1B2C3D4E5F60718293A4B5C6D7E8F90123456789ABCDEF00123456789ABCDEF",
+                    generation: 1))));
+
+        var tree = await GetNamespaceTreeTool.ExecuteAsync(
+            server,
+            new GetNamespaceTreeInput(Depth: depth, IncludeTypes: includeTypes),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, tree.IsError);
+        Assert.Contains("\n- Probe", TextOf(tree), StringComparison.Ordinal);
+    }
+
     private static string TypeHandoffOf(string text, string typeName)
     {
         var match = Regex.Match(text, $@"- {typeName} \([^\r\n]+handoffId: `(?<id>h:[^`]+)`");
