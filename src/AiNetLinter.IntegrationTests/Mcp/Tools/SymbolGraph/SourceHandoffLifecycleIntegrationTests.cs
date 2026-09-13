@@ -84,6 +84,41 @@ public sealed class SourceHandoffLifecycleIntegrationTests
         Assert.False(afterRestart.IsError == true, Text(afterRestart));
     }
 
+    [Fact]
+    public async Task SourceHandoff_AfterSourceRefreshReportsStaleSnapshotInsteadOfTargetMismatch()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        await using var registry = CreateRegistry(TimeProvider.System);
+        var leaseResult = registry.Lease(fixture.SolutionPath);
+        Assert.True(leaseResult.Succeeded);
+        using var lease = leaseResult.Lease!;
+        await TestWaiter.WaitForConditionAsync(
+            () => lease.Server.LoadState == ServerLoadState.Loaded,
+            TimeSpan.FromSeconds(30));
+
+        var discovery = await FindSymbolTool.ExecuteAsync(
+            lease.Server,
+            ["Greeter"],
+            "class",
+            maxResults: 50,
+            CancellationToken.None);
+        Assert.False(discovery.IsError == true, Text(discovery));
+        var handoffId = ExtractHandoffId(Text(discovery));
+
+        File.AppendAllText(fixture.GreeterPath, "\n// Source-Snapshot-Refresh\n");
+
+        var stale = await FindReferencesTool.ExecuteAsync(
+            lease.Server,
+            handoffId,
+            maxResults: 50,
+            depth: 1,
+            CancellationToken.None);
+        var text = Text(stale);
+
+        Assert.Contains("STALE_SNAPSHOT", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TARGET_MISMATCH", text, StringComparison.Ordinal);
+    }
+
     private static ProjectRegistry CreateRegistry(TimeProvider clock) =>
         new(new ProjectRegistryOptions(
             definition => McpServerCommand.CreateResidentInstance(definition, LinterConsole.Instance),
