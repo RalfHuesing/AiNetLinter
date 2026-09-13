@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **26 Befunde:** 1 Critical, 19 Major, 6 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **24 Befunde:** 1 Critical, 17 Major, 6 Minor. Kein Server-Crash.
 
 ---
 
@@ -16,7 +16,7 @@ Der MCP-Server ist **stabil erreichbar** (Daemon-Health, Uptime, Version). Sourc
 
 **Querschnittsmuster (höchste Hebelwirkung):**
 
-1. **Budget-Vertrag ist nicht einheitlich.** `find_symbol` kennt `RESPONSE_BUDGET_TOO_SMALL` + `minimumResponseBytes`; `get_file_tree` überzieht das Wire-Budget still (B-01/E-02); `inspect_assembly` mappt Unter-Floor auf `INVALID_ARGUMENT` (B-03/E-03); `get_class_structure` liefert eine leere Hülle (E-01).
+1. **Budget-Vertrag ist nicht einheitlich.** `find_symbol` kennt `RESPONSE_BUDGET_TOO_SMALL` + `minimumResponseBytes`; `inspect_assembly` mappt Unter-Floor auf `INVALID_ARGUMENT` (B-03/E-03); `get_class_structure` liefert eine leere Hülle (E-01).
 2. **Handoff-IDs fehlen oder werden abgewiesen**, sobald die Kette über `get_class_structure`, `search_assembly`, `find_implementations` oder `resolve_type_origin` läuft (C-01–C-03, B-06, E-04). CHAIN-02–04 brauchen manuelles Parsen.
 
 Lint-/Metrik-Tools auf `SOURCE-01` sind grundsätzlich nutzbar; Assembly-Lint wird als nicht unterstützt erkannt. Qualitäts-Tools haben weniger Blocker als Discovery/Chaining, aber zwei klare Agentenfallen (`scopeType=production` vs. Testhilfen, stilles `enrichCSharp`).
@@ -30,8 +30,6 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Priorität | ID | Tool(s) | Kurzbeschreibung des Befunds | Wirkung auf konsumierende Agenten | Bericht |
 |---|---|---|---|---|---|
 | Critical | E-01 | `get_class_structure` | Floor-Budget 512: leere Member-Hülle als Erfolg (`0 von 12`, „Keine Member gefunden“) | Falscher Envelope; Member-Ketten werden als „klasse leer“ abgebrochen | [E](gruppe-e-konsistenz-recovery.md) |
-| Major | B-01 | `get_file_tree` | `maxResponseBytes=200` wird überschritten, kein `RESPONSE_BUDGET_TOO_SMALL` | Token-Budget unkalkulierbar | [B](gruppe-b-discovery.md) |
-| Major | E-02 | `get_file_tree` | 500/512 Bytes akzeptiert, Payload klar über dem Limit (Extensions-Inventar) | Wie B-01; Retry-Vertrag nicht anwendbar | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | B-03 | `inspect_assembly` | Unter-Floor (200) als `INVALID_ARGUMENT` statt Budget-Envelope | Retry nur über Fließtext (2048 raten) | [B](gruppe-b-discovery.md) |
 | Major | E-03 | `find_symbol`, `get_class_structure`, `inspect_assembly` | `maxResponseBytes=500` trifft Tool-spezifische Floors (512 vs. 2048 vs. akzeptieren) | Kanonischer 500-Byte-Probe nicht ausführbar | [E](gruppe-e-konsistenz-recovery.md) |
 | Major | C-01 | `get_class_structure` | Keine Member-`handoffId`; Namens-/Signatur-Übernahme → `AMBIGUOUS_SYMBOL` / `SYMBOL_NOT_FOUND` | CHAIN-02 braucht String-Bau oder Umweg `get_file_skeleton` | [C](gruppe-c-symbol-chaining.md) |
@@ -59,7 +57,7 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 ### Empfohlene Bearbeitungsreihenfolge (Produkt)
 
 1. **E-01** — leere Erfolgs-Hülle von `get_class_structure` (einziger Critical).
-2. **Einheitlicher Budget-Vertrag** — B-01/E-02, B-03/E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
+2. **Einheitlicher Budget-Vertrag** — B-03/E-03 (ein Code, ein `minimumResponseBytes`, ein Floor).
 3. **Handoff schließen** — C-01, C-03/B-06, C-02/E-04 (Member-, Search- und Origin-IDs).
 4. **Pfad-Redaktion** — B-02.
 

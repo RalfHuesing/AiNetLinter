@@ -2,6 +2,9 @@
 
 using System;
 using System.IO;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.FileStructure;
@@ -120,6 +123,47 @@ public sealed class GetFileTreeToolTests
             Assert.NotEqual(true, result.IsError);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
+    }
+
+    [Theory]
+    [InlineData(200)]
+    [InlineData(500)]
+    [InlineData(512)]
+    public async Task ExecuteAsync_TooSmallBudgetReturnsDeterministicRetryForValuableContent(int maxResponseBytes)
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-tool-budget-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
+        File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "important.md"), "important\n");
+        for (var index = 0; index < 30; index++)
+        {
+            File.WriteAllText(
+                Path.Combine(tempDir.DirectoryPath, $"entry{index}.extension{index:D2}withvaluableclassification"),
+                "content\n");
+        }
+
+        var input = GetFileTreeTestData.Input() with { View = "files", MaxResponseBytes = maxResponseBytes };
+        var constrained = await GetFileTreeTool.ExecuteAsync(targetPath, input, CancellationToken.None);
+
+        Assert.True(constrained.IsError);
+        var constrainedText = TextOf(constrained);
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", constrainedText, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.maxResponseBytes", constrainedText, StringComparison.Ordinal);
+        Assert.Contains($"maxResponseBytes={maxResponseBytes}", constrainedText, StringComparison.Ordinal);
+        var minimumResponseBytes = int.Parse(
+            Regex.Match(constrainedText, "minimumResponseBytes: (\\d+)").Groups[1].Value,
+            CultureInfo.InvariantCulture);
+        Assert.True(minimumResponseBytes > maxResponseBytes);
+
+        var retry = await GetFileTreeTool.ExecuteAsync(
+            targetPath,
+            input with { MaxResponseBytes = minimumResponseBytes },
+            CancellationToken.None);
+
+        Assert.NotEqual(true, retry.IsError);
+        var retryText = TextOf(retry);
+        Assert.True(Encoding.UTF8.GetByteCount(retryText) <= minimumResponseBytes);
+        Assert.Contains("important.md", retryText, StringComparison.Ordinal);
+        Assert.Contains("extension00withvaluableclassification", retryText, StringComparison.Ordinal);
     }
 
     [Fact]

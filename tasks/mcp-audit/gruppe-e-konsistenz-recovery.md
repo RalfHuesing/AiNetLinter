@@ -10,7 +10,7 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 1 Critical, 4 Major, 2 Minor
+- **Gefundene Befunde:** 1 Critical, 3 Major, 2 Minor
 
 ---
 
@@ -36,19 +36,6 @@
   - Wenn nicht mindestens ein vollständiger Member-Eintrag plus Envelope in `maxResponseBytes` passt: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes` (wie `find_symbol` bei 512).
   - Den Erfolgspfad „Keine Member gefunden“ nur verwenden, wenn die Klasse tatsächlich 0 Member hat.
 
-### [Major] E-02: `get_file_tree` akzeptiert 500/512 Bytes und überschreitet das Wire-Budget ohne Budget-Fehler
-
-- **Betroffener Querschnittsbereich**: Response-Budget / Wire-Treue
-- **Betroffenes Tool / Schema**: `get_file_tree` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_file_tree(targetPath=SOURCE-01, maxResponseBytes=500)` sowie identisch mit `maxResponseBytes=512`
-- **Beobachtung / Ist-Verhalten**:
-  - Beide Aufrufe laufen als Erfolg (kein `[ERROR]`, kein `RESPONSE_BUDGET_TOO_SMALL`).
-  - Payload enthält Scan-Kopf, vollständige Extensions-Liste (30+ Endungen), Warn-/NEXT-Zeilen; sichtbare Antwortlänge klar über 500 bzw. 512 Bytes (grob ≥750 Zeichen plus Newlines/Umlaute).
-  - WARN nennt `maxResponseBytes` als Kürzungsgrund („1 gezeigt“), der Kopf inkl. Extensions-Inventar wird trotzdem vollständig ausgeliefert.
-  - Gegensatz: `find_symbol` lehnt 500 als `INVALID_ARGUMENT` ab (Floor 512) und liefert bei 512 einen echten Budget-Fehler.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Entweder Wire-Budget einhalten oder `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes`. Eine „gekürzte“ Antwort, deren Hülle bereits über dem Limit liegt, macht Token-Budgets und Retry-Logik unbrauchbar.
 - **Empfehlung**:
   - Extensions-Inventar und Warnblock in das Wire-Budget einrechnen.
   - Passt die Mindestprojektion nicht: `RESPONSE_BUDGET_TOO_SMALL` plus maschinenlesbares `minimumResponseBytes` (nicht nur WARN-Prosa).

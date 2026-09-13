@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -50,6 +51,10 @@ internal static class GetFileTreeTool
         {
             var scan = GetFileTreeScanner.Scan(analysisRoot, input, cancellationToken);
             var text = GetFileTreeRenderer.Render(scan);
+            if (input.MaxResponseBytes > 0 && Encoding.UTF8.GetByteCount(text) > input.MaxResponseBytes)
+            {
+                return Task.FromResult(ResponseBudgetTooSmall(analysisRoot, input, cancellationToken));
+            }
             return Task.FromResult(McpToolResults.Text(text));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -64,5 +69,24 @@ internal static class GetFileTreeTool
                 context: analysisRoot,
                 hint: "Root, Berechtigungen und Ausschlussmuster pruefen."));
         }
+    }
+
+    private static CallToolResult ResponseBudgetTooSmall(
+        string analysisRoot,
+        GetFileTreeInput input,
+        CancellationToken cancellationToken)
+    {
+        var minimumInput = input with { MaxResponseBytes = MaxResponseBytesCap };
+        var minimumText = GetFileTreeRenderer.Render(
+            GetFileTreeScanner.Scan(analysisRoot, minimumInput, cancellationToken));
+        var minimumResponseBytes = Encoding.UTF8.GetByteCount(minimumText);
+        return McpToolResults.Error(
+            LinterErrorCodes.ResponseBudgetTooSmall,
+            $"maxResponseBytes={input.MaxResponseBytes} ist zu klein für die vollständige Dateilandkarte im angeforderten Scope.",
+            new McpErrorParameters(
+                Hint: $"maxResponseBytes auf mindestens {minimumResponseBytes} setzen; der Retry liefert die vollständige wertvolle Dateilandkarte für diesen Scope.",
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: input.MaxResponseBytes,
+                MinimumResponseBytes: minimumResponseBytes));
     }
 }

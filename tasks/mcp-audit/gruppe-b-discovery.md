@@ -10,25 +10,11 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 7 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 6 Major, 1 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] B-01: `get_file_tree` hält `maxResponseBytes=200` nicht ein
-
-- **Betroffenes Tool / Schema**: `get_file_tree` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_file_tree(targetPath="<SOURCE-01>", view="summary", maxResponseBytes=200)` sowie `get_file_tree(targetPath="<SOURCE-01>", view="tree", treeDepth=2, maxResponseBytes=200)`
-- **Beobachtung / Ist-Verhalten**:
-  - Kein `RESPONSE_BUDGET_TOO_SMALL`, kein `minimumResponseBytes`.
-  - `view=summary`: vollständige Extension-Zählung aller gescannten Dateien plus WARN/HINWEIS/NEXT; nur die Verzeichnisliste entfällt. Nutzlast klar über 200 Bytes (allein die Extensions-Zeile liegt bereits darüber).
-  - `view=tree`: ebenfalls vollständige Extensions-Zeile; der Baum wird auf den Root-Knoten `.` reduziert. Gesamtnutzlast bleibt weit über 200 Bytes.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Wire-Budget muss eingehalten werden oder der Aufruf muss mit `RESPONSE_BUDGET_TOO_SMALL` und deterministischem `minimumResponseBytes` abbrechen. Stilles Überziehen macht Token-Budgets unkalkulierbar.
-- **Empfehlung**:
-  - Header/Extension-Census in das Budget einrechnen. Bei Unterschreitung: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes`, das nach Retry mindestens eine Nutz-Einheit liefert.
 
 ### [Major] B-02: Assembly-Antworten leaken volle Systempfade
 
