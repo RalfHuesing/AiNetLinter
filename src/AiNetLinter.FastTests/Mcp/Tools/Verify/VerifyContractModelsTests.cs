@@ -58,6 +58,20 @@ public sealed class VerifyContractModelsTests
         Assert.Equal("ASSEMBLY_TARGET_UNSUPPORTED", error.Code);
     }
 
+    [Theory]
+    [InlineData(@"C:\repo\*.sln")]
+    [InlineData(@"C:\repo\*.slnx")]
+    [InlineData(@"C:\repo\???.sln")]
+    public void TryValidateSourceSolutionTarget_WildcardTarget_ReturnsExplicitWildcardError(string targetPath)
+    {
+        var valid = VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var error);
+
+        Assert.False(valid);
+        Assert.NotNull(error);
+        Assert.Equal("INVALID_ARGUMENT", error.Code);
+        Assert.Contains("Wildcards oder Suchmasken", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void GateSummary_ExposesFixedAcceptanceThresholds()
     {

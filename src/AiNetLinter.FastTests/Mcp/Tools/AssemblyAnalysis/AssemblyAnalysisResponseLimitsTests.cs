@@ -29,6 +29,20 @@ public sealed class AssemblyAnalysisResponseLimitsTests
     }
 
     [Fact]
+    public void MinimumAssemblyBudget_WithNavigation_IncludesStatusLine()
+    {
+        var budgetError = AssemblyAnalysisResponse.ValidateResponseBudget(500);
+        Assert.NotNull(budgetError);
+
+        var navigated = AiNetLinter.Mcp.McpToolResults.WithNavigation(budgetError!, "C:\\virtual\\fixture.dll");
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(navigated.Content)).Text;
+
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=error, completeness=not_applicable", text, StringComparison.Ordinal);
+        Assert.Contains($"Aktion: denselben Aufruf mit maxResponseBytes={AssemblyAnalysisResponseLimits.MinimumResponseBytes} wiederholen.", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AssemblyDetailLevelContract_UsesCanonicalValuesForToolsAndValidator()
     {
         Assert.Equal(["compact", "standard", "full"], McpEnumValues.AssemblyDetailLevels);

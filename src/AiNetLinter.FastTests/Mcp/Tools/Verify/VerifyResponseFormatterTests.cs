@@ -101,6 +101,24 @@ public sealed class VerifyResponseFormatterTests
         Assert.Contains("RESPONSE_BUDGET_EXCEEDED", text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Error_FormatsStandardErrorEnvelopeWithNavigationStatus()
+    {
+        var result = VerifyResponseFormatter.Error(
+            "INVALID_ARGUMENT",
+            "targetPath ist erforderlich.",
+            "targetPath angeben.",
+            "$.targetPath");
+
+        var text = GetText(result);
+        Assert.True(result.IsError == true);
+        Assert.Contains("verdict: error", text, StringComparison.Ordinal);
+        Assert.Contains("code: INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("field: $.targetPath", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=error, completeness=not_applicable", text, StringComparison.Ordinal);
+        Assert.Contains("Aktion: targetPath angeben.", text, StringComparison.Ordinal);
+    }
+
     private static VerifySuccessParameters CreateParameters(
         ScoreResult score,
         VerifyAdvisoryProjection? advisory = null) => new(

@@ -94,6 +94,22 @@ public sealed class AnalysisTargetResolverTests
         Assert.Null(result.Error);
     }
 
+    [Theory]
+    [InlineData("*.dll")]
+    [InlineData("C:\\fixtures\\*.dll")]
+    [InlineData("C:\\fixtures\\???.sln")]
+    public void Resolve_TargetPathOnly_RejectsWildcardsExplicitly(string wildcardPath)
+    {
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(wildcardPath));
+        Assert.Null(result.Target);
+        Assert.NotNull(result.Error);
+        var text = TextOf(result.Error!);
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("Wildcards oder Suchmasken", text, StringComparison.Ordinal);
+        Assert.Contains("keine Globs", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=error, completeness=not_applicable", text, StringComparison.Ordinal);
+    }
+
     private static string TextOf(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

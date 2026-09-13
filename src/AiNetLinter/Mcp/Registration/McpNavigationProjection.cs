@@ -14,12 +14,50 @@ internal static class McpNavigationProjection
     internal static McpNavigationPayload Create(
         CallToolResult response,
         AnalysisTarget? target,
-        string? targetPath = null) =>
-        Create(new McpNavigationProjectionParameters(
+        string? targetPath = null)
+    {
+        var text = response.Content.FirstOrDefault() is TextContentBlock textBlock ? textBlock.Text : null;
+        var isError = response.IsError == true || IsErrorText(text);
+        var hint = isError && text is not null ? ExtractAction(text) : null;
+        return Create(new McpNavigationProjectionParameters(
             target,
-            response.IsError == true ? "error" : "ok",
-            response.IsError == true ? "not_applicable" : "complete",
+            isError ? "error" : "ok",
+            isError ? "not_applicable" : "complete",
+            Hint: hint,
             TargetPath: targetPath));
+    }
+
+    private static bool IsErrorText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        return text.StartsWith("[ERROR]:", StringComparison.Ordinal)
+            || text.StartsWith("verdict: error", StringComparison.Ordinal);
+    }
+
+    private static string? ExtractAction(string text)
+    {
+        string? hint = null;
+        string? recovery = null;
+        string? retry = null;
+
+        foreach (var line in text.Split('\n'))
+        {
+            retry = TryExtractPrefix(line, "retry:") ?? retry;
+            recovery = TryExtractPrefix(line, "recovery:") ?? recovery;
+            hint = TryExtractPrefix(line, "hint:") ?? hint;
+        }
+
+        return retry ?? recovery ?? hint;
+    }
+
+    private static string? TryExtractPrefix(string line, string prefix)
+    {
+        var trimmed = line.Trim();
+        if (!trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+
+        var value = trimmed[prefix.Length..].Trim();
+        return string.IsNullOrEmpty(value) ? null : value;
+    }
 
     internal static McpNavigationPayload Create(McpNavigationProjectionParameters parameters)
     {

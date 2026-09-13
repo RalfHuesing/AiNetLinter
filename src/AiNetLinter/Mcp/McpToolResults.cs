@@ -423,7 +423,7 @@ internal static partial class McpToolResults
         var navigationText = McpNavigationText.Format(navigation);
         return new CallToolResult
         {
-            IsError = navigation.Status.Operation == "error",
+            IsError = result.IsError == true,
             Content = AppendNavigationText(result.Content, navigationText),
         };
     }

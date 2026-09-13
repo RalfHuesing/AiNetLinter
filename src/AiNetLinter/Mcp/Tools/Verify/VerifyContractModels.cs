@@ -164,25 +164,13 @@ internal static class VerifyContract
         string? targetPath,
         out VerifyTargetValidationError? error)
     {
-        if (string.IsNullOrWhiteSpace(targetPath))
+        if (ValidateTargetPathSyntax(targetPath) is { } syntaxError)
         {
-            error = new(
-                "INVALID_ARGUMENT",
-                "targetPath ist erforderlich.",
-                "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei angeben.");
+            error = syntaxError;
             return false;
         }
 
-        if (!Path.IsPathFullyQualified(targetPath))
-        {
-            error = new(
-                "INVALID_ARGUMENT",
-                "targetPath muss ein absoluter Pfad sein.",
-                "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei angeben.");
-            return false;
-        }
-
-        var extension = Path.GetExtension(targetPath);
+        var extension = Path.GetExtension(targetPath!);
         if (string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase)
             || string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase))
         {
@@ -193,7 +181,7 @@ internal static class VerifyContract
             return false;
         }
 
-        if (!IsSourceSolutionTarget(targetPath))
+        if (!IsSourceSolutionTarget(targetPath!))
         {
             error = new(
                 "INVALID_ARGUMENT",
@@ -204,7 +192,7 @@ internal static class VerifyContract
 
         try
         {
-            if (File.Exists(Path.GetFullPath(targetPath)))
+            if (File.Exists(Path.GetFullPath(targetPath!)))
             {
                 error = null;
                 return true;
@@ -224,5 +212,34 @@ internal static class VerifyContract
             "Die angegebene Source-Solution wurde nicht gefunden.",
             "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei angeben.");
         return false;
+    }
+
+    private static VerifyTargetValidationError? ValidateTargetPathSyntax(string? targetPath)
+    {
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            return new(
+                "INVALID_ARGUMENT",
+                "targetPath ist erforderlich.",
+                "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei angeben.");
+        }
+
+        if (targetPath.Contains('*') || targetPath.Contains('?'))
+        {
+            return new(
+                "INVALID_ARGUMENT",
+                "targetPath darf keine Wildcards oder Suchmasken enthalten.",
+                "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei ohne Globs angeben.");
+        }
+
+        if (!Path.IsPathFullyQualified(targetPath))
+        {
+            return new(
+                "INVALID_ARGUMENT",
+                "targetPath muss ein absoluter Pfad sein.",
+                "targetPath als absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei angeben.");
+        }
+
+        return null;
     }
 }

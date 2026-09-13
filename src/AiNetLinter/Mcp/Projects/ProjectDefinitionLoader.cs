@@ -21,6 +21,13 @@ internal static class ProjectDefinitionLoader
                 "Der Parameter 'targetPath' ist erforderlich; übergib den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei.");
         }
 
+        if (solutionPath.Contains('*') || solutionPath.Contains('?'))
+        {
+            return Fail(
+                LinterErrorCodes.InvalidArgument,
+                $"Der Parameter 'targetPath' darf keine Wildcards oder Suchmasken enthalten: '{solutionPath}'.");
+        }
+
         var canonicalSolutionPath = Canonicalize(solutionPath);
         if (canonicalSolutionPath is null
             || !File.Exists(canonicalSolutionPath)

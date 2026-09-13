@@ -34,7 +34,10 @@ internal static partial class AssemblyAnalysisResponse
         AssemblyAnalysisLease lease,
         AssemblyAnalysisResponseRequest request)
     {
-        if (ValidateResponseBudget(request.MaxResponseBytes) is { } budgetError) return budgetError;
+        if (ValidateResponseBudget(request.MaxResponseBytes) is { } budgetError)
+        {
+            return McpToolResults.WithNavigation(budgetError, lease.CanonicalPath);
+        }
 
         var enriched = CreateEnriched(result, lease);
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(

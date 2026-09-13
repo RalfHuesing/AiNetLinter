@@ -31,13 +31,14 @@ internal static class AnalysisTargetResolver
         {
             return Invalid(
                 "Der Parameter 'targetPath' ist erforderlich.",
-                "Den absoluten Pfad einer vorhandenen .sln, .slnx, .dll oder .exe uebergeben.");
+                "Den absoluten Pfad einer vorhandenen .sln, .slnx, .dll oder .exe uebergeben.",
+                request.TargetPath);
         }
 
         var path = ResolveCanonicalFilePath(request.TargetPath);
         if (path.Error is not null)
         {
-            return Invalid(path.Error, path.Hint);
+            return Invalid(path.Error, path.Hint, request.TargetPath);
         }
 
         var canonicalPath = path.CanonicalPath!;
@@ -47,7 +48,8 @@ internal static class AnalysisTargetResolver
         {
             return Invalid(
                 $"Der Parameter 'targetPath' hat eine nicht unterstuetzte Endung: '{canonicalPath}'.",
-                "Eine vorhandene Datei mit Endung .sln, .slnx, .dll oder .exe uebergeben.");
+                "Eine vorhandene Datei mit Endung .sln, .slnx, .dll oder .exe uebergeben.",
+                canonicalPath);
         }
 
         var analysisRoot = Path.GetDirectoryName(canonicalPath)!;
@@ -110,6 +112,13 @@ internal static class AnalysisTargetResolver
     private static PathResolution ResolveCanonicalFilePath(string targetPath)
     {
         var path = targetPath.Trim();
+        if (path.Contains('*') || path.Contains('?'))
+        {
+            return new(null,
+                $"Der Parameter 'targetPath' darf keine Wildcards oder Suchmasken enthalten: '{targetPath}'.",
+                "Eine konkrete vorhandene .sln, .slnx, .dll oder .exe angeben; keine Globs verwenden.");
+        }
+
         if (!Path.IsPathFullyQualified(path))
         {
             return new(null, "Der Parameter 'targetPath' muss ein absoluter Pfad sein.",
@@ -150,11 +159,13 @@ internal static class AnalysisTargetResolver
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 
-    private static AnalysisTargetResolution Invalid(string message, string? hint = null) =>
-        new(null, McpToolResults.InvalidArgument(
-            message,
-            hint ?? "targetPath mit dem absoluten Pfad einer vorhandenen .sln/.slnx/.dll/.exe-Datei übergeben.",
-            fieldPath: "$.targetPath"));
+    private static AnalysisTargetResolution Invalid(string message, string? hint = null, string? targetPath = null) =>
+        new(null, McpToolResults.WithNavigation(
+            McpToolResults.InvalidArgument(
+                message,
+                hint ?? "targetPath mit dem absoluten Pfad einer vorhandenen .sln/.slnx/.dll/.exe-Datei übergeben.",
+                fieldPath: "$.targetPath"),
+            targetPath));
 
     private sealed record PathResolution(string? CanonicalPath, string? Error, string? Hint = null);
 }

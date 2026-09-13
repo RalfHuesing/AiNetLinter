@@ -215,7 +215,7 @@ internal static partial class VerifyResponseFormatter
 
     internal static CallToolResult Error(string code, string message, string recovery, string? fieldPath = null) =>
         Text(
-            $"verdict: error\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfield: {fieldPath}")}\nrecovery: {recovery}",
+            $"verdict: error\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfield: {fieldPath}")}\nrecovery: {recovery}\nStatus: operation=error, completeness=not_applicable, analysisQuality=not_applicable; Aktion: {recovery}",
             isError: true);
 
     private static CallToolResult Text(string text, bool isError = false)
@@ -232,7 +232,7 @@ internal static partial class VerifyResponseFormatter
     {
         if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return text;
         return isError
-            ? "verdict: error\ncode: RESPONSE_BUDGET_EXCEEDED\nrecovery: Scope präzisieren und erneut ausführen."
+            ? "verdict: error\ncode: RESPONSE_BUDGET_EXCEEDED\nrecovery: Scope präzisieren und erneut ausführen.\nStatus: operation=error, completeness=not_applicable, analysisQuality=not_applicable; Aktion: Scope präzisieren und erneut ausführen."
             : "verdict: incomplete\ncompleteness: incomplete\nisGateResult: false\nreason: gateevidenceincomplete\nscope: changes\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
     }
 

@@ -117,6 +117,7 @@ public sealed class McpArgumentValidationFilterTests
         AssertFilterError(error, $"$.{requiredField}");
         var projected = McpArgumentValidationFilter.ProjectFilterError(error!, null, "C:\\virtual\\fixture.slnx");
         Assert.Contains("fieldPath", TextOf(projected), System.StringComparison.Ordinal);
+        Assert.Contains("Status: operation=error, completeness=not_applicable", TextOf(projected), System.StringComparison.Ordinal);
     }
 
     [Theory]
