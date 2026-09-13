@@ -19,7 +19,7 @@ internal static partial class GetNamespaceTreeScanner
         HashSet<SyntaxTree> projectTrees)
     {
         var rootNodes = new List<NamespaceTreeNode>();
-        var flatListForOutput = new List<(string DisplayName, int TypeCount, int Indent)>();
+        var flatListForOutput = new List<(string DisplayName, int TypeCount, int Indent, IReadOnlyList<TypeNodeEntry>? Types)>();
         var traverseContext = new NamespaceTreeTraverseContext(parameters, projectTrees, flatListForOutput);
         var hasExactRoot = !string.IsNullOrWhiteSpace(parameters.NamespacePrefix);
 
@@ -70,11 +70,14 @@ internal static partial class GetNamespaceTreeScanner
 
     private static void AddExactRootToFlatOutput(
         NamespaceTreeScanParameters parameters, INamespaceSymbol startNs, HashSet<SyntaxTree> projectTrees,
-        List<(string DisplayName, int TypeCount, int Indent)> flatOutput, bool hasExactRoot)
+        List<(string DisplayName, int TypeCount, int Indent, IReadOnlyList<TypeNodeEntry>? Types)> flatOutput, bool hasExactRoot)
     {
         if (!hasExactRoot) return;
         var directTypes = CollectMatchingSourceTypes(startNs, parameters, projectTrees);
-        flatOutput.Add((startNs.ToDisplayString(), directTypes.Count, 0));
+        var typeEntries = parameters.IncludeTypes
+            ? directTypes.Select(type => ToTypeEntry(type, parameters.SolutionDir, projectTrees)).ToList()
+            : null;
+        flatOutput.Add((startNs.ToDisplayString(), directTypes.Count, 0, typeEntries));
     }
 
     private static List<NamespaceTreeNode> CreateExactRootProjection(
@@ -93,14 +96,30 @@ internal static partial class GetNamespaceTreeScanner
         CollectSourceTypes(ns, projectTrees).Where(type => SymbolKindClassifier.MatchesTypeKind(type, parameters.KindFilter)).ToList();
 
     private static StringBuilder RenderNamespaceText(
-        NamespaceTreeScanParameters parameters, List<(string DisplayName, int TypeCount, int Indent)> shownList)
+        NamespaceTreeScanParameters parameters,
+        List<(string DisplayName, int TypeCount, int Indent, IReadOnlyList<TypeNodeEntry>? Types)> shownList)
     {
         var sb = new StringBuilder();
         var prefixTitle = string.IsNullOrWhiteSpace(parameters.NamespacePrefix) ? string.Empty : $" unter '{parameters.NamespacePrefix}'";
         sb.AppendLine($"# Namespaces in Projekt '{parameters.Project.Name}'{prefixTitle}:\n");
         if (shownList.Count == 0) sb.AppendLine("Keine Namespaces mit Typen gefunden.");
-        else foreach (var item in shownList) sb.AppendLine($"{new string(' ', item.Indent * 2)}- {item.DisplayName} ({item.TypeCount} Typen)");
+        else
+        {
+            foreach (var item in shownList)
+            {
+                sb.AppendLine($"{new string(' ', item.Indent * 2)}- {item.DisplayName} ({item.TypeCount} Typen)");
+                AppendTypeDetails(sb, item.Types, item.Indent + 1);
+            }
+        }
         return sb;
+    }
+
+    private static void AppendTypeDetails(StringBuilder sb, IReadOnlyList<TypeNodeEntry>? types, int indent)
+    {
+        foreach (var type in types ?? Array.Empty<TypeNodeEntry>())
+        {
+            sb.AppendLine($"{new string(' ', indent * 2)}- {type.Name} ({type.Kind}) — {type.FilePath}:{type.Line}");
+        }
     }
 
     private static (IReadOnlyList<NamespaceTreeNode> Nodes, int Count) TakeExactRootProjection(
@@ -117,7 +136,7 @@ internal static partial class GetNamespaceTreeScanner
     private static void AppendNamespaceTreeSummary(
         StringBuilder sb,
         NamespaceTreeScanParameters parameters,
-        List<(string DisplayName, int TypeCount, int Indent)> shownList,
+        List<(string DisplayName, int TypeCount, int Indent, IReadOnlyList<TypeNodeEntry>? Types)> shownList,
         int totalCount,
         bool truncated)
     {
@@ -164,7 +183,7 @@ internal static partial class GetNamespaceTreeScanner
                 ? directTypes.Select(t => ToTypeEntry(t, context.Parameters.SolutionDir, context.ProjectTrees)).ToList()
                 : null;
 
-            context.FlatOutput.Add((subNs.ToDisplayString(), directTypes.Count, currentIndent));
+            context.FlatOutput.Add((subNs.ToDisplayString(), directTypes.Count, currentIndent, typeEntries));
 
             if (currentDepth < context.Parameters.Depth)
             {

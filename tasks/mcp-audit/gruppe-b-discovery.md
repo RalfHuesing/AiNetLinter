@@ -10,7 +10,7 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 6 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 5 Major, 0 Minor
 
 ---
 
@@ -84,30 +84,3 @@
   - TC-B08 und die Kette Suche → `get_symbol_body` verlangen konsumierbare Handoff-IDs. Ohne ID muss der Agent Pfad/Zeile oder Typnamen selbst zusammenbauen.
 - **Empfehlung**:
   - Pro Match dieselbe `handoffId` wie bei `inspect_assembly` ausgeben (Typ- bzw. Member-ID), nicht nur Datei:Zeile.
-
-### [Major] B-07: `get_namespace_tree` listet unter `includeTypes=true` keine Source-Typen
-
-- **Betroffenes Tool / Schema**: `get_namespace_tree` (Parameter: `includeTypes`, `namespacePrefix`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_namespace_tree(targetPath="<SOURCE-01>", namespacePrefix="MyCompany.MyProduct.Auth", includeTypes=true, depth=2)` sowie mit `project=…`, `depth=3`, `kind="class"`
-- **Beobachtung / Ist-Verhalten**:
-  - `namespacePrefix` schränkt korrekt ein (nur der adressierte Namespace).
-  - Ausgabe: `MyCompany.MyProduct.Auth (2 Typen)` bzw. mit `kind="class"` `(1 Typen)` – **ohne Typnamen**.
-  - Tipp wiederholt denselben Aufruf (`project` + `namespacePrefix`) „fuer die Typen“ → No-Op-Schleife.
-  - Gegenprobe `LOCAL-01` mit Prefix listet Typnamen; das Fehlen ist Source-spezifisch, kein generelles Limit.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Schema: `includeTypes` zeigt Typen. Ein Agent kann den Namespace-Drilldown auf Source nicht abschließen und erhält einen Tipp, der denselben Call fordert.
-- **Empfehlung**:
-  - Bei `includeTypes=true` Typnamen (plus Handoff-ID) ausgeben; Tipp nur mit tatsächlich fehlendem Parameter oder auf `find_symbol`/`get_class_structure` verweisen.
-
-### [Minor] B-08: Assembly-Namespace-Fehler spricht von „Solution“
-
-- **Betroffenes Tool / Schema**: `get_namespace_tree` (Parameter: `namespacePrefix`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `get_namespace_tree(targetPath="<LOCAL-01>", namespacePrefix="DoesNotExist.NoSuchPrefix")`
-- **Beobachtung / Ist-Verhalten**:
-  - Prefix filtert (kein stilles Voll-Listing). Fehler: `INVALID_ARGUMENT: Namespace '…' wurde in keinem Projekt der Solution gefunden.` Hint nennt das eine verfügbare „Projekt“.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Recoverable, aber der Solution-Wortlaut im Assembly-Modus legt ein falsches Target-Modell nahe.
-- **Empfehlung**:
-  - Formulierung auf Assembly/Projekt-Snapshot umstellen; verfügbare Namespace-Präfixe statt Solution-Sprache nennen.

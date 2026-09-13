@@ -2,7 +2,7 @@
 
 > **Audit-Durchführung:** Reiner Read-Only-Audit. Keine Quellcode-Änderungen, kein Build, keine Tests. Alle Fremd-Targets sind ausschließlich über anonyme Labels referenziert (`SOURCE-01`, `LOCAL-01`–`LOCAL-03`, `FALSE-01`).
 
-**Stand:** alle fünf Gruppen abgeschlossen. **24 Befunde:** 1 Critical, 17 Major, 6 Minor. Kein Server-Crash.
+**Stand:** alle fünf Gruppen abgeschlossen. **22 Befunde:** 1 Critical, 16 Major, 5 Minor. Kein Server-Crash.
 
 ---
 
@@ -43,11 +43,9 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 | Major | B-02 | `inspect_assembly` u. a. | Volle Systempfade in Envelope, Referenzen, Fehler-`context` | IP-/Pfadleak in Agent-Logs | [B](gruppe-b-discovery.md) |
 | Major | B-04 | `get_assembly_context` | Übersicht ohne Identität, TFM, Verweise (`48 von 48` leer) | Composite-Einstieg unbrauchbar | [B](gruppe-b-discovery.md) |
 | Major | B-05 | `get_assembly_context` | `includeMetrics` → Solution-`NOT_CONFIGURED` | Irreführender Rules-Hint am Assembly-Target | [B](gruppe-b-discovery.md) |
-| Major | B-07 | `get_namespace_tree` | Source + `includeTypes=true`: Zähler ohne Typnamen; Tipp ist No-Op | Drilldown nicht abschließbar | [B](gruppe-b-discovery.md) |
 | Major | D-01 | `find_duplicates` | `scopeType=production` zeigt Testhilfen; effektiver Scope nicht ausgewiesen | Falsche Priorisierung von „Produktions“-Duplikaten | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | D-02 | `search_pattern` | `enrichCSharp=true` stiller No-Op (keine Symbol-ID) | Beworbenes Opt-in für Folgetools fehlt | [D](gruppe-d-qualitaet-metriken.md) |
 | Major | E-05 | `find_dead_code` | Ungültiges `kind`/`accessibility` ohne Werteliste | Agent muss Enum raten | [E](gruppe-e-konsistenz-recovery.md) |
-| Minor | B-08 | `get_namespace_tree` | Assembly-Fehler spricht von „Solution“ | Falsches Target-Modell | [B](gruppe-b-discovery.md) |
 | Minor | C-07 | `find_references`, `get_feature_context`, `get_test_context` | Call-Sites/Tests ohne eigene Handoff-IDs; 0/29 Evidenzzeilen | Vertiefen in Caller braucht Parsing | [C](gruppe-c-symbol-chaining.md) |
 | Minor | D-03 | `metrics_lookup`, `dependency_graph`, `search_pattern` | Schema-`required` nur `targetPath`, Runtime verlangt weitere Felder | Extra-Roundtrip nach Schema-first | [D](gruppe-d-qualitaet-metriken.md) |
 | Minor | D-04 | `pattern_detect` | Vollständiger Lauf als `partiell` wegen `not_configured`; kein Schema-`enum` | Agent erhöht Limits statt Regeln zu setzen | [D](gruppe-d-qualitaet-metriken.md) |
@@ -76,14 +74,14 @@ Verwandte IDs aus mehreren Gruppen sind nicht zusammengelegt; die Wirkungsspalte
 - `find_symbol` nach `RESPONSE_BUDGET_TOO_SMALL` + Retry mit `minimumResponseBytes` liefert ≥1 Einheit (TC-E04, Tool-Pfad `find_symbol` ab Floor 512).
 - `get_violations` auf `LOCAL-01` ohne Absturz (Decompiled/unsupported-Pfad, TC-D02).
 - `includePatterns` an `search_pattern` existiert und filtert; `minTokens`/`scopeDir` an `find_duplicates` greifen; Phantomfelder werden mit `fieldPath` abgewiesen.
-- `namespacePrefix` schränkt Source- und Assembly-Bäume korrekt ein (Filter selbst OK; Befund B-07 betrifft nur fehlende Typnamen).
+- `namespacePrefix` schränkt Source- und Assembly-Bäume korrekt ein; `includeTypes=true` liefert bei Source-Trees Typart, relativen Pfad und Zeile.
 
 ---
 
 ## 4. Referenzierte Teilberichte der Subagenten
 
-- [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 6 / 2
-- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 7 / 1
+- [Gruppe A – Health, Handshake & Runtime-Config](gruppe-a-health-handshake.md) — 0 / 0 / 0
+- [Gruppe B – Discovery, Scope & Assembly-Inspektion](gruppe-b-discovery.md) — 0 / 5 / 0
 - [Gruppe C – Semantische Symbol-Tools & Chaining-Ketten](gruppe-c-symbol-chaining.md) — 0 / 6 / 1
 - [Gruppe D – Codequalität, Linter, Metriken & Safeguard](gruppe-d-qualitaet-metriken.md) — 0 / 2 / 2
-- [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 4 / 2
+- [Gruppe E – Cross-Tool-Konsistenz, Handoff-Vertrag & Recovery](gruppe-e-konsistenz-recovery.md) — 1 / 3 / 2

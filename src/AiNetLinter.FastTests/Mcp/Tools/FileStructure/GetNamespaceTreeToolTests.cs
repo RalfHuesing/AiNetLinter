@@ -221,6 +221,29 @@ public sealed class GetNamespaceTreeToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_AssemblyNamespacePrefixNotFound_UsesAssemblyWording()
+    {
+        using var context = new McpInMemoryTestContext();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(
+                null,
+                ReadOnlySolutionSnapshot: context.Solution,
+                AssemblySymbolIdentity: AnalysisSymbolIdentity.ForAssembly(
+                    @"C:\Assemblies\SymbolGraphMini.dll",
+                    new string('a', 64),
+                    generation: 1))));
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(NamespacePrefix: "Missing.Namespace"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Assembly-Snapshot", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Projekt der Solution", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Verfuegbare Projekte", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MaxResponseBytes_ProjectsVisibleTypesIntoText()
     {
         var source = "namespace BudgetNs {\n" + string.Join("\n", System.Linq.Enumerable.Range(1, 40)
@@ -302,6 +325,34 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Contains("DirectRootType", text, StringComparison.Ordinal);
         Assert.Contains("Contract.Root.Child", text, StringComparison.Ordinal);
         Assert.DoesNotContain("maxResponseBytes", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NamespaceTreeWithTypes_RendersTypeDetailsForEveryVisibleNamespace()
+    {
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\NamespaceTypeDetails.slnx",
+            new ProjectSpec(
+                "NamespaceProject",
+                [
+                    ("Root.cs", "namespace Contract.Root; public sealed class DirectRootType {}"),
+                    ("Child.cs", "namespace Contract.Root.Child; public interface ChildContract {}"),
+                ])));
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetNamespaceTreeInput(
+                "NamespaceProject",
+                "Contract.Root",
+                Depth: 2,
+                IncludeTypes: true,
+                DeferResponseBudgetToNavigation: true),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("DirectRootType (class) — NamespaceProject/Root.cs:1", text, StringComparison.Ordinal);
+        Assert.Contains("ChildContract (interface) — NamespaceProject/Child.cs:1", text, StringComparison.Ordinal);
     }
 
     [Fact]

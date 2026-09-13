@@ -69,7 +69,14 @@ internal static class GetNamespaceTreeTool
                 return AddAssemblyOverviewHeader(
                     state,
                     solution,
-                    await ExecuteAutoProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct), input.MaxResponseBytes);
+                    await ExecuteAutoProjectDrilldownAsync(
+                        solution,
+                        input,
+                        clampedDepth,
+                        clampedMaxResults,
+                        solutionDir,
+                        state.AssemblySymbolIdentity is not null,
+                        ct), input.MaxResponseBytes);
             }
 
             return AddAssemblyOverviewHeader(
@@ -151,6 +158,7 @@ internal static class GetNamespaceTreeTool
         int clampedDepth,
         int clampedMaxResults,
         string solutionDir,
+        bool isAssemblyTarget,
         CancellationToken ct)
     {
         var matchingProjects = new List<Project>();
@@ -172,6 +180,14 @@ internal static class GetNamespaceTreeTool
 
         if (matchingProjects.Count == 0)
         {
+            if (isAssemblyTarget)
+            {
+                return McpToolResults.Recoverable(
+                    LinterErrorCodes.InvalidArgument,
+                    $"Namespace '{input.NamespacePrefix}' wurde im Assembly-Snapshot nicht gefunden.",
+                    hint: "namespacePrefix pruefen oder get_namespace_tree ohne namespacePrefix fuer den Assembly-Ueberblick aufrufen.");
+            }
+
             var available = string.Join(", ", solution.Projects.Select(p => p.Name));
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,

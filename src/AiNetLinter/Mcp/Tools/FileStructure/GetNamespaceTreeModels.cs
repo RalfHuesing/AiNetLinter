@@ -80,5 +80,5 @@ public sealed record NamespaceTreeNext(string Kind, string Reason);
 internal sealed record NamespaceTreeTraverseContext(
     NamespaceTreeScanParameters Parameters,
     HashSet<SyntaxTree> ProjectTrees,
-    List<(string DisplayName, int TypeCount, int Indent)> FlatOutput);
+    List<(string DisplayName, int TypeCount, int Indent, IReadOnlyList<TypeNodeEntry>? Types)> FlatOutput);
 
