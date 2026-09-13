@@ -83,19 +83,6 @@ public sealed class WiringProjectContractTests
     }
 
     [Fact]
-    public void ServerInstructions_TextStaysWithinBudgetAndCarriesContract()
-    {
-        var byteCount = System.Text.Encoding.UTF8.GetByteCount(ServerInstructions.Text);
-        Assert.True(byteCount <= ServerInstructions.MaxUtf8Bytes, $"Instructions-Budget gerissen: {byteCount} > {ServerInstructions.MaxUtf8Bytes}");
-        Assert.Contains("targetPath", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains(".dll/.exe", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("Content enthält Status", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void TestKitProjectRoot_UsesAdjacentMcpRulesOnly()
     {
         using var tempDir = TestTempDirectory.Create("wiring-project-root-");

@@ -31,6 +31,8 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
         Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
         Assert.Contains("MUSS zuerst das passende", content.Text, StringComparison.Ordinal);
+        Assert.Contains("## MCP-Zielvertrag", content.Text, StringComparison.Ordinal);
+        Assert.Contains("Ein Handoff-Handle hat das Format `h:…`", content.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("report_observability_feedback", content.Text, StringComparison.Ordinal);
 
         const string workflowMarker = "## Dauerhafte Agentenregel\n\n";

@@ -81,11 +81,12 @@ auf das angefragte Target begrenzt.
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt bei `initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Zielstatus steht in der Overview-Resource.
-
-Der globale Text ist auf höchstens 1.200 UTF-8-Bytes begrenzt. Tool-spezifische
-Parameter, Defaults und Grenzen sind deshalb ausschließlich dem aktuellen
-`tools/list` zu entnehmen.
+Der Server veröffentlicht keine globalen `ServerInstructions`: Manche Hosts hängen
+diesen Text an jede einzelne Toolbeschreibung und vervielfachen damit Tokenkosten.
+Der zentrale Ziel-, Handoff- und Workflowvertrag steht einmalig und ohne Target unter
+`ainetlinter://agent-guide`; der Zielstatus steht in der Overview-Resource. Die
+vollständigen Tool- und Parameterschemas bleiben in `tools/list`, dessen
+Beschreibungen ausschließlich tool-spezifische Parameter, Defaults und Grenzen nennen.
 
 ### Tool-Annotations
 

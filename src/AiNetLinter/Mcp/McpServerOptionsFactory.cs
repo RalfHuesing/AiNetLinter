@@ -29,7 +29,6 @@ internal static class McpServerOptionsFactory
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
-            .WithServerInstructions(ServerInstructions.Text)
             .WithToolCollection(tools)
             .WithResourceCollection(resources)
             .Build();

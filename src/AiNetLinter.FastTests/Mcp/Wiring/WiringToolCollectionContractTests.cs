@@ -89,12 +89,11 @@ public sealed class WiringToolCollectionContractTests
                 assemblyRegistry: composition.Sessions)
             .ToDictionary(tool => tool.ProtocolTool.Name, tool => tool.ProtocolTool);
 
-        Assert.Contains("targetPath: absoluter .sln/.slnx-Pfad fuer Source oder .dll/.exe fuer Assembly", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("mit demselben targetPath weitergeben", ServerInstructions.Text, StringComparison.Ordinal);
-
         foreach (var tool in tools.Values.Where(tool => tool.Name != "get_server_health"))
         {
             Assert.DoesNotContain("Ziel: absolute", tool.Description, StringComparison.Ordinal);
+            Assert.DoesNotContain("Zielgebundene Aufrufe brauchen", tool.Description, StringComparison.Ordinal);
+            Assert.DoesNotContain("Den Integrationsleitfaden", tool.Description, StringComparison.Ordinal);
         }
 
         Assert.Contains("Projekt", tools["get_server_health"].Description, StringComparison.Ordinal);

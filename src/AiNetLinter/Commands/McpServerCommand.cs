@@ -74,7 +74,6 @@ internal static class McpServerCommand
             Name = McpServerOptionsFactory.ServerName,
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
-        serverOptions.ServerInstructions = ServerInstructions.Text;
         serverOptions.ToolCollection = McpServerToolCollectionFactory.Build(
             registry,
             AnalysisToolCall.CreateTargetRoute(

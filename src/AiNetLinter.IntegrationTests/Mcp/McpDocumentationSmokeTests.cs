@@ -72,7 +72,7 @@ public sealed class McpDocumentationSmokeTests
 
         var docText = File.ReadAllText(docPath);
 
-        Assert.Contains("denselben zentralen `ServerInstructions`-Text", docText, StringComparison.Ordinal);
+        Assert.Contains("keine globalen `ServerInstructions`", docText, StringComparison.Ordinal);
         Assert.Contains("C#-Symbolgraph-Grenze", docText, StringComparison.Ordinal);
         Assert.Contains("`tools/list`", docText, StringComparison.Ordinal);
         Assert.Contains("`ainetlinter://overview`", docText, StringComparison.Ordinal);
@@ -95,7 +95,7 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("`includeSessions` ist kein öffentlicher Input", docText, StringComparison.Ordinal);
         Assert.Contains("ausschließlich serverweite", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("`includeSessions=true` fordert begrenzte Sessiondetails", docText, StringComparison.Ordinal);
-        Assert.Contains("höchstens 1.200 UTF-8-Bytes", docText, StringComparison.Ordinal);
+        Assert.Contains("an jede einzelne Toolbeschreibung", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("McpPayloadMeasurement", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("Tokenersparnis", docText, StringComparison.Ordinal);
         Assert.Contains("einzigen sichtbaren Content", docText, StringComparison.Ordinal);

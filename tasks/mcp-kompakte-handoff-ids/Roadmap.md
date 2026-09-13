@@ -15,6 +15,7 @@
 - [X] 13. Exponierte MCP-Toolverträge und Beschreibungen konsistent machen
 - [X] 14. Call-Tree-Transportvertrag ohne internes Request-Kontextfeld absichern
 - [X] 15. Assembly-Member-Handoffs per MCP-Transport vollständig auflösbar machen
+- [X] 16. Globale MCP-Präambel aus öffentlichen Toolbeschreibungen entfernen
 
 ## Durchführungsprotokoll
 
@@ -107,3 +108,9 @@
 - Rot-Test: `inspect_assembly`-Member-Handle lieferte bei `get_symbol_body` `SYMBOL_NOT_FOUND`.
 - Resolver durchsucht bei Assembly-Handoffs zusätzlich den kompilierten Assembly-Symbolbaum; Prozessvertrag prüft alle ausgegebenen Member gegen Body und Context.
 - Build, beide Verify-Scopes, 2.636 FastTests und 240 non-Stress-IntegrationTests grün.
+
+### 16. Globale MCP-Präambel aus öffentlichen Toolbeschreibungen entfernen
+
+- Rot-Test belegte: nichtleere Server-Instruktionen werden im Host vor jede Toolbeschreibung gesetzt.
+- Globale Hinweise bleiben einmalig über `ainetlinter://agent-guide` erreichbar; Tools enthalten nur ihre Verträge.
+- Build, `verify(changes)` und 1.835 Unit-FastTests grün.

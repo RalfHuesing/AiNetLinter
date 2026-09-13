@@ -41,7 +41,6 @@ internal sealed class DaemonMcpSession
             Name = McpServerOptionsFactory.ServerName,
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
-        serverOptions.ServerInstructions = ServerInstructions.Text;
         serverOptions.ToolCollection = toolCollectionFactory(runtimeContext);
         serverOptions.ResourceCollection = resourceCollectionFactory();
 
