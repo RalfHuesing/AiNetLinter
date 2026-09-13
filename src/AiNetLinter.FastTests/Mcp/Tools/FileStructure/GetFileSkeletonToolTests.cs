@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -83,6 +85,23 @@ public sealed class GetFileSkeletonToolTests
         Assert.DoesNotContain("Erzeugt:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Caller", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("OtherCaller", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SymbolHandoff_RendersTheDeclaringDocumentSkeleton()
+    {
+        var state = _fixture.CreateServer();
+        var findResult = await FindSymbolTool.ExecuteAsync(
+            state, ["Greeter"], kind: "class", maxResults: 10, CancellationToken.None);
+        var handoff = Regex.Match(
+            Assert.IsType<TextContentBlock>(Assert.Single(findResult.Content)).Text,
+            @"handoffId:\s*`(?<id>h:[^`]+)`").Groups["id"].Value;
+        Assert.NotEmpty(handoff);
+
+        var result = await GetFileSkeletonTool.ExecuteAsync(state, [handoff], CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("Greeter", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]

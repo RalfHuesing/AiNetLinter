@@ -24,6 +24,24 @@ namespace AiNetLinter.FastTests.Mcp.Tools.TypeResolution;
 public sealed class ResolveTypeOriginTests
 {
     [Fact]
+    public void ResolveTypeOriginInput_AcceptsExactlyOneIdentifierAlias()
+    {
+        Assert.True(ResolveTypeOriginInput.TryGetIdentifier("App.Worker", null, out var typeName, out var typeNameError));
+        Assert.Equal("App.Worker", typeName);
+        Assert.Null(typeNameError);
+
+        Assert.True(ResolveTypeOriginInput.TryGetIdentifier(null, "h:abc", out var handoff, out var handoffError));
+        Assert.Equal("h:abc", handoff);
+        Assert.Null(handoffError);
+
+        Assert.False(ResolveTypeOriginInput.TryGetIdentifier(null, null, out _, out var missingError));
+        Assert.Contains("INVALID_ARGUMENT", GetText(missingError!), StringComparison.Ordinal);
+
+        Assert.False(ResolveTypeOriginInput.TryGetIdentifier("App.Worker", "h:abc", out _, out var ambiguousError));
+        Assert.Contains("INVALID_ARGUMENT", GetText(ambiguousError!), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveTypeOrigin_ResolvesBclTypeFromMetadataReference()
     {
         var compilation = CreateTestCompilation("// empty");

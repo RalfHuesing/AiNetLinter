@@ -219,7 +219,7 @@ internal static class FileStructureToolRegistrations
 
     private const string GetFileSkeletonDescription =
         "Ueberblick ueber Typen und Signaturen von C#-Dateien ohne Bodies (Batch in 1 Turn). " +
-        "filePaths: Array von Dateipfaden (relativ oder absolut). " +
+        "filePaths: Array von Dateipfaden (relativ oder absolut) oder h:…-Symbol-Handoffs für deren deklarierendes Quell-Dokument. " +
         "Navigierbare Typen und Member enthalten h:… für direkte Folgeparameter, etwa get_symbol_body.symbolIdentifiers. " +
         "maxResponseBytes (Default 24576, Min 512, Max 65536).";
 

@@ -16,6 +16,39 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.TypeResolution;
 
+internal static class ResolveTypeOriginInput
+{
+    internal static bool TryGetIdentifier(
+        string? typeName,
+        string? symbolIdentifier,
+        out string identifier,
+        out CallToolResult? error)
+    {
+        identifier = string.Empty;
+        error = null;
+        if (typeName is null && symbolIdentifier is null)
+        {
+            error = McpToolResults.InvalidArgument(
+                "Pflichtargument 'typeName' oder 'symbolIdentifier' fehlt.",
+                "Genau eines angeben; symbolIdentifier für h:…-Handoffs, typeName für Typnamen.",
+                "$.symbolIdentifier");
+            return false;
+        }
+
+        if (typeName is not null && symbolIdentifier is not null)
+        {
+            error = McpToolResults.InvalidArgument(
+                "typeName und symbolIdentifier sind gegenseitig exklusiv — genau eines angeben.",
+                "symbolIdentifier für h:…-Handoffs oder typeName für Typnamen verwenden, nie beide.",
+                "$.symbolIdentifier");
+            return false;
+        }
+
+        identifier = symbolIdentifier ?? typeName!;
+        return true;
+    }
+}
+
 internal static class ResolveTypeOriginTool
 {
     internal static async Task<CallToolResult> ExecuteProjectAsync(

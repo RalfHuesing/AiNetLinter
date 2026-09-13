@@ -72,6 +72,7 @@ public sealed class HandoffToolContractTests
         "get_type_hierarchy.symbolIdentifier",
         "metrics_lookup.symbolIdentifiers",
         "resolve_type_origin.typeName",
+        "resolve_type_origin.symbolIdentifier",
     ];
 
     // inspect_assembly.typeName ist ausschließlich ein textueller Assembly-Filter; es nimmt

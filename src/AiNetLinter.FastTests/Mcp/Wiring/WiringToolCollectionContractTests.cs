@@ -119,6 +119,7 @@ public sealed class WiringToolCollectionContractTests
         var skeleton = tools["get_file_skeleton"];
         Assert.Contains("filePaths", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("\"filePath\"", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Handoffs", skeleton.Description, StringComparison.Ordinal);
         Assert.DoesNotContain("String-Alias", skeleton.Description, StringComparison.Ordinal);
 
         var metrics = tools["metrics_tree"];
@@ -130,6 +131,11 @@ public sealed class WiringToolCollectionContractTests
         Assert.Contains("symbolIdentifiers", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("String-Alias", symbolBody.Description, StringComparison.Ordinal);
+
+        var typeOrigin = tools["resolve_type_origin"];
+        Assert.Contains("\"symbolIdentifier\"", typeOrigin.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("\"typeName\"", typeOrigin.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("genau ein", typeOrigin.Description, StringComparison.Ordinal);
 
         var findSymbol = tools["find_symbol"];
         Assert.Contains("namePatterns", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);

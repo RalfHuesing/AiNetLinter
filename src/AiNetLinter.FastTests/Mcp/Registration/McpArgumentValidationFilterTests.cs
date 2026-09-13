@@ -134,6 +134,18 @@ public sealed class McpArgumentValidationFilterTests
         AssertFilterError(error, $"$.{unknownField}");
     }
 
+    [Fact]
+    public void ValidateArguments_GetSymbolBodySingularIdentifier_ExplainsBatchParameter()
+    {
+        var error = McpArgumentValidationFilter.ValidateArguments(
+            "get_symbol_body",
+            Schema("symbolIdentifiers"),
+            Arguments("{\"symbolIdentifier\":\"h:abc\"}"));
+
+        AssertFilterError(error, "$.symbolIdentifier");
+        Assert.Contains("symbolIdentifiers: [\"h:…\"]", TextOf(error!), System.StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("find_symbol", "namePatterns", "\"not-an-array\"")]
     [InlineData("get_file_tree", "includeExtensions", "\"not-an-array\"")]

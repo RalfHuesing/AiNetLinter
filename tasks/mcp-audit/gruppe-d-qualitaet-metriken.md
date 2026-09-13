@@ -11,7 +11,7 @@
 - **Geprüfte Tools:** `verify`, `get_hotspots`, `find_duplicates`, `pattern_detect`, `metrics_tree`, `metrics_lookup`, `dependency_graph`, `search_pattern` (kontextuell `get_feature_context` / `get_impact`; Live-Schema ohne Alt-Namen)
 - **Geprüfte Prüffälle:** TC-D01 bis TC-D10
 - **Schema-Check Alt-Tools:** `safeguard`, `get_violations`, `find_dead_code`, `find_magic_values` und `minLines` sind im Live-Katalog **nicht** gelistet (kein Befund).
-- **Gefundene Befunde:** 0 Critical, 4 Major, 1 Minor
+- **Gefundene Befunde:** 0 Critical, 3 Major, 1 Minor
 
 Kurz positiv (kein Befund): `verify` auf `LOCAL-01`/`FALSE-01` recoverable `unsupported` ohne Crash und ohne `pass`; `get_hotspots` Assembly-Modus klar; `find_duplicates` respektiert `minTokens`/`mode`; `pattern_detect` gruppiert Heuristiken; `metrics_lookup` konsumiert `h:…`; `dependency_graph` akzeptiert `symbolIdentifier` aus Handoff; kontextuelle Violations ohne Gate-Verdict.
 
@@ -63,20 +63,6 @@ Kurz positiv (kein Befund): `verify` auf `LOCAL-01`/`FALSE-01` recoverable `unsu
 - **Empfehlung**:
   - `production` strikt auf Nicht-Test-Kompilationseinheiten begrenzen oder effektiv angewandten `scopeType` plus Zählung (production vs. tests) maschinenlesbar in der Kopfzeile ausweisen, wenn gemischt.
 
-### [Major] D-04: `helperSymbol`-Handoff aus `get_impact` bricht mit irreführendem `SYMBOL_NOT_FOUND`
-
-- **Betroffenes Tool / Schema**: `find_duplicates` (Parameter: `helperSymbol`, `mode=refactoring-drift`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `find_duplicates(targetPath=<SOURCE-01>, mode=refactoring-drift, helperSymbol=<h: aus get_impact>)`; Kontrast `helperSymbol=<h: aus find_symbol, kind=method>`
-- **Beobachtung / Ist-Verhalten**:
-  - Unveränderte `h:…` einer Call-Site aus `get_impact` (Konstruktor): Auflösung zu einem Metadata-Namen, danach `[ERROR]: SYMBOL_NOT_FOUND` mit Hint „Schreibweise prüfen oder find_symbol“.
-  - Dieselbe API mit Klassen-`h:`: klares `INVALID_ARGUMENT` (nur Methode/lokale Funktion) — das ist der bessere Pfad.
-  - Methode-`h:` aus `find_symbol`: Aufruf erfolgreich, leere Kandidatenmenge mit ehrlicher Evidenzgrenze (kein Befund).
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Handoff-Bruch: `h:…` aus dem unmittelbaren Vorgänger-Tool unverändert zu übergeben ist der Vertrag; der Agent erhält eine irreführende „Symbol nicht gefunden“-Meldung statt „Konstruktor ist kein gültiger Helper“.
-- **Empfehlung**:
-  - Aus `get_impact` stammende Konstruktor-`h:` entweder als Methode akzeptieren oder mit demselben `INVALID_ARGUMENT`-Profil wie NamedType ablehnen; Hint nicht auf Tippfehler/`find_symbol` schieben.
-
 ### [Minor] D-05: Qualitäts-Trefferlisten ohne konsumierbare `h:…`
 
 - **Betroffenes Tool / Schema**: `get_hotspots`, `find_duplicates`, `pattern_detect`, `metrics_tree`, `dependency_graph`, `search_pattern` (Parameter: `enrichCSharp`)
@@ -101,7 +87,7 @@ Kurz positiv (kein Befund): `verify` auf `LOCAL-01`/`FALSE-01` recoverable `unsu
 | TC-D02 | `scope=solution` Abschlussform mit `verdict`/`gate`; Semantik Fail am Target erwartbar; Maschinenlesbarkeit D-01. |
 | TC-D03 | `LOCAL-01` und `FALSE-01`: `verdict: error`, `code: ASSEMBLY_TARGET_UNSUPPORTED`, Recovery auf Source-Ziel; kein Crash, kein `pass`. JSON-RPC-`isError` in der sichtbaren Tool-Antwort nicht belegt. |
 | TC-D04 | Source: MaxLineCount-Tabelle nachvollziehbar. `LOCAL-01`: `[ASSEMBLY] capability=unsupported` plus recoverable Fehler, kein Crash. |
-| TC-D05 | `minTokens`/`mode` (`clone`, `structural`, `refactoring-drift`) greifen; kein `minLines` im Schema. Filter-/Handoff-Mängel D-03/D-04. |
+| TC-D05 | `minTokens`/`mode` (`clone`, `structural`, `refactoring-drift`) greifen; kein `minLines` im Schema. Filter-Mangel D-03. |
 | TC-D06 | Gruppierte Heuristiken (god-class, async-void, long-method, empty-catch); `not_configured`/`not_decidable` ohne globalen Clean-Claim. |
 | TC-D07 | Baum hierarchisch; Lookup konsumiert `h:…`. Emission von `h:…` im Baum fehlt (D-05). |
 | TC-D08 | `symbolIdentifier` aus Handoff akzeptiert; Kanten ohne `h:…` (D-05). |

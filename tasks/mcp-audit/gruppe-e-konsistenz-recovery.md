@@ -10,7 +10,7 @@
 
 - **Geprüfte Querschnittsbereiche:** Frühvalidierung, Typfehler, ungültige Pfade/Enums, Response-Budget-Treue, deterministisches Retry, Parameter-Naming, Session-Isolation
 - **Geprüfte Prüffälle:** TC-E01 bis TC-E06 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 0 Major, 2 Minor
+- **Gefundene Befunde:** 0 Critical, 0 Major, 1 Minor
 
 Live-Katalog: 33 Fach-Tools plus Cursor-internes `mcp_auth` (generische Auth-Description, nicht als AiNetLinter-Fach-Tool beworben — kein Befund). Quality-Gate ist `verify` (`targetPath`, `scope`); keine Alt-Filter `scopeFilter` / `minScore` / `maxViolations` im Schema.
 
@@ -49,18 +49,3 @@ Ohne Befund geblieben: Typfehler (handlungsweisende JSON-Typ-Meldung, kein Stack
   - Eine Maske ist kein fehlender Dateiname. Ohne Glob-Diagnose sucht der Agent weiter nach „der Datei“ statt ein Discovery-Tool zu wählen.
 - **Empfehlung**:
   - Wildcard/`*` in `targetPath` als eigenen, selbsterklärenden Code behandeln (z. B. `INVALID_ARGUMENT` mit Hint „keine Globs; konkrete Datei oder Discovery-Tool“). Fehlende Dateien optional als `FILE_NOT_FOUND` unterscheiden.
-
-### [Minor] E-06: `symbolIdentifier` an Batch-Tools ohne Alias-Hinweis
-
-- **Betroffener Querschnittsbereich**: Parameter-Naming
-- **Betroffenes Tool / Schema**: `get_symbol_body` (Parameter: `symbolIdentifiers`); Kontrast `resolve_type_origin` (`typeName`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_symbol_body(targetPath=SOURCE-01, symbolIdentifier=h:…)` (Singular, wie bei fast allen Gruppe-C-Tools)
-- **Beobachtung / Ist-Verhalten**:
-  - `INVALID_ARGUMENT: Unbekanntes Argument: symbolIdentifier`. Hint: nur Schema-Argumente verwenden. **Kein** Verweis auf `symbolIdentifiers` (Array).
-  - Derselbe `h:…`-Token ist bei `get_class_structure` / `find_references` / `get_feature_context` der Parameter `symbolIdentifier`, bei `resolve_type_origin` Pflichtfeld `typeName` (im Description-Text erwähnt).
-  - Übrige Naming-Unterschiede (`pattern`/`namePatterns` vs. `symbolIdentifier`, `helperSymbol`, `filePath`/`filePaths`) sind im Live-Schema semantisch begründet oder beschrieben. `verify` bewirbt keine Alt-Filter — kein zusätzlicher Defekt.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Naheliegendes Chaining (`h:…` → `symbolIdentifier`) scheitert an einem unbekannten Schlüsselnamen ohne Korrekturvorschlag. Das erhöht Reibung, obwohl das Schema den Plural kennt.
-- **Empfehlung**:
-  - Bei unbekanntem `symbolIdentifier` explizit `symbolIdentifiers` (Array) vorschlagen; optional Alias akzeptieren und intern zu `["h:…"]` mappen. `resolve_type_origin` auf `symbolIdentifier` angleichen oder in jeder Handoff-Zeile den Zielparameter `typeName` nennen.

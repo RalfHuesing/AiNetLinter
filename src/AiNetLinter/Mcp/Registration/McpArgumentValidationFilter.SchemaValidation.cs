@@ -33,7 +33,7 @@ internal static partial class McpArgumentValidationFilter
             return null;
         }
 
-        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(properties, arguments);
+        var unknownError = CreateUnknownArgumentError(toolName, properties, arguments);
         if (unknownError is not null) return unknownError;
 
         var requiredError = ValidateRequiredArguments(inputSchema, arguments);
@@ -46,5 +46,23 @@ internal static partial class McpArgumentValidationFilter
         }
 
         return null;
+    }
+
+    private static CallToolResult? CreateUnknownArgumentError(
+        string toolName,
+        JsonElement properties,
+        IDictionary<string, JsonElement> arguments)
+    {
+        if (toolName == "get_symbol_body"
+            && arguments.ContainsKey("symbolIdentifier")
+            && !properties.TryGetProperty("symbolIdentifier", out _))
+        {
+            return McpToolResults.InvalidArgument(
+                "get_symbol_body verwendet keinen einzelnen Parameter 'symbolIdentifier'.",
+                "symbolIdentifiers: [\"h:…\"] für einen oder mehrere Werte verwenden.",
+                "$.symbolIdentifier");
+        }
+
+        return TargetPathToolRegistrationOptions.RejectUnknownArguments(properties, arguments);
     }
 }

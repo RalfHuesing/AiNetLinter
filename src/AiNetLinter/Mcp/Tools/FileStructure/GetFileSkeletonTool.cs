@@ -12,7 +12,9 @@ using AiNetLinter.Core;
 using AiNetLinter.Core.Documents;
 using AiNetLinter.Maps.Skeleton;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -134,7 +136,12 @@ internal static class GetFileSkeletonTool
         var solutionDir = request.SolutionDir;
         var totalCount = request.TotalCount;
         var assemblyIdentity = request.AssemblyIdentity;
-        var candidates = SolutionDocumentPathResolver.FindCandidates(solution, path);
+        var handoffDocument = await TryResolveHandoffDocumentAsync(solution, path, assemblyIdentity, ct).ConfigureAwait(false);
+        if (handoffDocument.Error is not null) return (handoffDocument.Error, []);
+
+        var candidates = handoffDocument.Document is null
+            ? SolutionDocumentPathResolver.FindCandidates(solution, path)
+            : [handoffDocument.Document];
         if (candidates.Count > 1)
         {
             var candidateNames = candidates
@@ -152,6 +159,9 @@ internal static class GetFileSkeletonTool
             return (null, [new SkeletonRenderUnit($"### Datei nicht gefunden: `{path}`\n\n[HINWEIS] Datei '{path}' existiert nicht in der Solution.", path, [])]);
         }
 
+        var displayPath = handoffDocument.Document?.FilePath is { Length: > 0 } filePath
+            ? PathNormalizer.ToRelative(solutionDir, filePath)
+            : path;
         var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(
             document,
             solutionDir,
@@ -166,9 +176,35 @@ internal static class GetFileSkeletonTool
 
         if (types.Count == 0)
         {
-            return (null, [new SkeletonRenderUnit($"### Skelett: `{path}`\n\nKeine Typen gefunden in '{path}'", path, [])]);
+            return (null, [new SkeletonRenderUnit($"### Skelett: `{displayPath}`\n\nKeine Typen gefunden in '{displayPath}'", displayPath, [])]);
         }
-        return (null, types.Select(type => new SkeletonRenderUnit(SkeletonMarkdownRenderer.Render([type], path).TrimEnd(), path, [type])).ToList());
+        return (null, types.Select(type => new SkeletonRenderUnit(SkeletonMarkdownRenderer.Render([type], displayPath).TrimEnd(), displayPath, [type])).ToList());
+    }
+
+    private static async Task<(Document? Document, CallToolResult? Error)> TryResolveHandoffDocumentAsync(
+        Solution solution,
+        string path,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
+    {
+        if (!HandoffCounterAlphabet.IsValidHandle(path) && !path.StartsWith("h:", StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, null);
+        }
+
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, path, ct, assemblyIdentity).ConfigureAwait(false);
+        if (error is not null) return (null, error);
+
+        var document = symbol?.Locations
+            .Where(location => location.IsInSource && location.SourceTree is not null)
+            .Select(location => solution.GetDocument(location.SourceTree!))
+            .FirstOrDefault(candidate => candidate is not null);
+        return document is null
+            ? (null, McpToolResults.InvalidArgument(
+                "Die Handoff-ID verweist auf kein Quell-Dokument.",
+                "Eine Handoff-ID eines Symbols mit Source-Location oder einen Dateipfad in filePaths verwenden.",
+                "$.filePaths"))
+            : (document, null);
     }
 
     private sealed record RenderSingleFileSkeletonRequest(

@@ -16,27 +16,11 @@
   - CHAIN-03 (`LOCAL-01`): Hierarchie-Basis ohne konsumierbare `h:…` — **Bruch**
   - CHAIN-04 (`LOCAL-01`): `inspect_assembly` → `search_assembly` → `get_symbol_body` — **Bruch** (Direktpfad `inspect_assembly`-`h:…` → `get_symbol_body` funktioniert)
 - **FALSE-01:** recoverable `INVALID_ASSEMBLY`, kein Crash
-- **Gefundene Befunde:** 0 Critical, 6 Major, 2 Minor
+- **Gefundene Befunde:** 0 Critical, 5 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] C-03: `get_file_skeleton` akzeptiert keine Datei-Handoff-ID
-
-- **Betroffenes Tool / Schema**: `get_file_skeleton` (Parameter: `filePaths`)
-- **Ziel-Label**: `SOURCE-01` (Modus: Source)
-- **Konkreter Aufruf**: `get_file_skeleton(targetPath=<SOURCE-01>, filePaths=["h:…"])` mit Klassen-ID aus `find_symbol` / `get_symbol_body`
-- **Beobachtung / Ist-Verhalten**:
-  - `RESOURCE_NOT_FOUND: Datei 'h:…' nicht in der Solution gefunden.`
-  - Derselbe Fehler mit einer frischen Klassen-`h:…` nach Reload (kein Stale-Effekt).
-  - Erfolg nur nach **manuellem Kopieren** des relativen Dateipfads aus dem Markdown des Vorgängertools.
-  - Auf `LOCAL-01` analog: Dateiname aus `get_class_structure` (`Files:`) muss als Pfadstring übergeben werden; funktioniert, ist aber kein `h:…`-Handoff.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Workflow-Kontrakt: Folgeaufrufe ausschließlich mit kanonischen `h:…`. `get_file_skeleton` zwingt zum Parsen eines Pfads und behandelt `h:…` wie einen fehlenden Dateinamen.
-- **Empfehlung**:
-  - `filePaths` soll `h:…` (Datei oder enthaltenes Symbol) unverändert akzeptieren und auf das deklarierende Dokument mappen.
-  - Alternativ eigene Datei-`h:…` in `find_symbol` / `get_symbol_body` ausweisen.
 
 ### [Major] C-06: `includeReferences=true` verdrängt das Assembly-Target durch Referenztreffer
 
@@ -80,19 +64,6 @@
   - CHAIN-03 verlangt durchreichbare Qualifikation. Das `error:`-Präfix erzwingt String-Manipulation und ist keine recoverable Typ-Diagnose mit `h:…` oder `origin=external`.
 - **Empfehlung**:
   - Externe Basistypen als `origin=external` mit `h:…` oder stabilem FQ-Namen **ohne** Fehlerpräfix; `resolve_type_origin` soll denselben Identifier akzeptieren und `unresolved` strukturiert melden.
-
-### [Minor] C-09: `resolve_type_origin` nutzt `typeName` statt `symbolIdentifier`
-
-- **Betroffenes Tool / Schema**: `resolve_type_origin` (Parameter: `typeName`)
-- **Ziel-Label**: `SOURCE-01` / `LOCAL-01`
-- **Konkreter Aufruf**: `resolve_type_origin(targetPath=<LABEL>, typeName=<h:…>)`
-- **Beobachtung / Ist-Verhalten**:
-  - `h:…` wird akzeptiert (Kette auf `SOURCE-01` und Typ-Origin auf `LOCAL-01` ok).
-  - Alle anderen Symboltools heißen der Parameter `symbolIdentifier` / `symbolIdentifiers`.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Uneinheitlicher Parametername erhöht die Chance, dass ein Agent den Wert umbenennt oder als Anzeigenamen interpretiert.
-- **Empfehlung**:
-  - Alias `symbolIdentifier` analog zu den übrigen Tools, `typeName` als Legacy-Alias.
 
 ### [Minor] C-10: Assembly-Call-Tree mischt nutzbaren Graph mit Diagnose-Rauschen
 

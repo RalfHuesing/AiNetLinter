@@ -352,20 +352,29 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string typeName, CancellationToken ct = default) =>
-                await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? typeName = null, string? symbolIdentifier = null, CancellationToken ct = default) =>
+            {
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
+                if (!ResolveTypeOriginInput.TryGetIdentifier(typeName, symbolIdentifier, out var identifier, out var inputError))
+                {
+                    return inputError!;
+                }
+
+                return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => ResolveTypeOriginTool.ExecuteProjectAsync(lease.Server, typeName, ct),
-                            AssemblySessionCall: lease => ResolveTypeOriginTool.ExecuteAssemblyAsync(lease, typeName, ct)),
-                        ct))),
+                            ProjectCall: lease => ResolveTypeOriginTool.ExecuteProjectAsync(lease.Server, identifier, ct),
+                            AssemblySessionCall: lease => ResolveTypeOriginTool.ExecuteAssemblyAsync(lease, identifier, ct)),
+                        ct));
+            },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("resolve_type_origin", ResolveTypeOriginDescription)));
     }
 
     private const string ResolveTypeOriginDescription =
-        "Ermittelt die definierende Assembly (Name und DLL-Dateipfad), vollqualifizierten Namen und Symbol-Kind eines Typs. typeName: Pflicht-Einzelwert; bevorzugt h:… eines Typs aus vorheriger Toolantwort unverändert, alternativ Typname.";
+        "Ermittelt die definierende Assembly (Name und DLL-Dateipfad), vollqualifizierten Namen und Symbol-Kind eines Typs. symbolIdentifier oder typeName: genau ein Pflicht-Einzelwert; symbolIdentifier für h:… eines Typs aus vorheriger Toolantwort, typeName für einen Typnamen.";
 
     private static void AddFindImplementations(
         McpServerPrimitiveCollection<McpServerTool> tools,
