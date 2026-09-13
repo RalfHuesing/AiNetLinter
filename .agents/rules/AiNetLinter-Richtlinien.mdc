@@ -42,7 +42,13 @@ Nutzeranweisungen haben Vorrang.
 - MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-Testinfrastruktur (keine Ad-hoc-Skripte committen).
 - Keine Compilerwarnungen einführen (`TreatWarningsAsErrors`). Tests niemals abschwächen oder auskommentieren; stets Ursache beheben.
 - Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
-- **MCP-Quality-Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge `dotnet build`, `verify(targetPath)` und der passende FastTests-Lauf. Vor dem Abschluss in derselben Reihenfolge `dotnet build`, `verify(targetPath, scope: "solution")`, vollständige FastTests und vollständige IntegrationTests, jeweils ohne `Stress`. Nur `verdict=pass`, `score=10.0` und `violationCount=0` erfüllen das Verify-Gate. Schlägt ein Schritt fehl, Ursache beheben und das jeweilige Gate vollständig wiederholen. Advisory-Kandidaten bei `changes` erfordern Agentenurteil, beeinflussen das Verdict nicht und sind keine sichere Lösch- oder Änderungsanweisung.
+- **Workflow- und MCP-Quality-Gates**:
+  - **Taskbeginn**: Saubere Codebasis voraussetzen; vor der ersten Änderung kein Build, Verify oder Test.
+  - **Incremental Gate**: Nach jedem kohärenten Coding-Slice mit Produktions- oder Testcode in dieser Reihenfolge: `dotnet build`, `verify(targetPath)`, passender FastTests-Lauf (standardmäßig `dotnet test src/AiNetLinter.FastTests --filter Category=Unit`). Kein bekannter roter Stand bleibt als Zwischen- oder Übergabestand bestehen.
+  - **Release Gate**: Vor Abschluss in dieser Reihenfolge: `dotnet build`, `verify(targetPath, scope: "solution")`, `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`, `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`.
+  - Jeder fehlgeschlagene Schritt ist vor dem Weiterarbeiten zu beheben; danach das jeweilige Gate vollständig wiederholen. Das Release Gate ist nur bei `verdict=pass`, `score=10.0` und `violationCount=0` erfüllt. Advisory-Kandidaten bei `changes` erfordern Agentenurteil, beeinflussen das Verdict nicht und sind keine sichere Lösch- oder Änderungsanweisung.
+  - `dotnet build` muss alle vier Projekte fehler- und warnungsfrei bauen (`TreatWarningsAsErrors`). `Stress`-Tests laufen nur auf ausdrückliche Anforderung. Bei unklaren oder abgebrochenen Testläufen `--logger "trx;LogFileName=<Name>.trx"` verwenden.
+  - Für reine Dokumentations-, Markdown- oder Agentenregel-Änderungen sind Build und Tests nicht erforderlich; `git diff --check` und eine saubere Diff-Prüfung genügen.
 - Kommentare erklären nur nicht offensichtliches „Why“; keine Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 
 ## Git und parallele Agenten

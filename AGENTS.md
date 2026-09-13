@@ -13,50 +13,12 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 
 ## 2. Entwicklungs- & Test-Workflow
 
-### Gates & Verifikation
-1. **Taskbeginn**:
-   Eine saubere Codebasis wird vorausgesetzt. Vor der ersten Änderung werden
-   kein Build, kein Verify und keine Tests ausgeführt.
-
-2. **Incremental Gate (nach jedem kohärenten Coding-Slice)**:
-   Produktions- oder Testcode darf erst nach dieser Reihenfolge als nächster
-   Arbeitsstand verwendet werden:
-   ```text
-   dotnet build
-   verify(targetPath)
-   dotnet test src/AiNetLinter.FastTests --filter Category=Unit
-   ```
-   Schlägt ein Schritt fehl, muss die Ursache vor dem nächsten Slice behoben
-   und die Reihenfolge wiederholt werden. Kein bekannter roter Stand bleibt
-   als Zwischen- oder Übergabestand bestehen.
-
-3. **Release Gate bei Codeänderungen (Pflicht)**:
-   Vor Abschluss jedes Tasks an Produktions- oder Testcode müssen alle Schritte
-   in dieser Reihenfolge grün sein:
-   ```text
-   dotnet build
-   verify(targetPath, scope: "solution")
-   dotnet test src/AiNetLinter.FastTests --filter Category!=Stress
-   dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
-   ```
-   Ist ein Schritt rot, ist der Task nicht abgeschlossen: Ursache beheben und
-   das Release Gate vollständig wiederholen.
-
-   `dotnet build` muss alle vier Projekte der Solution fehler- und
-   warnungsfrei bauen (`TreatWarningsAsErrors = true`). `verify` muss beim
-   Release Gate `verdict=pass`, `score=10.0` und `violationCount=0` liefern.
-
-4. **`Stress`-Kategorie (nur manuell/gezielt, nie automatisch)**:
-   Absichtlich lastintensive Tests laufen nicht im normalen Gate mit, sondern nur auf explizite Anforderung:
-   ```bash
-   dotnet test src/AiNetLinter.IntegrationTests --filter Category=Stress
-   ```
-
-5. **Testdiagnose**:
-   Bei unklaren oder abgebrochenen Läufen `--logger "trx;LogFileName=<Name>.trx"` nutzen.
-
-6. **Dokumentations-Ausnahme**:
-   Für reine Dokumentations-, Markdown- oder Agentenregel-Änderungen sind Build und Tests nicht erforderlich. Hier genügen Referenzprüfungen, `git diff --check` und eine saubere Diff-Prüfung.
+Der verbindliche Gate-Ablauf steht ausschließlich in
+`.agents/rules/AiNetLinter-Richtlinien.mdc`; die Testebenen stehen in
+`.agents/rules/AiNetLinter-TestRichtlinien.mdc`. Diese Dateien sind die
+einzige Source of Truth für Prüfzeitpunkt, Reihenfolge, Testauswahl und
+Abschlusskriterien. Bei unklaren oder abgebrochenen Testläufen die dort
+genannte TRX-Diagnose verwenden.
 
 ---
 
