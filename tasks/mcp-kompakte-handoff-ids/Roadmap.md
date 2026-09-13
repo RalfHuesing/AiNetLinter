@@ -2,7 +2,7 @@
 
 - [X] 1. Ist-Stand, vollständige Verdrahtungsinventur und offene Scope-Lücken auditieren
 - [X] 2. Verbleibende Source-Producer und -Consumer (`metrics_lookup`, Spezial-Consumer) verdrahten
-- [ ] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
+- [X] 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 - [ ] 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 - [ ] 5. Dokumentation, Tokenmessung und vollständige Wire-/Inventurprüfung abschließen
 - [ ] 6. Gesamt-Audit mit proaktiver Finding-Behebung und Release-Gate
@@ -23,7 +23,9 @@
 
 ### 3. Assembly-Producer und -Consumer vollständig auf opaque Handles umstellen
 
-- Ausstehend.
+- `get_assembly_context` und Assembly-Referenzsuche restaurieren Handles am Eingang.
+- Toolketten für Inspect/Search/Extensions bis zum Context gegen `h:` und Altformatfehler abgesichert.
+- Build, `verify(changes)` und 1.838 Unit-FastTests grün.
 
 ### 4. Öffentlichen Vertrag, Renderer- und Toolketten-Tests einschließlich Edge-Cases schließen
 

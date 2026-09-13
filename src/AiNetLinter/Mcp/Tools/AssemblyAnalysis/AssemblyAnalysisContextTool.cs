@@ -57,6 +57,14 @@ internal static class AssemblyAnalysisContextTool
     {
         var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(arguments.DetailLevel);
         if (detailLevelError is not null) return detailLevelError;
+        if (!McpToolResults.TryRestoreSymbolIdentifier(
+                arguments.SymbolIdentifier,
+                "$.symbolIdentifier",
+                out var effectiveSymbolIdentifier,
+                out var handoffError))
+        {
+            return handoffError;
+        }
 
         try
         {
@@ -77,7 +85,12 @@ internal static class AssemblyAnalysisContextTool
                 InspectAssemblyFormatter.FormatContextOverview(
                     inspection,
                     GetTargetFramework(lease.Context)));
-            var symbolError = await AddSymbolSectionsAsync(lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
+            var symbolError = await AddSymbolSectionsAsync(
+                lease,
+                arguments,
+                effectiveSymbolIdentifier,
+                sectionTexts,
+                cancellationToken).ConfigureAwait(false);
             if (symbolError is not null) return symbolError;
             return McpToolResults.Text(RenderText(CreateTextModel(lease, arguments, inspection, sectionTexts)));
         }
@@ -104,11 +117,16 @@ internal static class AssemblyAnalysisContextTool
     private static async Task<CallToolResult?> AddSymbolSectionsAsync(
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
+        string effectiveSymbolIdentifier,
         Dictionary<string, string> sectionTexts,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(arguments.SymbolIdentifier)) return null;
-        var resolvedSectionLease = await ResolveSectionLeaseAsync(lease, arguments, cancellationToken).ConfigureAwait(false);
+        var resolvedSectionLease = await ResolveSectionLeaseAsync(
+            lease,
+            arguments,
+            effectiveSymbolIdentifier,
+            cancellationToken).ConfigureAwait(false);
         if (resolvedSectionLease.Error is not null) return resolvedSectionLease.Error;
         var symbolLease = resolvedSectionLease.Lease;
         if (arguments.IncludeMetrics)
@@ -156,22 +174,23 @@ internal static class AssemblyAnalysisContextTool
     private static async Task<(AssemblyAnalysisLease Lease, CallToolResult? Error)> ResolveSectionLeaseAsync(
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
+        string effectiveSymbolIdentifier,
         CancellationToken cancellationToken)
     {
-        if (!arguments.IncludeReferences && !SymbolHandoffIdentifier.HasWirePrefix(arguments.SymbolIdentifier!))
+        if (!arguments.IncludeReferences && !SymbolHandoffIdentifier.HasWirePrefix(effectiveSymbolIdentifier))
         {
             return (lease, null);
         }
 
-        var plan = AssemblySearchPlan.Create(arguments.SymbolIdentifier, arguments.IncludeReferences);
+        var plan = AssemblySearchPlan.Create(effectiveSymbolIdentifier, arguments.IncludeReferences);
         var resolved = await AssemblySymbolResolver.ResolveAsync(
             lease,
-            arguments.SymbolIdentifier!,
+            effectiveSymbolIdentifier,
             plan,
             cancellationToken).ConfigureAwait(false);
         if (resolved.Error is not null) return (lease, resolved.Error);
         return resolved.Target is null
-            ? (lease, McpToolResults.SymbolNotFound(arguments.SymbolIdentifier!))
+            ? (lease, McpToolResults.SymbolNotFound(effectiveSymbolIdentifier))
             : (resolved.Target.Lease, null);
     }
 

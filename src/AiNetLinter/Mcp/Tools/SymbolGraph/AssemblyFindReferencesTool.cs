@@ -47,6 +47,15 @@ internal static class AssemblyFindReferencesTool
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
+        if (!McpToolResults.TryRestoreSymbolIdentifier(
+                symbolIdentifier,
+                "$.symbolIdentifier",
+                out symbolIdentifier,
+                out var handoffError))
+        {
+            return handoffError;
+        }
+
         try
         {
             var plan = AssemblySearchPlan.Create(symbolIdentifier, request.IncludeReferences);
