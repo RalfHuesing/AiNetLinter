@@ -248,6 +248,12 @@ internal static partial class MagicValueAdvisoryScanner
         IReadOnlySet<string>? scopeFiles)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
+        var selection = new MagicValueDocumentSelectionParameters(
+            solutionDir,
+            scopeFilter,
+            includeTests,
+            changedFiles,
+            scopeFiles);
         var result = new List<(Document, string)>();
         foreach (var project in solution.Projects)
         {
@@ -258,7 +264,7 @@ internal static partial class MagicValueAdvisoryScanner
 
             foreach (var document in project.Documents)
             {
-                if (TrySelectDocument(document, solutionDir, scopeFilter, includeTests, changedFiles, scopeFiles, out var entry))
+                if (TrySelectDocument(document, selection, out var entry))
                 {
                     result.Add(entry);
                 }
@@ -273,32 +279,40 @@ internal static partial class MagicValueAdvisoryScanner
     /// relativen Pfad zurueck.</summary>
     private static bool TrySelectDocument(
         Document document,
-        string solutionDir,
-        string? scopeFilter,
-        bool includeTests,
-        IReadOnlySet<string>? changedFiles,
-        IReadOnlySet<string>? scopeFiles,
+        MagicValueDocumentSelectionParameters selection,
         out (Document Document, string FilePath) entry)
     {
         entry = default;
+        if (!IsSupportedSourceDocument(document, selection.ScopeFiles)) return false;
+
+        var relativePath = selection.SolutionDirectory.Length == 0
+            ? document.FilePath!
+            : Path.GetRelativePath(selection.SolutionDirectory, document.FilePath!).Replace('\\', '/');
+        if (!MatchesSelection(relativePath, selection)) return false;
+
+        entry = (document, relativePath);
+        return true;
+    }
+
+    private static bool IsSupportedSourceDocument(Document document, IReadOnlySet<string>? scopeFiles)
+    {
         if (document.SourceCodeKind != SourceCodeKind.Regular) return false;
         if (document.FilePath is null) return false;
         if (!document.FilePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
         if (FileSystemExclusionHelpers.IsGeneratedPath(document.FilePath)) return false;
-        if (scopeFiles is not null && !scopeFiles.Contains(Path.GetFullPath(document.FilePath))) return false;
+        return scopeFiles is null || scopeFiles.Contains(Path.GetFullPath(document.FilePath));
+    }
 
-        var relativePath = solutionDir.Length == 0
-            ? document.FilePath
-            : Path.GetRelativePath(solutionDir, document.FilePath).Replace('\\', '/');
-
-        if (!string.IsNullOrWhiteSpace(scopeFilter)
-            && relativePath.IndexOf(scopeFilter, StringComparison.OrdinalIgnoreCase) < 0)
+    private static bool MatchesSelection(string relativePath, MagicValueDocumentSelectionParameters selection)
+    {
+        if (!string.IsNullOrWhiteSpace(selection.ScopeFilter)
+            && relativePath.IndexOf(selection.ScopeFilter, StringComparison.OrdinalIgnoreCase) < 0)
         {
             return false;
         }
 
         // includeTests=false: Testdateien und Testpfade ueberspringen.
-        if (!includeTests && LooksLikeTestPath(relativePath))
+        if (!selection.IncludeTests && LooksLikeTestPath(relativePath))
         {
             return false;
         }
@@ -306,12 +320,11 @@ internal static partial class MagicValueAdvisoryScanner
         // changedOnly: Datei MUSS in den geaenderten Dateien sein (Forward-Slash-normalisiert,
         // weil ResolveChangedFilesAsync die Keys bereits normalisiert). Bei leerem Set
         // (kein Git-Repo / keine Diffs) liefert der Filter 0 Dateien.
-        if (changedFiles is not null && !changedFiles.Contains(relativePath))
+        if (selection.ChangedFiles is not null && !selection.ChangedFiles.Contains(relativePath))
         {
             return false;
         }
 
-        entry = (document, relativePath);
         return true;
     }
 

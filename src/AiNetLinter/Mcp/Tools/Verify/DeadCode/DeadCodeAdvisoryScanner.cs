@@ -447,20 +447,39 @@ internal static class DeadCodeAdvisoryScanner
         var docs = new List<Document>();
         foreach (var project in solution.Projects)
         {
-            if (!project.SupportsCompilation) continue;
-            if (!args.IncludeTests && TestDetector.IsTestProject(project)) continue;
-
-            foreach (var doc in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(doc, solutionDir)) continue;
-                if (args.ScopeFiles is not null
-                    && (doc.FilePath is null || !args.ScopeFiles.Contains(Path.GetFullPath(doc.FilePath)))) continue;
-                if (!ViolationScopeFilter.MatchesScope(doc.FilePath ?? "", project.Name, solutionDir, args.ScopeFilter)) continue;
-
-                docs.Add(doc);
-            }
+            if (!ShouldScanProject(project, args)) continue;
+            AddCandidateDocuments(project, solutionDir, args, docs);
         }
         return docs;
+    }
+
+    private static bool ShouldScanProject(Project project, DeadCodeAdvisoryOptions args)
+    {
+        return project.SupportsCompilation && (args.IncludeTests || !TestDetector.IsTestProject(project));
+    }
+
+    private static void AddCandidateDocuments(
+        Project project,
+        string solutionDir,
+        DeadCodeAdvisoryOptions args,
+        List<Document> documents)
+    {
+        foreach (var document in project.Documents)
+        {
+            if (IsCandidateDocument(document, project.Name, solutionDir, args)) documents.Add(document);
+        }
+    }
+
+    private static bool IsCandidateDocument(
+        Document document,
+        string projectName,
+        string solutionDir,
+        DeadCodeAdvisoryOptions args)
+    {
+        if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) return false;
+        if (args.ScopeFiles is not null
+            && (document.FilePath is null || !args.ScopeFiles.Contains(Path.GetFullPath(document.FilePath)))) return false;
+        return ViolationScopeFilter.MatchesScope(document.FilePath ?? "", projectName, solutionDir, args.ScopeFilter);
     }
 
     private static bool ShouldCheckSymbol(INamedTypeSymbol symbol, DeadCodeAdvisoryOptions args) =>

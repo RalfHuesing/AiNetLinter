@@ -52,6 +52,13 @@ internal sealed record MagicValueAdvisoryScannerParameters(
     CancellationToken CancellationToken,
     IReadOnlySet<string>? ScopeFiles = null);
 
+internal sealed record MagicValueDocumentSelectionParameters(
+    string SolutionDirectory,
+    string? ScopeFilter,
+    bool IncludeTests,
+    IReadOnlySet<string>? ChangedFiles,
+    IReadOnlySet<string>? ScopeFiles);
+
 /// <summary>
 /// Ergebnis-Record fuer <see cref="MagicValueAdvisoryScanner.ScanAsync"/>. <see cref="IsMalfunction"/>
 /// unterscheidet eine echte Malfunction (unerwartete Roslyn-/Laufzeit-Exception im defensiven

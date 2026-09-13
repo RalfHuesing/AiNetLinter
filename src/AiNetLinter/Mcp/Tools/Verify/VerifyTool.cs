@@ -191,60 +191,23 @@ internal static class VerifyScopeProjector
     }
 }
 
-internal static class VerifyResponseFormatter
+internal static partial class VerifyResponseFormatter
 {
     internal static CallToolResult Success(VerifySuccessParameters parameters)
     {
-        var requested = parameters.Requested;
-        var scope = parameters.Scope;
-        var score = parameters.Score;
-        var advisory = parameters.Advisory;
-        var count = score.TotalViolationCount;
-        var verdict = score.Score == VerifyGateSummary.RequiredScore && count == VerifyGateSummary.RequiredViolationCount
-            ? VerifyVerdict.Pass
-            : VerifyVerdict.Failed;
-        var reason = count > 0 ? VerifyDecisionReason.ViolationsPresent : VerifyDecisionReason.ScoreBelowRequired;
-        var gateEvidence = score.Violations
-            .Select(ToEvidence)
-            .OrderBy(entry => GateRank(entry.Severity))
-            .ThenBy(entry => entry.SourcePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(entry => entry.Line)
-            .ThenBy(entry => entry.RuleOrCategory, StringComparer.Ordinal)
-            .ToList();
-        if (verdict == VerifyVerdict.Failed && gateEvidence.Count == 0) return Incomplete(
-            requested, VerifyDecisionReason.GateEvidenceIncomplete, "Den identischen verify-Aufruf erneut ausführen.");
-        var candidates = gateEvidence.Concat(advisory.Entries).ToList();
-        var sourceTruncated = gateEvidence.Count < count
-            || advisory.Entries.Count < advisory.TotalCount
-            || candidates.Count > VerifyTool.EvidenceLimit;
-        var limitedCandidates = candidates.Take(VerifyTool.EvidenceLimit).ToList();
-        var response = new VerifyResponse(
-            verdict,
-            VerifyCompleteness.Complete,
-            new VerifyGateSummary(score.Score, count, verdict == VerifyVerdict.Pass ? VerifyDecisionReason.RequirementsMet : reason),
-            scope,
-            count + advisory.TotalCount,
-            limitedCandidates);
-        var unbounded = RenderWithinBudget(response, parameters.Exclusions, count, advisory, TruncationReason(sourceTruncated, false));
+        var prepared = PrepareSuccessResponse(parameters);
+        if (prepared.RequiresIncomplete) return Incomplete(
+            parameters.Requested, VerifyDecisionReason.GateEvidenceIncomplete, "Den identischen verify-Aufruf erneut ausführen.");
+
+        var unbounded = RenderWithinBudget(
+            prepared.Response,
+            parameters.Exclusions,
+            prepared.GateEvidenceCount,
+            parameters.Advisory,
+            TruncationReason(prepared.SourceTruncated, false));
         if (unbounded.Text is not null && !unbounded.ScopeProjected) return Text(unbounded.Text);
 
-        var projected = new List<VerifyEvidenceEntry>();
-        var truncationReason = TruncationReason(sourceTruncated, true);
-        foreach (var candidate in limitedCandidates)
-        {
-            var candidateResponse = response with { Evidence = projected.Append(candidate).ToList() };
-            if (RenderWithinBudget(candidateResponse, parameters.Exclusions, count, advisory, truncationReason).Text is null) break;
-            projected.Add(candidate);
-        }
-
-        if (verdict == VerifyVerdict.Failed && projected.All(entry => entry.Kind != "gate_violation")) return Incomplete(
-            requested, VerifyDecisionReason.GateEvidenceIncomplete, "Die vollständige Gate-Evidenz überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.");
-
-        var budgeted = RenderWithinBudget(
-            response with { Evidence = projected }, parameters.Exclusions, count, advisory, truncationReason);
-        return budgeted.Text is not null
-            ? Text(budgeted.Text)
-            : Incomplete(requested, VerifyDecisionReason.GateEvidenceIncomplete, "Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.");
+        return ProjectWithinBudget(parameters, prepared);
     }
 
     internal static CallToolResult Incomplete(VerifyScope scope, VerifyDecisionReason reason, string? recovery) =>
