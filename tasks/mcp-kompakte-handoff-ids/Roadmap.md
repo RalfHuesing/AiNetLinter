@@ -16,6 +16,7 @@
 - [X] 14. Call-Tree-Transportvertrag ohne internes Request-Kontextfeld absichern
 - [X] 15. Assembly-Member-Handoffs per MCP-Transport vollständig auflösbar machen
 - [X] 16. Globale MCP-Präambel aus öffentlichen Toolbeschreibungen entfernen
+- [ ] 17. Abschlussaudit des gesamten Handoff- und Toolbeschreibungs-Vertrags
 
 ## Durchführungsprotokoll
 
@@ -114,3 +115,9 @@
 - Rot-Test belegte: nichtleere Server-Instruktionen werden im Host vor jede Toolbeschreibung gesetzt.
 - Globale Hinweise bleiben einmalig über `ainetlinter://agent-guide` erreichbar; Tools enthalten nur ihre Verträge.
 - Build, `verify(changes)` und 1.835 Unit-FastTests grün.
+
+### 17. Abschlussaudit des gesamten Handoff- und Toolbeschreibungs-Vertrags
+
+- Audit nach Nutzeranweisung vor dem Release-Gate abgebrochen; kein Abschlussnachweis behauptet.
+- Doku-Smoke-Test zeigte die entfallene C#-Symbolgraph-Grenze; der Agent-Guide-Verweis beschreibt sie wieder präzise und ohne Toolpräambel.
+- Kein Build, keine Tests und kein Release-Gate in diesem unvollständigen Audit-Schritt.

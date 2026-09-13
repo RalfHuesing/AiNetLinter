@@ -84,9 +84,11 @@ auf das angefragte Target begrenzt.
 Der Server veröffentlicht keine globalen `ServerInstructions`: Manche Hosts hängen
 diesen Text an jede einzelne Toolbeschreibung und vervielfachen damit Tokenkosten.
 Der zentrale Ziel-, Handoff- und Workflowvertrag steht einmalig und ohne Target unter
-`ainetlinter://agent-guide`; der Zielstatus steht in der Overview-Resource. Die
-vollständigen Tool- und Parameterschemas bleiben in `tools/list`, dessen
-Beschreibungen ausschließlich tool-spezifische Parameter, Defaults und Grenzen nennen.
+`ainetlinter://agent-guide`; dort steht auch die C#-Symbolgraph-Grenze mit
+`search_pattern`-Fallback für Text und Nicht-C#-Dateien. Der Zielstatus steht in der
+Overview-Resource. Die vollständigen Tool- und Parameterschemas bleiben in
+`tools/list`, dessen Beschreibungen ausschließlich tool-spezifische Parameter,
+Defaults und Grenzen nennen.
 
 ### Tool-Annotations
 
