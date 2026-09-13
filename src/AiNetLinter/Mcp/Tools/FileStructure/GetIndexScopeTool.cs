@@ -23,15 +23,7 @@ internal static class GetIndexScopeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var (text, entries, population) = await GetIndexScopeScanner.BuildBreakdownAsync(solution, ct);
-        // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        var payload = new IndexScopePayload(
-            entries,
-            population,
-            Status: "ok",
-            Routing: new IndexScopeRouting(
-                new IndexScopeRoute("find_symbol", "pattern", null, null),
-                new IndexScopeRoute("search_pattern", "pattern", "all", ["**/*{extension}"])));
+        var text = await GetIndexScopeScanner.BuildBreakdownAsync(solution, ct);
         return McpToolResults.Text(text);
     }
 }

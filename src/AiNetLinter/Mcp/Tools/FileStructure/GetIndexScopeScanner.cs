@@ -24,10 +24,9 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 internal static class GetIndexScopeScanner
 {
     /// <summary>
-    /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> — Text
-    /// plus <see cref="FileTypeBreakdownEntry"/>-Liste für den Renderer.
+    /// Baut die vollstaendige Dateityp-Aufschluesselung für <paramref name="solution"/> als Text.
     /// </summary>
-    internal static async System.Threading.Tasks.Task<(string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries, IndexScopePopulation Population)> BuildBreakdownAsync(Solution solution, System.Threading.CancellationToken cancellationToken)
+    internal static async System.Threading.Tasks.Task<string> BuildBreakdownAsync(Solution solution, System.Threading.CancellationToken cancellationToken)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var csCount = CountPhysicalCSharpFiles(solution, solutionDir);
@@ -66,7 +65,7 @@ internal static class GetIndexScopeScanner
             generatedDocumentCount,
             testDocumentCount,
             entries.Sum(entry => entry.Count));
-        return (FormatBreakdown(entries, population), entries, population);
+        return FormatBreakdown(entries, population);
     }
 
     private static int CountPhysicalCSharpFiles(Solution solution, string solutionDir)
@@ -158,22 +157,6 @@ internal sealed record FileTypeBreakdownEntry(
     int Count,
     bool SymbolGraphCovered,
     string RoutingTool,
-    string QueryField,
-    string? ScopeType,
-    IReadOnlyList<string>? IncludePatterns);
-
-internal sealed record IndexScopePayload(
-    IReadOnlyList<FileTypeBreakdownEntry> Breakdown,
-    IndexScopePopulation Population,
-    string Status,
-    IndexScopeRouting Routing);
-
-internal sealed record IndexScopeRouting(
-    IndexScopeRoute CSharp,
-    IndexScopeRoute NonCSharp);
-
-internal sealed record IndexScopeRoute(
-    string Tool,
     string QueryField,
     string? ScopeType,
     IReadOnlyList<string>? IncludePatterns);
