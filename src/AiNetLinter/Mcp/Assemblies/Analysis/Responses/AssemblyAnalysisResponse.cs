@@ -34,12 +34,7 @@ internal static partial class AssemblyAnalysisResponse
         AssemblyAnalysisLease lease,
         AssemblyAnalysisResponseRequest request)
     {
-        if (AssemblyAnalysisResponseLimits.IsBelowMinimumResponseBudget(request.MaxResponseBytes))
-        {
-            return McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss mindestens {AssemblyAnalysisResponseLimits.MinimumResponseBytes} Bytes betragen, damit ein maschinenlesbarer Assembly-Envelope mit Status und Budgetdaten repräsentierbar bleibt.",
-                $"maxResponseBytes erhöhen oder den Parameter weglassen; dann gilt das konfigurierte Assembly-Budget von {lease.Context.ResponseBudgetBytes} Bytes.");
-        }
+        if (ValidateResponseBudget(request.MaxResponseBytes) is { } budgetError) return budgetError;
 
         var enriched = CreateEnriched(result, lease);
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
@@ -56,6 +51,18 @@ internal static partial class AssemblyAnalysisResponse
         // removing a partial domain unit before its owner can select it.
         return AssemblyPublicContract.Project(enriched);
     }
+
+    internal static CallToolResult? ValidateResponseBudget(int requestedBytes) =>
+        !AssemblyAnalysisResponseLimits.IsBelowMinimumResponseBudget(requestedBytes)
+            ? null
+            : McpToolResults.Error(
+                LinterErrorCodes.ResponseBudgetTooSmall,
+                $"maxResponseBytes={requestedBytes} ist kleiner als das für eine vollständige minimale Assembly-Projektion erforderliche Budget.",
+                new McpErrorParameters(
+                    Hint: "maxResponseBytes erhöhen; die vollständige minimale Assembly-Projektion bleibt erhalten.",
+                    FieldPath: "$.maxResponseBytes",
+                    RequestedBytes: requestedBytes,
+                    MinimumResponseBytes: AssemblyAnalysisResponseLimits.MinimumResponseBytes));
 
     private static CallToolResult CreateEnriched(CallToolResult result, AssemblyAnalysisLease lease)
     {

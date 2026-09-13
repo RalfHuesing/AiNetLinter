@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using AiNetLinter.Mcp.Assemblies.Analysis.Responses;
 using AiNetLinter.Mcp.Validation;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Xunit;
@@ -11,6 +12,22 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 [Trait("Category", "Unit")]
 public sealed class AssemblyAnalysisResponseLimitsTests
 {
+    [Fact]
+    public void MinimumAssemblyBudget_ReturnsExecutableBudgetError()
+    {
+        var result = AssemblyAnalysisResponse.ValidateResponseBudget(200);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsError);
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, StringComparison.Ordinal);
+        Assert.Contains("fieldPath: $.maxResponseBytes", text, StringComparison.Ordinal);
+        Assert.Contains("requestedBytes: 200", text, StringComparison.Ordinal);
+        Assert.Contains($"minimumResponseBytes: {AssemblyAnalysisResponseLimits.MinimumResponseBytes}", text, StringComparison.Ordinal);
+        Assert.Contains($"maxResponseBytes={AssemblyAnalysisResponseLimits.MinimumResponseBytes}", text, StringComparison.Ordinal);
+        Assert.Null(AssemblyAnalysisResponse.ValidateResponseBudget(AssemblyAnalysisResponseLimits.MinimumResponseBytes));
+    }
+
     [Fact]
     public void AssemblyDetailLevelContract_UsesCanonicalValuesForToolsAndValidator()
     {

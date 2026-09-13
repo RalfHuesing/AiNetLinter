@@ -95,6 +95,7 @@ public sealed class McpToolResultsContentTests
             new McpErrorParameters(FieldPath: "$.maxResponseBytes", RequestedBytes: 512, MinimumResponseBytes: 1024));
 
         var text = TextOf(result);
+        Assert.Contains("requestedBytes: 512", text, StringComparison.Ordinal);
         Assert.Contains("minimumResponseBytes: 1024", text, StringComparison.Ordinal);
         Assert.Contains("maxResponseBytes=1024", text, StringComparison.Ordinal);
     }

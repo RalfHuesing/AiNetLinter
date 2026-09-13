@@ -10,25 +10,11 @@
 
 - **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
 - **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
-- **Gefundene Befunde:** 0 Critical, 4 Major, 0 Minor
+- **Gefundene Befunde:** 0 Critical, 3 Major, 0 Minor
 
 ---
 
 ## 2. Negative Befunde
-
-### [Major] B-03: `inspect_assembly` meldet Budget-Untergrenze als `INVALID_ARGUMENT`
-
-- **Betroffenes Tool / Schema**: `inspect_assembly` (Parameter: `maxResponseBytes`)
-- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
-- **Konkreter Aufruf**: `inspect_assembly(targetPath="<LOCAL-01>", maxResponseBytes=200)`
-- **Beobachtung / Ist-Verhalten**:
-  - Antwort: `INVALID_ARGUMENT: maxResponseBytes muss mindestens 2048 Bytes betragen …`; Hinweis auf Default-Budget 16384.
-  - Kein Fehlercode `RESPONSE_BUDGET_TOO_SMALL`, kein maschinenlesbares `minimumResponseBytes`.
-  - Folgeaufruf mit `maxResponseBytes=2048` liefert Nutzinhalt (1 Typ) plus `continuationToken`.
-- **Soll-Verhalten / Problem aus Agentensicht**:
-  - Der dokumentierte Retry-Vertrag (`RESPONSE_BUDGET_TOO_SMALL` + `minimumResponseBytes`) greift nicht. Ein Agent muss deutschen Fließtext parsen, um 2048 zu erraten.
-- **Empfehlung**:
-  - Unter der Mindestgröße denselben Budget-Envelope wie bei Overflow nutzen: Code `RESPONSE_BUDGET_TOO_SMALL`, Feld `minimumResponseBytes=2048` (oder den tatsächlich benötigten Wert).
 
 ### [Major] B-04: `get_assembly_context` liefert Übersicht ohne Verweise und Zielframework
 

@@ -133,6 +133,10 @@ internal static partial class McpToolResults
         {
             text += $"\n  fieldPath: {parameters.FieldPath}";
         }
+        if (parameters.RequestedBytes is { } requestedBytes)
+        {
+            text += $"\n  requestedBytes: {requestedBytes}";
+        }
         if (parameters.MinimumResponseBytes is { } minimumResponseBytes)
         {
             text += $"\n  minimumResponseBytes: {minimumResponseBytes}";
