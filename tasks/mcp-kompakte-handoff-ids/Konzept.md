@@ -7,24 +7,33 @@ open_questions:
     recommendation: "Ja. Ohne persistente Zustandsablage ist dies die stärkste praktikable Lösung. Eine Kollision ist theoretisch möglich, kryptographisch aber vernachlässigbar."
 ---
 
-# Konzept: Token-effiziente MCP-Handoff-Handles
+# Konzept: Externe opaque Handoff-Handles
 
-## 1. Ziel und Nicht-Ziel
+## 1. Ziel
 
-AiNetLinter ersetzt die langen öffentlichen Symbol-Handoff-IDs durch kurze, opaque Handles der Form `h:…`.
+AiNetLinter behält seine heutigen vollständigen Symbol-Handoff-IDs intern bei. An der MCP-Grenze werden sie durch kurze, opaque Handles der Form `h:…` ersetzt.
 
-Das Vorhaben optimiert ausschließlich die technische Adressierung zwischen MCP-Tools:
+Optimiert wird ausschließlich die technische Adresse:
 
-- Der fachliche Informationsgehalt einer Antwort bleibt erhalten.
-- Bestehende Toolketten und Eingabemöglichkeiten bleiben erhalten.
-- Verständliche Symbolart, Name bzw. Signatur sowie erforderliche Pfad- und Positionsangaben bleiben sichtbar.
-- Content-only und Zero-Transformation bleiben unverändert.
+- Keine Analysefunktion und keine Toolkette geht verloren.
+- Treffer, Signaturen, Pfade, Positionen, Paging und Detailinhalt bleiben erhalten.
+- Der Agent gibt ein empfangenes `h:…` unverändert an ein passendes Folgetool weiter.
+- Content-only und Zero-Transformation bleiben erfüllt.
 
-Nicht Ziel sind kürzere fachliche Antworten, weniger Treffer, das Entfernen von Navigationsmöglichkeiten oder neue Analysefunktionen.
+Nicht Ziel sind kürzere fachliche Antworten, weniger Treffer oder eine neue Symbolauflösung.
 
-## 2. Gemessener Ausgangspunkt
+## 2. Ausgangspunkt
 
-Reale Abfragen gegen `AiNetLinter.slnx` zeigen, dass die heutigen `s:`-/`a:`-IDs einen großen Teil der Ausgabe belegen:
+Die heutigen internen IDs enthalten bereits alles, was AiNetLinter zur sicheren Auflösung benötigt:
+
+- Source oder Assembly;
+- Target-Identität;
+- Snapshot-Identität;
+- Roslyn-DocCommentId und damit die Symbolidentität.
+
+Diese Logik bleibt bestehen. Nur das öffentlich sichtbare Format ändert sich.
+
+Reale Baseline gegen `AiNetLinter.slnx`:
 
 | Toolantwort | Gesamtzeichen | Zeichen in Handoff-IDs | Anteil |
 |---|---:|---:|---:|
@@ -33,76 +42,72 @@ Reale Abfragen gegen `AiNetLinter.slnx` zeigen, dass die heutigen `s:`-/`a:`-IDs
 | `find_references` | 10.534 | 4.000 | 38,0 % |
 | `inspect_assembly` | 13.324 | 6.060 | 45,5 % |
 
-Diese Werte sind die Baseline für die spätere Messung. Die Optimierung muss die IDs verkürzen, nicht den übrigen Inhalt.
+## 3. Kernarchitektur
 
-## 3. Verbindlicher öffentlicher Vertrag
-
-### 3.1 Harter Schnitt
-
-- Neu ausgegebene Symbol-Handoffs beginnen ausschließlich mit `h:`.
-- Öffentliche Eingabefelder akzeptieren keine alten `s:`- oder `a:`-Handoff-IDs mehr.
-- Dafür gibt es keinen Dual-Parser, keine Übergangsphase und keinen Migrationspfad.
-- Direkte semantische Eingaben bleiben erhalten, sofern das jeweilige Tool sie heute unterstützt. Dazu gehören insbesondere qualifizierte Symbolnamen, `Datei:Zeile[:Spalte]` und rohe Roslyn-DocCommentIds. Der harte Schnitt betrifft nur das alte Handoff-Drahtformat.
-
-### 3.2 Keine künstliche Informationsreduktion
-
-Ein Handle ersetzt nur den technischen Identifikator. Es ersetzt nicht die für einen Agenten lesbare Bedeutung.
-
-Beispiel:
+### 3.1 Interne und externe ID
 
 ```text
-method  HandoffRegistry.Resolve(string handle)
-        src/AiNetLinter.Mcp/Infrastructure/HandoffRegistry.cs:73
-        h:Qm8…x.2f
+Ausgabe:
+bestehende interne s:/a:-ID
+    -> HandoffHandleRegistry.GetOrCreateOpaqueHandleForOutput(...)
+    -> externes h:…
+    -> MCP-Content
+
+Eingabe:
+MCP-Parameter mit h:…
+    -> HandoffHandleRegistry.RestoreInternalHandoffForInput(...)
+    -> bestehende interne s:/a:-ID
+    -> heutiger Resolver und heutige Toollogik
 ```
 
-Die genaue Darstellung folgt dem bestehenden Renderer. Entscheidend ist:
+Die Registry ist ein Adapter. Sie kennt weder Roslyn-Symbole noch Target-, Snapshot- oder Assembly-Semantik. Sie ordnet ausschließlich Strings einander zu.
 
-- Symbolart und verständlicher Name bzw. Signatur bleiben sichtbar.
-- Pfad, Zeile und Spalte bleiben sichtbar, wenn sie heute fachlich relevant sind.
-- Reihenfolge, Trefferzahl, Gruppierung, Paging und Detailtiefe bleiben gleich.
-- Jeder eigenständig navigierbare Treffer behält ein eigenes übergebbares Handle.
+Die bisherigen `s:`-/`a:`-Parser, Serializer und Resolver bleiben intern erhalten. Sie dürfen nur nicht mehr als öffentliches Drahtformat ausgegeben oder angenommen werden.
 
-Bei Listen darf dasselbe Root-Handle einmal im Kopf statt in jeder Zeile erscheinen, aber nur wenn alle Zeilen tatsächlich dasselbe Symbol meinen und die unveränderte Weitergabe eindeutig bleibt. Handles unterschiedlicher Symbole dürfen nicht zusammengelegt werden.
+### 3.2 Zentrale Klasse und API
 
-### 3.3 Kein `:Zeile`-Suffix am Symbolhandle
+Arbeitsname:
 
-Symbolhandles adressieren Symbole, nicht Textzeilen. Daher wird kein `:Zeile` an `h:…` angehängt:
+```text
+HandoffHandleRegistry
+```
 
-- Eine Zeile kann mehrere Symbole enthalten.
-- Positionen ändern sich häufiger als Symbolidentitäten.
-- Ein Suffix verlängert jede Wiederholung und vermischt Adressierung mit Anzeige.
+Verbindliche fachliche API-Namen:
 
-Bestehende Positionsverträge bleiben separat als `relativer/Pfad.cs:Zeile[:Spalte]` erhalten. Sollte künftig ein eigener Positions-Handoff nötig werden, benötigt er einen eigenen Typ und Vertrag; er wird nicht in dieses Symbolhandle eingebaut.
+```text
+Result<string> GetOrCreateOpaqueHandleForOutput(string internalHandoffId)
+Result<string> RestoreInternalHandoffForInput(string externalHandleOrSemanticInput)
+```
 
-### 3.4 Unveränderte Weitergabe
+`Opaque` und `ForOutput` sind bewusst Teil des Namens. Sie machen beim Programmieren sichtbar, dass der zurückgegebene Wert keine verständliche Semantik enthält.
 
-Ein von Tool A ausgegebenes Handle muss ohne Umschreiben an jedes fachlich passende Symbol-Eingabefeld von Tool B übergeben werden können. Der Client darf weder Target, Snapshot, DocCommentId noch Symbolart rekonstruieren müssen.
+Die XML-Dokumentation von `GetOrCreateOpaqueHandleForOutput` muss ausdrücklich festhalten:
 
-## 4. Architektur
+> Das Handle ist nur eine technische Adresse. Der umgebende MCP-Text muss Symbolart, verständlichen Namen bzw. Signatur und bei Bedarf relativen Pfad sowie Position ausgeben.
 
-### 4.1 Eine zentrale Source of Truth
+Die Registry ist die einzige Source of Truth für beide Richtungen:
 
-Eine hostweit genau einmal erzeugte `HandoffRegistry` ist die einzige Stelle für:
+```text
+internalToExternal: Dictionary<string, string>
+externalToInternal: Dictionary<string, string>
+```
 
-- `GetOrAdd(SymbolIdentity) -> Handle`
-- `Resolve(Handle, RequestContext) -> SymbolIdentity`
-- Formatprüfung, Sitzungsprüfung und Fehlerklassifikation
-- Deduplizierung identischer Symbolidentitäten
-- aggregierte Betriebsmetriken
+Beide Dictionaries verwenden Ordinal-Vergleich.
 
-Producer und Consumer dürfen keine eigenen Handle-Parser, Zähler, Dictionaries oder Auflösungslogik besitzen.
+Die Eingabemethode kapselt die komplette öffentliche Weiche: gültiges `h:…` restaurieren, öffentliches `s:`/`a:` ablehnen, alle anderen heute erlaubten semantischen Eingaben unverändert zurückgeben. Sie parst oder bewertet die restaurierte interne ID nicht. Erwartbare Format-, Lookup- und Kapazitätsfehler werden gemäß Projektkonvention als `Result<string>` zurückgegeben.
 
-Die Registry lebt:
+### 3.3 Nebenläufigkeit und 1:1-Zuordnung
 
-- im Daemon genau für dessen Laufzeit, gemeinsam für alle parallelen MCP-Verbindungen;
-- im direkten stdio-Betrieb genau für die Laufzeit dieses MCP-Hostprozesses.
+Die beiden Richtungen müssen jederzeit eine konsistente Bijektion bilden.
 
-Eine Registry pro Verbindung oder Request ist unzulässig, weil Toolketten sonst nicht zuverlässig funktionieren.
+- Derselbe interne Wert liefert während des Hostlaufs immer dasselbe externe Handle.
+- Ein externes Handle verweist auf genau einen internen Wert.
+- Zwei parallele Registrierungen desselben internen Werts erzeugen nicht zwei Handles.
+- Ein neu erzeugter externer Wert wird erst sichtbar, wenn beide Richtungen eingetragen sind.
 
-### 4.2 Handleformat
+Zwei unabhängige `ConcurrentDictionary.GetOrAdd`-Aufrufe reichen dafür nicht aus. Die Erstellung eines neuen Mappings wird gemeinsam synchronisiert, beispielsweise mit einem kurzen Lock. Bereits vorhandene Zuordnungen dürfen ohne exklusiven Schreibpfad gelesen werden.
 
-Vorgabe:
+### 3.4 Handleformat
 
 ```text
 h:<sessionNonce>.<counter>
@@ -110,96 +115,111 @@ h:<sessionNonce>.<counter>
 
 - `sessionNonce`: beim Hoststart einmalig mit CSPRNG erzeugte 128 Bit, Base64url ohne Padding.
 - `counter`: hostweit atomar steigender `UInt64`, Base36 ohne führende Nullen.
-- Erlaubte Zeichen und Trennzeichen werden exakt geprüft; Groß-/Kleinschreibung ist signifikant.
-- Nach Zählerüberlauf werden keine neuen Handles ausgegeben; der Host liefert `HANDOFF_CAPACITY_EXCEEDED`.
-- Ein existierendes Handle bleibt davon unberührt.
+- Groß-/Kleinschreibung ist signifikant.
+- Erlaubte Zeichen, Länge und genau ein Trennpunkt werden strikt geprüft.
+- Bei Zählerüberlauf oder einer festen Sicherheitsgrenze schlagen nur neue Registrierungen mit `HANDOFF_CAPACITY_EXCEEDED` fehl.
 
-Der Session-Nonce ist Bestandteil jedes Handles. Dadurch kann die Registry ein Handle einer fremden oder früheren Sitzung vor einem Registry-Lookup erkennen. Ein `h:\...`-Wert bleibt als Windows-Pfad interpretierbar; nur das vollständig gültige Handleformat aktiviert die Handle-Auflösung.
+Ein Zufallswert pro Handle ist nicht erforderlich. Session-Nonce plus Zähler ist kürzer, innerhalb der Sitzung kollisionsfrei und nach einem Neustart praktisch eindeutig.
 
-Die offene Grundsatzfrage zur theoretischen Neustart-Kollision steht im Frontmatter.
+Ein Windows-Pfad wie `h:\...` darf nicht als Handle erkannt werden. Nur das vollständig gültige Format aktiviert die Registry-Auflösung.
 
-### 4.3 Gespeicherte Identität
+### 3.5 Lebensdauer
 
-Die Registry speichert keine langlebigen Roslyn-`ISymbol`-, `Compilation`-, `Solution`- oder Snapshot-Objekte. Ein Eintrag enthält mindestens:
+Es gibt genau eine Registry pro MCP-Hostlauf:
 
-- Ursprung: Source oder Assembly;
-- ursprüngliches Invocation-Target;
-- tatsächliches Owner-Target bei Assembly-Referenzen;
-- Target-Identität/Fingerprint;
-- Snapshot-Identität/Fingerprint;
-- Projekt- bzw. Assembly-Identität;
-- Roslyn-DocCommentId;
-- Symbolart;
-- nötigen Disambiguator für nicht eindeutig per DocCommentId adressierbare Symbole;
-- nur die zur robusten Wiederauflösung notwendigen Zusatzdaten.
+- im Daemon gemeinsam für alle parallelen MCP-Verbindungen;
+- im direkten stdio-Betrieb für die Laufzeit dieses Hostprozesses.
 
-Lesbare Namen, Signaturen, Pfade und Positionen gehören weiterhin in die Toolausgabe. Sie müssen nicht allein deshalb redundant in jedem Registry-Eintrag liegen.
+Jedes ausgegebene Handle bleibt bis zum Host-Shutdown in beiden Dictionaries erhalten.
 
-### 4.4 Idempotente Registrierung
+Wichtig: Das Entfernen einer Solution- oder Assembly-Session aus dem bestehenden TTL-Cache löscht deren Handle-Mappings nicht. Andernfalls würde ein bereits ausgegebenes Handle vorzeitig ungültig und eine Agenten-Toolkette könnte nach einer Leerlaufphase brechen.
 
-Innerhalb eines Hostlaufs liefert dieselbe normalisierte `SymbolIdentity` immer dasselbe Handle. Registrierung und Deduplizierung sind threadsicher und atomar.
+Das ist speicherseitig vertretbar, weil die Registry nur zwei Strings je Mapping hält. Sie hält keine Roslyn-Symbole, Compilations, Solutions, Leases oder Cache-Sessions fest. Nach einem TTL-Reload wird die restaurierte interne ID wie heute vom bestehenden Resolver geprüft.
 
-- Parallele Requests dürfen für dieselbe Identität keine zwei dauerhaften Handles erzeugen.
-- Verschiedene Targets, Snapshots, Assembly-Versionen oder Symbolvarianten dürfen nicht versehentlich dedupliziert werden.
-- Nur tatsächlich gerenderte Handoffs werden registriert. Vor Paging oder Abschneiden verworfene Treffer erzeugen keine Einträge.
+Die Registry wird erst beim Host-Shutdown verworfen. Nach einem Neustart ist sie leer; alte Handles dürfen niemals auf neue Einträge zeigen.
 
-### 4.5 Auflösung und Snapshot-Wechsel
+## 4. Öffentlicher Vertrag
 
-Die Auflösung geschieht requestweit gegen genau einen atomar gebundenen Analysezustand:
+### 4.1 Ausgabe
 
-1. Handle syntaktisch und auf Session prüfen.
-2. Eintrag in der zentralen Registry laden.
-3. Invocation-Target gegen den Request prüfen.
-4. gespeicherten Snapshot/Assembly-Fingerprint gegen den gebundenen Zustand prüfen.
-5. Symbol anhand der gespeicherten Identität neu auflösen.
-6. Symbolart und Disambiguator validieren.
+- Öffentlich werden ausschließlich `h:…`-Handoffs ausgegeben.
+- Eine bestehende interne `s:`-/`a:`-ID wird unmittelbar vor ihrer Ausgabe externalisiert.
+- Der übrige Text bleibt fachlich gleich.
+- Ein Mapping wird erst erzeugt, wenn der Handoff tatsächlich in den finalen Content gerendert wird.
+- Gleichartige Renderer verwenden denselben zentralen Adapter, keine lokalen Maps.
 
-Ein Snapshot-Wechsel während eines Requests darf nicht zu einer gemischten Auflösung führen. Kann die gespeicherte Identität im aktuellen Zustand nicht mehr eindeutig aufgelöst werden, schlägt der Aufruf klar fehl; das Handle wird niemals auf ein nur ähnlich benanntes Symbol umgebogen.
+Ein unverständlicher Output wie
 
-Assembly-Referenzhandles, die aus einer Abfrage gegen das Root-Target stammen, bleiben mit diesem ursprünglichen Root-Target verwendbar. Die Registry verwaltet das tatsächliche Owner-Assembly intern. Der Agent muss den `targetPath` nicht aus der Ausgabe erraten oder wechseln.
+```text
+h:Abc.7 Ok
+```
 
-### 4.6 Lebensdauer und Speicher
+ist unzulässig. Er muss mindestens die heute vorhandene fachliche Bedeutung behalten, zum Beispiel:
 
-- Jedes einmal ausgegebene Handle bleibt bis zum Host-Shutdown gültig.
-- Es gibt keine TTL-, LRU- oder andere Eviction.
-- Nach einem Neustart ist die Registry leer.
-- Speichergrenzen dürfen nicht durch stilles Löschen alter Einträge umgesetzt werden.
-- Erreicht der Host eine konfigurierte harte Sicherheitsgrenze, dürfen nur neue Registrierungen mit `HANDOFF_CAPACITY_EXCEEDED` fehlschlagen.
-- Registry-Einträge dürfen keine Roslyn-Workspaces, Snapshots oder Compilations festhalten.
+```text
+method HandoffHandleRegistry.RestoreInternalHandoffForInput(string externalHandleOrSemanticInput)
+src/AiNetLinter/Mcp/.../HandoffHandleRegistry.cs:73
+handoffId: h:Abc.7
+```
 
-## 5. Vollständige Toolpfade
+### 4.2 Eingabe
 
-Die Umsetzung beginnt mit einer codegestützten Inventur. Maßgeblich sind alle öffentlichen Felder, die heute `s:`-/`a:`-IDs ausgeben oder konsumieren, nicht nur diese Namensliste.
+Für jedes öffentliche Symbol-Eingabefeld gilt dieselbe Reihenfolge:
 
-### 5.1 Zu prüfende Producer
+1. Ein syntaktisch gültiges `h:…` wird durch die Registry in die interne ID zurückübersetzt.
+2. Eine öffentlich übergebene alte `s:`-/`a:`-Handoff-ID wird mit `UNSUPPORTED_HANDOFF_FORMAT` abgelehnt.
+3. Andere heute erlaubte Eingaben werden unverändert an die vorhandene Logik weitergereicht.
+
+Damit bleiben insbesondere direkte Symbolnamen, rohe DocCommentIds sowie `Datei:Zeile[:Spalte]` gültig.
+
+Der harte Schnitt betrifft ausschließlich alte öffentliche Handoff-IDs. Intern bleiben diese IDs Implementierungsdetail.
+
+### 4.3 Semantische Anzeige und Positionen
+
+Das opaque Handle ersetzt keine Anzeigeinformation:
+
+- Symbolart bleibt sichtbar.
+- Verständlicher Name oder Signatur bleibt sichtbar.
+- Relativer Pfad, Zeile und Spalte bleiben sichtbar, wenn sie heute ausgegeben werden.
+- Reihenfolge, Gruppierung, Trefferzahl, Begrenzung und Paging bleiben unverändert.
+
+Es wird kein `:Zeile` an das Symbolhandle angehängt. Ein Handle adressiert ein Symbol; die Position bleibt separat als `Pfad:Zeile[:Spalte]` sichtbar.
+
+In dieser Umsetzung werden keine weiteren Layout- oder Deduplizierungsänderungen an den Antworten vorgenommen. So ist messbar, dass ausschließlich die ID-Darstellung optimiert wurde.
+
+## 5. Einbaustellen
+
+Die Umstellung muss vollständig sein. Vor der Implementierung wird per Codeinventur jede öffentliche Ausgabe und jedes passende Eingabefeld erfasst. Die folgenden Producer sind Prüfkandidaten, kein Auftrag, einem Tool neue Handoffs hinzuzufügen: Hat ein Tool heute keinen sichtbaren Handoff, wird sein Check mit „nicht betroffen“ und Codebeleg abgeschlossen.
+
+### 5.1 Producer
 
 - [ ] `find_symbol`
 - [ ] `get_file_skeleton`
 - [ ] `get_symbol_body`
 - [ ] `find_references`
+- [ ] `get_call_tree`
 - [ ] `get_impact`
 - [ ] `get_type_hierarchy`
 - [ ] `find_implementations`
+- [ ] `dependency_graph`
 - [ ] `get_class_structure`
 - [ ] `metrics_lookup`
-- [ ] `get_call_tree`, soweit die Ausgabe heute Handoff-IDs enthält
-- [ ] `dependency_graph`, soweit die Ausgabe heute Handoff-IDs enthält
-- [ ] `get_feature_context`, soweit die Ausgabe heute Handoff-IDs enthält
-- [ ] `get_test_context`, soweit die Ausgabe heute Handoff-IDs enthält
+- [ ] `get_feature_context`
+- [ ] `get_test_context`
 - [ ] `inspect_assembly`
 - [ ] `search_assembly`
 - [ ] `find_assembly_extensions`
 - [ ] `get_assembly_context`
-- [ ] alle weiteren per Code-/Textsuche gefundenen Renderer, DTOs und Formatter
+- [ ] alle weiteren Renderer, Formatter und DTO-Projektionen mit heutigen Handoff-IDs
 
-Für jeden Producer ist zu prüfen:
+Für jeden gefundenen Producer:
 
-- [ ] Jeder heutige Handoff bleibt vorhanden und wird ausschließlich durch `h:…` ersetzt.
-- [ ] Lesbare Semantik, Pfad und Position bleiben erhalten.
-- [ ] Paging, Begrenzung und Reihenfolge bleiben unverändert.
-- [ ] Wiederholte Identitäten verwenden dasselbe Handle.
+- [ ] jede interne ID wird genau an der Ausgabegrenze externalisiert;
+- [ ] keine interne `s:`-/`a:`-ID gelangt in den Content;
+- [ ] der semantische Begleittext bleibt mindestens gleichwertig;
+- [ ] dieselbe interne ID ergibt immer dasselbe externe Handle.
 
-### 5.2 Zu prüfende Consumer
+### 5.2 Consumer
 
 - [ ] `get_symbol_body.symbolIdentifiers[]`
 - [ ] `metrics_lookup.symbolIdentifiers[]`
@@ -215,90 +235,85 @@ Für jeden Producer ist zu prüfen:
 - [ ] `get_assembly_context.symbolIdentifier`
 - [ ] `find_duplicates.helperSymbol`
 - [ ] `resolve_type_origin.typeName`
-- [ ] alle weiteren per Code-/Textsuche gefundenen Symbol-Eingabefelder
+- [ ] alle weiteren öffentlichen Symbol-Eingabefelder
 
-Für jeden Consumer ist explizit festzulegen und zu testen:
+Für jeden gefundenen Consumer:
 
-- [ ] passende `h:…`-Handles werden akzeptiert;
-- [ ] unpassende Symbolarten liefern `HANDOFF_KIND_MISMATCH`;
-- [ ] direkte semantische Eingaben funktionieren weiterhin, falls sie heute unterstützt werden;
-- [ ] alte `s:`-/`a:`-IDs werden als altes Handoffformat abgelehnt;
-- [ ] ein Handle aus jedem fachlich passenden Producer funktioniert unverändert.
+- [ ] externe Handles werden vor der bisherigen Fachlogik restauriert;
+- [ ] direkte semantische Eingaben bleiben unverändert;
+- [ ] öffentliche alte Handoff-Formate werden abgelehnt;
+- [ ] ein Handle aus jedem fachlich passenden Producer kann unverändert verwendet werden.
 
-Die heute beobachteten Vertragslücken bei `find_duplicates.helperSymbol` und `resolve_type_origin.typeName` müssen vor Freigabe geschlossen sein.
+Besondere Prüfung: `find_duplicates.helperSymbol` und `resolve_type_origin.typeName` akzeptieren heute nicht zuverlässig jeden ausgegebenen Handoff. Nach der Restaurierung müssen diese Pfade die interne Handoff-ID an den bestehenden passenden Resolver weiterreichen. Die Registry selbst erhält dafür keine Symbolsemantik.
 
-### 5.3 Bewusst nicht als Symbolhandles zu behandeln
+### 5.3 Nicht betroffen
 
-Ohne bereits vorhandenen Symbol-Handoff-Vertrag bleiben unverändert:
+Ohne heutigen Symbol-Handoff-Vertrag bleiben unverändert:
 
 - `continuationToken` und andere Paging-Tokens;
-- Verify-Referenzen im Format `Pfad:Zeile[:Spalte]`;
-- Diagnostics-/Violation-Referenzen;
-- Dateibaum-, Namespace-, Metrikbaum-, Hotspot-, Index-, Scope- und Suchparameter;
-- Graph-Knoten ohne heutigen öffentlichen Symbol-Handoff;
-- reine Feature-, Health- oder Pattern-Daten.
+- Verify- und Diagnostics-Referenzen im Format `Pfad:Zeile[:Spalte]`;
+- Dateibaum-, Namespace-, Metrikbaum-, Hotspot-, Index- und Scope-Parameter;
+- Graph-Knoten, Feature- oder Testdaten ohne heutige öffentliche Handoff-ID.
 
-Es werden dort keine neuen Handles eingeführt. Falls ein solcher Pfad heute doch `s:`/`a:` ausgibt oder annimmt, fällt er durch die Inventur wieder in Producer bzw. Consumer.
+Falls die Codeinventur dort doch eine öffentliche `s:`-/`a:`-ID findet, gehört diese konkrete Stelle wieder in Producer oder Consumer.
 
 ## 6. Fehlervertrag
 
-Alle Fehler sind stabile maschinenlesbare Codes mit kurzer verständlicher Meldung. Priorität bei mehreren möglichen Fehlern: Syntax → altes Format → Session → Registry → Target → Snapshot → Symbolart/Auflösung.
+Die Registry erzeugt nur mapperbezogene Fehler. Target-, Snapshot-, Symbolart- und Auflösungsfehler bleiben beim bestehenden internen Resolver.
 
-| Code | Bedeutung |
+| Code | Zuständigkeit |
 |---|---|
 | `INVALID_HANDOFF` | `h:…` ist syntaktisch ungültig. |
-| `UNSUPPORTED_HANDOFF_FORMAT` | Eine alte `s:`-/`a:`-ID wurde als Handoff übergeben. |
-| `HANDOFF_SESSION_MISMATCH` | Das Handle stammt sicher aus einem anderen Hostlauf. |
-| `HANDOFF_UNKNOWN` | Format und Session passen, aber der Eintrag existiert nicht. |
-| `TARGET_MISMATCH` | Das Request-Target passt nicht zum ursprünglichen Invocation-Target. |
-| `STALE_SNAPSHOT` | Target passt, der gespeicherte Source-/Assembly-Zustand ist aber nicht mehr gültig. |
-| `HANDOFF_KIND_MISMATCH` | Das Symbol ist für das Eingabefeld fachlich ungeeignet. |
-| `HANDOFF_CAPACITY_EXCEEDED` | Es können keine neuen Einträge sicher registriert werden. |
+| `UNSUPPORTED_HANDOFF_FORMAT` | Eine öffentliche alte `s:`-/`a:`-ID wurde übergeben. |
+| `HANDOFF_SESSION_MISMATCH` | Session-Nonce gehört nicht zum laufenden Host. |
+| `HANDOFF_UNKNOWN` | Format und Session passen, aber das Mapping fehlt. |
+| `HANDOFF_CAPACITY_EXCEEDED` | Kein neues Mapping kann sicher angelegt werden. |
+| bestehende Fehler, z. B. `TARGET_MISMATCH` oder `STALE_SNAPSHOT` | Restaurierte interne ID wurde vom bestehenden Resolver abgelehnt. |
 
-Fehlertexte dürfen die gespeicherte lange Identität nicht vollständig ausgeben und so den Tokengewinn wieder aufheben. Sie sollen erwartete Symbolart, sichtbaren Symbolnamen soweit vorhanden und eine konkrete nächste Aktion nennen.
+Fehlertexte geben keine vollständige interne ID aus. Ein unbekanntes oder altes Handle nennt als nächste Aktion die erneute Symbolermittlung.
 
-## 7. Betriebsbeobachtung
+## 7. Muss-Kriterien
 
-`health` oder ein gleichwertiger aggregierter Diagnosepfad weist mindestens aus:
-
-- Registry-Einträge gesamt, Source und Assembly;
-- geschätzte Registry-Bytes;
-- GetOrAdd-Treffer und neue Registrierungen;
-- Resolve-Erfolge und Fehleranzahl je Fehlercode;
-- aktuelles Sicherheitslimit, falls konfiguriert.
-
-Keine Liste aller Handles und keine langen gespeicherten Identitäten ausgeben.
-
-## 8. Muss-Akzeptanzkriterien
-
-### 8.1 Informations- und Funktionsgleichheit
-
-- [ ] Für jede Baseline-Antwort sind Treffer, Reihenfolge, Gruppierung, Signaturen, Pfade, Positionen, Paging und Detailinhalt fachlich gleich.
-- [ ] Nur die technische Handoff-Darstellung und nachweislich redundante Wiederholungen derselben Identität ändern sich.
-- [ ] Kein heute möglicher Source-, Assembly-, Diagnostics-, Verify-, Graph-, Feature- oder Paging-Workflow geht verloren.
+- [ ] Die bestehenden internen Handoff-IDs und ihre Resolversemantik bleiben erhalten.
+- [ ] Öffentlich werden ausschließlich kurze `h:…`-Handles verwendet.
+- [ ] Es gibt genau eine zentrale `HandoffHandleRegistry` pro Hostlauf.
+- [ ] Die Registry mappt ausschließlich String zu String und kennt keine Symbolsemantik.
+- [ ] Beide Mappingrichtungen bleiben unter Parallelität konsistent.
+- [ ] Kein Handle wird wegen Solution-/Assembly-TTL entfernt.
+- [ ] Kein Registry-Eintrag hält Roslyn- oder Cache-Objekte am Leben.
+- [ ] Alle Producer und Consumer verwenden die zentrale Registry.
+- [ ] Sichtbare fachliche Informationen werden nicht reduziert.
 - [ ] Content-only und Zero-Transformation bleiben erfüllt.
-- [ ] Kein Consumer zwingt den Agenten, Handlebestandteile zu lesen oder umzuschreiben.
 
-### 8.2 Registry und Lebenszyklus
+## 8. Akzeptanz- und Testfälle
 
-- [ ] Daemon-Verbindungen desselben Hostlaufs können Handles gegenseitig verwenden.
-- [ ] Direkter stdio-Betrieb unterstützt Toolketten über mehrere Requests.
-- [ ] Paralleles `GetOrAdd` derselben Identität liefert genau ein Handle.
-- [ ] Derselbe Symbolwert über verschiedene Producer liefert dasselbe Handle.
-- [ ] Unterschiedliche Symbolidentitäten liefern niemals dasselbe Handle.
-- [ ] Alle ausgegebenen Handles bleiben bis Shutdown auflösbar.
-- [ ] Ein Handle aus dem vorigen Hostlauf liefert `HANDOFF_SESSION_MISMATCH` und niemals ein neues Symbol.
-- [ ] Snapshot-Wechsel liefern entweder exakt dasselbe Symbol oder `STALE_SNAPSHOT`.
-- [ ] Target-Mismatch wird nicht durch Namenssuche oder Fallback-Auflösung kaschiert.
-- [ ] Eine lange Session hält keine Roslyn-Snapshots oder Compilations über Registry-Einträge am Leben.
+### 8.1 Mapping
 
-### 8.3 Parser und harter Schnitt
+- [ ] Dieselbe interne ID liefert bei 1, 100 und parallelen Aufrufen dasselbe Handle.
+- [ ] Unterschiedliche interne IDs liefern unterschiedliche Handles.
+- [ ] Für jedes Mapping sind beide Dictionary-Richtungen vorhanden und konsistent.
+- [ ] Roundtrip `intern -> extern -> intern` liefert exakt denselben String.
+- [ ] Ordinal-Vergleich verhindert kulturabhängiges Verhalten.
+- [ ] Zählerüberlauf und Sicherheitsgrenze verändern keine bestehenden Mappings.
 
-- [ ] Gültige Handles werden exakt akzeptiert.
-- [ ] abgeschnittene, erweiterte, falsch getrennte und case-veränderte Handles werden abgelehnt.
-- [ ] `s:` und `a:` werden in Handoff-Kontexten mit `UNSUPPORTED_HANDOFF_FORMAT` abgelehnt.
-- [ ] Windows-Pfade wie `h:\...` werden nicht als Handles fehlklassifiziert.
-- [ ] Direkte Namen, Positionen und rohe DocCommentIds bleiben in ihren bisherigen Feldern gültig.
+### 8.2 Lebenszyklus
+
+- [ ] Zwei parallele MCP-Verbindungen desselben Daemons teilen dieselbe Registry.
+- [ ] Direkter stdio-Betrieb behält Handles über mehrere Requests.
+- [ ] Solution-TTL-Eviction entfernt die Session, nicht das Mapping.
+- [ ] Ein Handle funktioniert nach TTL-Reload weiterhin oder liefert den bisherigen internen Snapshotfehler.
+- [ ] Alle Handles bleiben bis Host-Shutdown registriert.
+- [ ] Nach Neustart liefert ein altes Handle `HANDOFF_SESSION_MISMATCH` und niemals ein neues Symbol.
+- [ ] 10.000 und 100.000 Mappings werden hinsichtlich Speicher, Registrierungszeit und Lookup-Latenz gemessen.
+
+### 8.3 Öffentlicher Vertrag
+
+- [ ] In keiner MCP-Antwort erscheint eine interne `s:`-/`a:`-Handoff-ID.
+- [ ] Öffentliche alte Handoff-IDs werden nicht akzeptiert.
+- [ ] Direkte Namen, DocCommentIds und Positionen funktionieren wie zuvor.
+- [ ] Ungültige, abgeschnittene, erweiterte und case-veränderte Handles werden abgelehnt.
+- [ ] `h:\...` wird weiterhin als möglicher Windows-Pfad behandelt.
+- [ ] Ein Outputvergleich mit normalisierten IDs zeigt keine verlorenen Treffer oder Fachinformationen.
 
 ### 8.4 Reale Toolketten
 
@@ -307,45 +322,51 @@ Keine Liste aller Handles und keine langen gespeicherten Identitäten ausgeben.
 - [ ] `find_symbol -> get_type_hierarchy`
 - [ ] `find_symbol -> metrics_lookup`
 - [ ] `get_file_skeleton -> get_symbol_body`
-- [ ] `find_references -> get_symbol_body` für einen Symboltreffer
+- [ ] `find_references -> get_symbol_body`
 - [ ] Source-Producer -> `find_duplicates.helperSymbol`
 - [ ] Type-Producer -> `resolve_type_origin.typeName`
-- [ ] `inspect_assembly -> assembly consumer`
-- [ ] Assembly-Referenz aus Root-Abfrage -> Consumer mit unverändertem Root-`targetPath`
-- [ ] passende Cross-Producer/Cross-Consumer-Kombinationen aus der vollständigen Vertragsmatrix
+- [ ] `inspect_assembly -> get_assembly_context`
+- [ ] Assembly-Referenz-Handoff -> passender Assembly-Consumer
+- [ ] alle fachlich passenden Kombinationen der fertigen Producer-/Consumer-Matrix
 
-### 8.5 Token-, Speicher- und Laufzeitmessung
+### 8.5 Tokenmessung
 
 Auf dem festgeschriebenen Baseline-Datensatz:
 
 - [ ] Keine der vier Referenzantworten wächst in UTF-8-Bytes oder Tokens.
-- [ ] Die Summe der UTF-8-Bytes der vier Antworten sinkt um mindestens 25 %.
+- [ ] Die Summe ihrer UTF-8-Bytes sinkt um mindestens 25 %.
 - [ ] Die Summe der Zeichen in Handoff-IDs sinkt um mindestens 70 %.
-- [ ] Die Gesamttokenzahl sinkt mit einem dokumentierten, Codex-nahen Tokenizer; Tokenizer und Version stehen im Messergebnis.
-- [ ] 10.000 eindeutige Einträge werden hinsichtlich Registry-Bytes, Registrierungszeit und Resolve-Latenz gemessen und dokumentiert.
-- [ ] Wiederholte Abfragen desselben Symbols erhöhen die Eintragszahl nach der ersten Registrierung nicht.
-- [ ] Parallel- und Langzeittest zeigen keine Handle-Kollision, keine falsche Auflösung und keine Snapshot-Retention.
+- [ ] Die Gesamttokenzahl sinkt mit einem dokumentierten Codex-nahen Tokenizer.
+- [ ] Der Vergleich bestätigt, dass die Einsparung aus den Handles und nicht aus entferntem Fachinhalt stammt.
 
-## 9. Umsetzungsreihenfolge
+## 9. Non-Goals
 
-- [ ] Öffentliche Producer-/Consumer-Matrix aus Codeinventur vervollständigen.
-- [ ] gemeinsame `SymbolIdentity`, `HandoffRegistry` und Fehlercodes implementieren.
-- [ ] Registry im Daemon und direkten stdio-Host korrekt verankern.
-- [ ] alle Producer auf `GetOrAdd` umstellen.
-- [ ] alle Consumer auf die zentrale Auflösung umstellen.
-- [ ] alte `s:`-/`a:`-Parser und -Renderer vollständig entfernen.
-- [ ] Vertrags-, Parallelitäts-, Neustart-, Snapshot-, Target- und Langzeittests ergänzen.
-- [ ] reale Toolketten und Baseline-Messungen aus Abschnitt 8 ausführen.
-- [ ] öffentliche MCP-Dokumentation und Beispiele aktualisieren.
-- [ ] vollständige Nicht-Stress-Testgates und `dotnet build` erfolgreich ausführen.
-- [ ] per Code-/Textsuche verifizieren, dass kein öffentlicher `s:`-/`a:`-Producer oder Handoff-Parser verblieben ist.
+- Keine neue Symbolidentität und kein Ersatz der internen `s:`-/`a:`-Logik.
+- Keine Änderung der Roslyn-Analyse oder ihrer Ergebnisse.
+- Keine persistente Handle-Datenbank.
+- Keine TTL-/LRU-Eviction für Handle-Mappings.
+- Keine Umstellung von Paging-Tokens oder Positionsreferenzen.
+- Keine zusätzliche Kürzung, Zusammenfassung oder Umordnung fachlicher Toolantworten.
+- Keine Rückwärtskompatibilität für öffentliche alte Handoff-IDs.
 
-## 10. Freigabegate
+## 10. Umsetzung und Release-Gate
 
-Die Umsetzung ist erst freigabefähig, wenn:
+- [ ] Vollständige Producer-/Consumer-Inventur erstellen.
+- [ ] `HandoffHandleRegistry` mit zentralem Lebenszyklus und Parallelitätstests implementieren.
+- [ ] alle Ausgaben unmittelbar vor dem Rendern externalisieren.
+- [ ] alle Symbolparameter unmittelbar nach der Argumentvalidierung restaurieren.
+- [ ] direkte semantische Eingaben unverändert durchreichen.
+- [ ] öffentliche Altformat-Annahme und -Ausgabe entfernen, interne Resolver erhalten.
+- [ ] semantischen Begleittext jeder Ausgabestelle prüfen.
+- [ ] FastTests für Mapping, Format, Parallelität und Renderer ergänzen.
+- [ ] Integrationstests für MCP-Wire, Toolketten, TTL und Neustart ergänzen.
+- [ ] MCP-Dokumentation, Agent-Guide und Beispiele auf `h:…` aktualisieren.
+- [ ] vollständige Non-Stress-Testgates, `dotnet build` und MCP-`verify(scope: solution)` erfolgreich ausführen.
+- [ ] Code-/Textsuche bestätigt: keine öffentliche interne ID und keine unverdrahtete Handoff-Stelle.
+- [ ] Baseline-Messung bestätigt Tokenersparnis ohne Informationsverlust.
 
-- [ ] die offene Frage im Frontmatter entschieden und dort entfernt oder als Entscheidung dokumentiert ist;
-- [ ] alle Muss-Akzeptanzkriterien erfüllt sind;
-- [ ] die vollständige Producer-/Consumer-Matrix im Konzept oder Implementierungsnachweis enthalten ist;
-- [ ] die Messung tatsächliche Tokenersparnis ohne fachlichen Informationsverlust belegt;
-- [ ] keine alten Handoff-IDs mehr ausgegeben oder als Handoff akzeptiert werden.
+Freigabefähig ist das Konzept erst, wenn:
+
+- [ ] die offene Frage im Frontmatter entschieden ist;
+- [ ] der Nutzer den Draft ausdrücklich freigibt;
+- [ ] alle Muss-Kriterien und Testfälle als verbindlicher Umsetzungsvertrag gelten.
