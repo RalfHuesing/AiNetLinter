@@ -8,6 +8,28 @@ Verhaltenstests abschließen, die Gates nach
 nach belegter Abnahme abhaken und nur eigene Dateien einschließlich
 der Roadmap committen. Bei Punkt 1 gilt Red-Test-First.
 
+## Testtakt
+
+Die verbindliche Gate-Reihenfolge bleibt `dotnet build`,
+`verify(targetPath)`, passender FastTests-Lauf. Für den
+FastTests-Lauf nach einem erfolgreichen Build nutzt jeder Punkt
+den unten festgelegten Filter und
+`-AdditionalArgs '--no-build'`; der konkrete Aufruf lautet
+`pwsh scripts/test-fast.ps1 -Filter '<Punktfilter>' -AdditionalArgs '--no-build'`.
+Neu angelegte FastTests liegen
+in den vom jeweiligen Filter erfassten Klassen oder Namespaces.
+Ein unverändert grüner Testnachweis wird nicht erneut gestartet.
+Vor Punkt 3 gibt es keinen vollständigen FastTests- oder
+IntegrationTests-Lauf.
+
+Nach der letzten Produktions-, Testcode- oder
+Konfigurationsänderung in Punkt 3 folgt das vollständige
+Abschlussgate der Projektregel und danach
+`pwsh scripts/test-integration.ps1` ohne Filterargument.
+IntegrationTests laufen seriell und werden nicht abgebrochen.
+Bei einem Fehler gilt die Wiederholungsregel des Konzepts;
+StressTests werden nicht ausgeführt.
+
 - [ ] **1 — Produktive Referenzsemantik im Scanner**
   - Intention: Test-only genutzter Produktionscode wird im
     solutionweiten Roslyn-Suchraum als Dead-Code-Kandidat erkannt.
@@ -32,7 +54,11 @@ der Roadmap committen. Bei Punkt 1 gilt Red-Test-First.
     produktive Referenz schützt, unbekannte Referenz erzeugt
     `undecidable` statt Kandidat. Interface-/Override- und
     Whitelist-/Suppression-Fälle bleiben korrekt. Incremental Gate
-    nach Projektregel grün; eigener Commit.
+    nach Projektregel grün mit
+    `-Filter 'FullyQualifiedName~AiNetLinter.FastTests.Mcp.Tools.DeadCode'`;
+    eigener Commit. Der isolierte Rot-Test läuft vor der
+    Produktionsänderung mit seinem exakten Testnamen ohne
+    `--no-build`.
 
 - [ ] **2 — Projekt-API-Policy und Verify-Preflight**
   - Intention: Extern sichtbare APIs werden nur auf ausdrückliche
@@ -66,7 +92,8 @@ der Roadmap committen. Bei Punkt 1 gilt Red-Test-First.
     einschließlich `protected internal` und öffentlichem Member
     im internen Typ. Der Verify-Vertragstest belegt `verdict: error`,
     `isError`, Content-only, alle Projektnamen, Feldhinweis,
-    Beispiele und fehlende Teilergebnisse. Incremental Gate grün;
+    Beispiele und fehlende Teilergebnisse. Incremental Gate grün
+    mit `-Filter 'FullyQualifiedName~DeadCode|FullyQualifiedName~ProjectOverrideResolutionTests|FullyQualifiedName~ConfigNormalizerTests|FullyQualifiedName~AiNetLinter.FastTests.Mcp.Tools.Verify'`;
     eigener Commit.
 
 - [ ] **3 — Dead Code in beiden Verify-Scopes priorisiert ausgeben**
@@ -100,7 +127,12 @@ der Roadmap committen. Bei Punkt 1 gilt Red-Test-First.
     Antwortkürzung, `partial`/`unavailable`, Content-only,
     Fehlalarm-Hinweis genau einmal und Handoff-Komposition
     auch bei Linked Files/gleichnamigen Symbolen.
-    Abschlussgate nach Projektregel grün; eigener Commit.
+    Incremental Gate grün mit
+    `-Filter 'FullyQualifiedName~DeadCode|FullyQualifiedName~AiNetLinter.FastTests.Mcp.Tools.Verify'`.
+    Danach vollständiges Abschlussgate mit ungefiltertem
+    `pwsh scripts/test-fast.ps1` und ein ungefilterter,
+    serieller `pwsh scripts/test-integration.ps1`-Lauf grün;
+    eigener Commit.
 
 - [ ] **Audit — Konzept und Anwendung abgleichen**
   - Intention: Ein unabhängiger, lesender Audit bestätigt die
@@ -109,7 +141,8 @@ der Roadmap committen. Bei Punkt 1 gilt Red-Test-First.
     Tests, der tatsächlichen `verify`-Antwort, Konfiguration,
     Dokumentation und Commits ab. Er prüft insbesondere test-only,
     externe API, unbekannte Referenzen, den einen Verify-Aufruf,
-    den Fehlalarm-Hinweis und die Gate-Nachweise. Der Orchestrator
+    den Fehlalarm-Hinweis sowie die Nachweise für FastTests
+    und IntegrationTests. Der Orchestrator
     übernimmt das Audit-Ergebnis und schließt danach die
     Roadmap-Checkbox.
   - Nicht: Keine Implementierung im Audit. Ein belegter Mangel

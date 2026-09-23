@@ -351,8 +351,9 @@ aufgelöst.
 
 ## Verifikation und Dokumentation
 
-Die spätere Umsetzung erhält zuerst einen roten xUnit-v3-Regressionsfall
-für test-only verwendeten Produktionscode. FastTests decken
+Die spätere Umsetzung erhält zuerst einen isolierten roten
+xUnit-v3-Regressionsfall für test-only verwendeten Produktionscode.
+FastTests decken
 Referenzrollen, Linked Files, Interface/Override, API-Sichtbarkeit,
 Projekt-Overrides, Preflight, Verify-Projektion, Ranking,
 Trunkierung und Fehlertext ab. Ein repräsentativer
@@ -367,7 +368,29 @@ Die Implementierung synchronisiert `Docs/linter/configuration.md`,
 werden der eine `verify`-Aufruf, beide Scopes, produktive
 Referenzsemantik, API-Werte und Default, Fehlerreaktion,
 Priorisierung sowie die Grenze zwischen Advisory und Löschentscheidung.
-Die Prüfzeitpunkte und Testgates richten sich ausschließlich nach
+Wegen der langen Testlaufzeiten verwendet jeder kohärente Code-Slice
+nach `dotnet build` und `verify` einen auf die betroffenen
+FastTest-Klassen begrenzten Lauf. Der bereits erfolgreiche Build
+darf dem Skript dabei mit `-AdditionalArgs '--no-build'`
+übergeben werden. Ein grüner scope-passender Nachweis wird ohne
+weitere Code- oder Konfigurationsänderung nicht wiederholt.
+
+Nach der **letzten** Produktions-, Testcode- oder
+Konfigurationsänderung folgt das vollständige Abschlussgate mit
+`dotnet build`,
+`verify(targetPath, scope: "solution")` und dem ungefilterten
+`pwsh scripts/test-fast.ps1`. Auf ausdrücklichen Wunsch des
+Nutzers folgt danach ein ungefilterter, serieller Lauf
+`pwsh scripts/test-integration.ps1`. Die Integrationssuite
+wird weder parallelisiert noch vorzeitig abgebrochen. Bei einem
+Fehler wird dessen Ursache vor einem erneuten Lauf geklärt und
+behoben; nach jeder dafür nötigen
+Code- oder Konfigurationsänderung werden die betroffenen Gates
+einschließlich des vollständigen Schlusslaufs erneut durchlaufen.
+`scripts/test-stress.ps1` gehört nicht zu diesem Auftrag.
+
+Die Prüfzeitpunkte, Reihenfolge und Gate-Bedingungen richten sich
+im Übrigen ausschließlich nach
 `.agents/rules/AiNetLinter-Richtlinien.mdc` und
 `AiNetLinter-TestRichtlinien.mdc`.
 
