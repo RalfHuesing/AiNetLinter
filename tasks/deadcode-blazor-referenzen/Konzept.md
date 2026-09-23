@@ -115,9 +115,12 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
    sagt knapp, dass generierte Razor-Referenzen mitgeprüft wurden.
 3. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeModels.cs`:
    Die vorhandenen Felder `confidence`, `reason` und `countercheck` nutzen;
-   keinen neuen öffentlichen Parameter. `recommendedNextAction` und
-   `summary.next` fordern übereinstimmend zuerst `countercheck`, nicht
-   pauschal `ask_user`.
+   keinen neuen öffentlichen Parameter. Bei nicht abgeschnittenen Kandidaten
+   fordern `recommendedNextAction` und `summary.next` übereinstimmend
+   `countercheck`, nicht pauschal `ask_user`. Bei abgeschnittenem Ergebnis
+   fordern beide zuerst `continue` zum Nachladen; die Gegenprüfung folgt nach
+   dem vollständigen Ergebnis. Für leere Ergebnisse bleiben die bestehenden
+   Next-Action-Werte erhalten.
 4. `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` und
    Formatter: Nur wenn `includeGenerated=false`, das aufgelöste Symbol in
    `.razor.cs` deklariert ist und die Antwort null Referenzen enthält,
