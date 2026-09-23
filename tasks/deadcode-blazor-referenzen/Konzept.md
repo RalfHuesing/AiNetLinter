@@ -109,7 +109,8 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
    diagnostikbasierte Kandidaten; kein zweites Razor-Erkennungsverfahren.
    Der `Unavailable`-Grund nennt „Razor-Referenzen nicht entscheidbar:
    generiertes C# fehlt oder ist nicht auswertbar“ und als Gegencheck die
-   Razor-Generierung/Projektladung.
+   Razor-Generierung/Projektladung. Der Grund eines `Available`-Kandidaten
+   sagt knapp, dass generierte Razor-Referenzen mitgeprüft wurden.
 3. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeModels.cs`:
    Die vorhandenen Felder `confidence`, `reason` und `countercheck` nutzen;
    keinen neuen öffentlichen Parameter. `recommendedNextAction` und
