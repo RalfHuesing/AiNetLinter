@@ -96,7 +96,7 @@ StressTests werden nicht ausgeführt.
     mit `-Filter 'FullyQualifiedName~DeadCode|FullyQualifiedName~ProjectOverrideResolutionTests|FullyQualifiedName~ConfigNormalizerTests|FullyQualifiedName~AiNetLinter.FastTests.Mcp.Tools.Verify'`;
     eigener Commit.
 
-- [ ] **3 — Dead Code in beiden Verify-Scopes priorisiert ausgeben**
+- [x] **3 — Dead Code in beiden Verify-Scopes priorisiert ausgeben**
   - Intention: Ein `verify`-Aufruf liefert für `changes` oder
     `solution` einen knappen, unmittelbar prüfbaren
     Dead-Code-Abschnitt, ohne den Qualitäts-Gate-Verdict aus

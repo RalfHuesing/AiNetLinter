@@ -37,6 +37,14 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
             : null;
     }
 
+    internal string? FormatHandoff(ISymbol symbol, ProjectId projectId)
+    {
+        var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
+        return IsCanonicalHandoffSymbol(symbol, declarationId)
+            ? Format($"{declarationId}~p:{projectId.Id:N}")
+            : null;
+    }
+
     internal static bool IsCanonicalHandoffSymbol(ISymbol symbol, string? declarationId = null) =>
         symbol is not IMethodSymbol { MethodKind: MethodKind.LocalFunction }
         && !string.IsNullOrWhiteSpace(declarationId)

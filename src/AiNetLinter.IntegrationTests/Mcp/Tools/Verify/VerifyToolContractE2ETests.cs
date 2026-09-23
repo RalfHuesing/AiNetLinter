@@ -33,7 +33,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: pass", "completeness: complete", "score: 10.0", "violationCount: 0", "scope: changes");
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "completeness: complete", "score: 10.0", "violationCount: 0", "scope: changes", "deadCode: status=");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: pass", "scope: changes");
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "scope: changes", "deadCode: status=");
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify");
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "scope: changes -> solution");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "scope: changes -> solution", "deadCode: status=");
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class VerifyToolContractE2ETests
 
         var validResult = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution");
+        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution", "deadCode: status=");
     }
 
     [Theory]
@@ -177,7 +177,7 @@ public sealed class VerifyToolContractE2ETests
 
         var validResult = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution");
+        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope: solution", "deadCode: status=");
     }
 
     [Fact]
@@ -201,9 +201,9 @@ public sealed class VerifyToolContractE2ETests
 
         var result = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
 
-        AssertVerifyResult(result, expectedError: false, "verdict: failed", "score: ", "violationCount: ", "scope: solution");
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "score: ", "violationCount: ", "scope: solution", "deadCode: status=");
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.DoesNotContain("kind: advisory_candidate", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("verdict: error", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -229,10 +229,12 @@ public sealed class VerifyToolContractE2ETests
 
         AssertVerifyResult(first, expectedError: false,
             "verdict: pass",
-            "advisories: count=2; completeness=complete; review_required; static_evidence",
+            "advisories: count=",
+            "deadCode: status=complete; candidates=",
+            "deadCodeHint:",
             "category=dead_code",
             "category=magic_value:",
-            "ref=");
+            "symbolIdentifier=h:");
         var firstText = Assert.IsType<TextContentBlock>(Assert.Single(first.Content)).Text;
         Assert.True(
             firstText.IndexOf("category=dead_code", StringComparison.Ordinal)
@@ -252,7 +254,11 @@ public sealed class VerifyToolContractE2ETests
 
         AssertVerifyResult(result, expectedError: false,
             "verdict: pass",
-            "advisories: count=4; completeness=complete; review_required; static_evidence");
+            "advisories: count=",
+            "deadCode: status=complete; candidates=");
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("ref=src/BaselineMini/FirstAdvisoryProbe.cs:", text, StringComparison.Ordinal);
+        Assert.Contains("ref=src/BaselineMini/SecondAdvisoryProbe.cs:", text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -150,6 +150,23 @@ ainetlinter --path ./MeinProjekt.slnx --remove-disable-all
 
 ## 4. Integration durch LLM / Agenten
 
+### Verify-Advisories im MCP-Aufruf
+
+`verify(targetPath)` liefert Dead-Code-Advisories für geänderte produktive
+Quelldateien; `verify(targetPath, scope: "solution")` untersucht alle
+produktiven Quelldateien. Beide Scopes suchen Referenzen solutionweit. Die
+knappe `deadCode`-Zusammenfassung zeigt vollständige Zähler und den Status
+`complete`, `partial` oder `unavailable`; `next=review_now` markiert Kandidaten
+als unmittelbar zu prüfen. Jeder Eintrag enthält einen `symbolIdentifier=h:...`
+für `find_references`. Dead-Code-Einträge stehen vor Magic-Value-Advisories.
+Sie sind statische Hinweise und ändern das Gate-Verdict, den Score und die
+Verstoßzahl nicht. Test-only bedeutet, dass keine produktive statische Referenz
+gefunden wurde; die angezeigten Testreferenzen bleiben sichtbar.
+
+Vor einer Entfernung sind Reflection, DI, Generatoren, `dynamic`, Markup und
+Konfiguration sowie externe Consumer gegenzuprüfen. Ein Kandidat ist keine
+Löschentscheidung.
+
 ### Workflow für Agenten
 
 1. **Vor einer Codeänderung:** Kontext aus dem Projekt holen (via MCP-Tools oder CLI `--list-rules` / `--describe-rule`).

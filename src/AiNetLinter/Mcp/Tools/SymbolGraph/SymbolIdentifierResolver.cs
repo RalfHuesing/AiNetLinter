@@ -184,10 +184,20 @@ internal static class SymbolIdentifierResolver
         CancellationToken ct,
         ICollection<ISymbol>? assemblyCandidates)
     {
+        Guid? selectedProjectId = null;
+        var projectMarker = stableId.LastIndexOf("~p:", StringComparison.Ordinal);
+        if (projectMarker > 0
+            && Guid.TryParseExact(stableId[(projectMarker + 3)..], "N", out var parsedProjectId))
+        {
+            selectedProjectId = parsedProjectId;
+            stableId = stableId[..projectMarker];
+        }
+
         var normalizedStableId = NormalizeDocCommentId(stableId);
         var matches = new List<ISymbol>();
         foreach (var project in solution.Projects)
         {
+            if (selectedProjectId is { } projectId && project.Id.Id != projectId) continue;
             matches.AddRange(await FindProjectExactStableIdsAsync(
                 project, stableId, normalizedStableId, assemblyCandidates, ct).ConfigureAwait(false));
             if (assemblyCandidates is not null)

@@ -562,15 +562,34 @@ Scope und Recovery, aber keinen Score und keinen Violation-Count.
 Ungültige Requests, Assembly-Ziele und exogene Fehler sind `verdict=error` mit
 `isError=true`, Fehlercode, optionalem Feld und genau einer Recovery.
 
-Nur bei `changes` können zusätzliche Advisory-Einträge erscheinen. Ihre gemeinsame
-Zeile markiert `review_required` und `static_evidence`; pro Eintrag bleiben nur
-Kategorie, `ref`, Confidence und Grund sichtbar. Ein `.razor.cs`-Kandidat mit
+Beide Scopes ergänzen Dead-Code-Advisories. `changes` begrenzt nur die
+untersuchten produktiven Deklarationen auf geänderte Quelldateien;
+`solution` untersucht alle produktiven Quelldateien. Die Referenzsuche bleibt
+in beiden Fällen solutionweit. Die Zeile `deadCode` nennt `status`, vollständige
+Zähler für Kandidaten, Test-only, unreferenziert, API-geschützt und unentscheidbar,
+die sichtbare Anzahl, `truncatedBy` sowie `next`. `partial` weist auf
+unentscheidbare Referenzstellen hin; `unavailable` enthält unbekannte Zähler und
+eine knappe Ursache. Auch bei gekürzten Einträgen bleibt diese Zusammenfassung
+erhalten. `deadCodeHint` erscheint genau einmal, wenn Kandidaten existieren.
+
+Dead-Code-Einträge stehen vor Magic-Value-Advisories und enthalten einen
+`symbolIdentifier` im kanonischen `h:...`-Format für `find_references`, den
+Deklarationspfad mit Zeile, `usage=test_only|unreferenced`, Confidence und
+`reason=no_production_static_reference`. Test-only-Einträge nennen zusätzlich
+die Testreferenzzahl. Sie behaupten nicht, es gebe keinerlei Solution-Referenzen.
+Reflection, DI, Generatoren, `dynamic`, Markup/Konfiguration und externe
+Consumer müssen vor einer Entfernung gegengeprüft werden. Kandidaten ändern
+`verdict`, `score` und `violationCount` nicht.
+
+Die gemeinsame Advisory-Zeile markiert `review_required` und `static_evidence`;
+bei Magic-Value-Einträgen bleiben Kategorie, `ref`, Confidence und Grund sichtbar.
+Ein `.razor.cs`-Kandidat mit
 fehlender oder nicht auswertbarer Razor-Generierung trägt einen sichtbaren
 Razor-Unsicherheitsgrund und `confidence=low`; im vollständigen Ergebnis nennen
 `recommendedNextAction` und `summary.next` `countercheck`, bei Trunkierung beide
 `continue`. Die ausführliche Unsicherheits- und Gegenindikator-Policy wird nicht
 je Eintrag wiederholt. Advisorys sind weder Lösch- oder Änderungsanweisungen noch
-Teil des Gate-Entscheids. `solution` enthält diese Heuristik-Kandidaten nicht.
+Teil des Gate-Entscheids.
 
 **`pattern_detect` — Content im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`) und `feature-envy` (`AvoidExcessiveMiddleMen`). Der Content nennt:
 

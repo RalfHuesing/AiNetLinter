@@ -113,7 +113,9 @@ internal sealed record VerifyEvidenceEntry(
     bool RequiresAgentJudgment = false,
     string? Confidence = null,
     string? EvidenceBoundary = null,
-    IReadOnlyList<string>? CounterIndicators = null);
+    IReadOnlyList<string>? CounterIndicators = null,
+    string? Usage = null,
+    int? TestReferences = null);
 
 /// <summary>
 /// Gemeinsames internes Antwortmodell für die einzige Content-Projektion von verify.

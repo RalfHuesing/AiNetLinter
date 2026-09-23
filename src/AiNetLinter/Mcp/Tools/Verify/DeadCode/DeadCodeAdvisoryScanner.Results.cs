@@ -56,7 +56,8 @@ internal static partial class DeadCodeAdvisoryScanner
             LimitsApplies: DetermineLimitsApplies(symbol, hasInternalsVisibleTo),
             Countercheck: assessment.Countercheck,
             Usage: referenceAnalysis.TestReferenceCount > 0 ? "test_only" : "unreferenced",
-            TestReferences: referenceAnalysis.TestReferenceCount);
+            TestReferences: referenceAnalysis.TestReferenceCount,
+            InternalSymbolIdentifier: context.Args.HandoffIdentity?.FormatHandoff(symbol, document.Project.Id));
 
         context.DeadSymbols.Add(entry);
         if (context.ByKind.TryGetValue(kindStr, out var count)) context.ByKind[kindStr] = count + 1;
@@ -93,7 +94,8 @@ internal static partial class DeadCodeAdvisoryScanner
                 totalDead == 0
                     ? "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."
                     : actionReason),
-            Undecidable: context.UndecidableCount);
+            Undecidable: context.UndecidableCount,
+            ApiProtected: context.ApiProtectedCount);
         var recommendedAction = totalDead == 0
             ? new DeadCodeRecommendedNextAction(
                 Action: "ask_user",

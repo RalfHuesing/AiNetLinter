@@ -66,7 +66,8 @@ internal sealed record DeadCodeAdvisoryOptions(
     DeadCodeMode Mode = DeadCodeMode.Members,
     int MaxResults = 50,
     IReadOnlySet<string>? ScopeFiles = null,
-    Config? Config = null)
+    Config? Config = null,
+    AiNetLinter.Mcp.AnalysisSymbolIdentity? HandoffIdentity = null)
 {
     public static bool IsKnownAccessibility(string? value) => value?.ToLowerInvariant() is "all" or "private" or "internal" or "public" or "private_internal";
     public static bool IsKnownConfidence(string? value) => value?.ToLowerInvariant() is "both" or "high" or "low";
@@ -136,7 +137,8 @@ internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("evidenceBoundary")] string EvidenceBoundary = "statische Referenzsuche innerhalb der Solution; keine Laufzeit- oder externen Consumer-Beweise",
     [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null,
     [property: JsonPropertyName("usage")] string Usage = "unreferenced",
-    [property: JsonPropertyName("testReferences")] int TestReferences = 0);
+    [property: JsonPropertyName("testReferences")] int TestReferences = 0,
+    [property: JsonPropertyName("internalSymbolIdentifier")] string? InternalSymbolIdentifier = null);
 
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
@@ -154,7 +156,8 @@ internal sealed record DeadCodeSummary(
     [property: JsonPropertyName("returnedCandidates")] int ReturnedCandidates = 0,
     [property: JsonPropertyName("truncatedBy")] int TruncatedBy = 0,
     [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null,
-    [property: JsonPropertyName("undecidable")] int Undecidable = 0);
+    [property: JsonPropertyName("undecidable")] int Undecidable = 0,
+    [property: JsonPropertyName("apiProtected")] int ApiProtected = 0);
 
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
@@ -210,4 +213,5 @@ internal sealed class DeadCodeScanContext(
     public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
     public int ScannedCount { get; set; }
     public int UndecidableCount { get; set; }
+    public int ApiProtectedCount { get; set; }
 }

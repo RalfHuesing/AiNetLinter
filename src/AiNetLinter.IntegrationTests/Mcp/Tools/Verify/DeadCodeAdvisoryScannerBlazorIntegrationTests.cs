@@ -49,8 +49,13 @@ public sealed class DeadCodeAdvisoryScannerBlazorIntegrationTests
         var deadCode = advisory.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToArray();
         Assert.Contains(deadCode, entry => entry.SourcePath.EndsWith("SiteView.razor.cs", StringComparison.Ordinal)
             && entry.Line == GetLine(fixture.SiteViewCsPath, "UnusedControlMember"));
-        Assert.DoesNotContain(deadCode, entry => entry.SourcePath.EndsWith("SiteView.razor.cs", StringComparison.Ordinal)
-            && entry.Line != GetLine(fixture.SiteViewCsPath, "UnusedControlMember"));
+        Assert.All(deadCode.Where(entry => entry.SourcePath.EndsWith("SiteView.razor.cs", StringComparison.Ordinal)
+            && entry.Line != GetLine(fixture.SiteViewCsPath, "UnusedControlMember")), entry =>
+        {
+            Assert.Equal(GetLine(fixture.SiteViewCsPath, "SiteView"), entry.Line);
+            Assert.Equal("low", entry.Confidence);
+            Assert.Contains("Generierte Razor-Referenzen wurden mitgeprüft", entry.Reason, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

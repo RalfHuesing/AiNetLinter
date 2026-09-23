@@ -13,6 +13,8 @@ using AiNetLinter.Core.Git;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
+using AiNetLinter.Mcp.Handoffs;
+using AiNetLinter.Mcp;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -65,9 +67,12 @@ internal static class VerifyTool
         if (scoreResult.IsMalfunction || scoreResult.Score is null) return VerifyResponseFormatter.Error(
             "ANALYSIS_FAILURE", "Der Verify-Gatekern konnte nicht vollständig bestimmt werden.", "Den identischen verify-Aufruf einmal erneut ausführen.");
 
-        var advisory = scope == VerifyScope.Changes
-            ? await VerifyAdvisoryProjector.CollectAsync(solution, projection.ScopeFiles, cancellationToken, config)
-            : VerifyAdvisoryProjection.Empty;
+        var advisory = await VerifyAdvisoryProjector.CollectAsync(
+            solution,
+            scope == VerifyScope.Changes ? projection.ScopeFiles : null,
+            cancellationToken,
+            config,
+            server.HandoffSymbolIdentity);
 
         return VerifyResponseFormatter.Success(new VerifySuccessParameters(
             scope,
@@ -356,6 +361,7 @@ internal static partial class VerifyResponseFormatter
         IReadOnlyList<VerifyEvidenceEntry> evidence,
         VerifyAdvisoryProjection advisory)
     {
+        AppendDeadCodeSummary(lines, evidence, advisory.DeadCode);
         var advisories = evidence.Where(entry => entry.Kind == "advisory_candidate").ToList();
         if (advisories.Count == 0)
         {
@@ -366,116 +372,36 @@ internal static partial class VerifyResponseFormatter
         lines.Add($"advisories: count={advisories.Count}; completeness={advisory.Completeness}; review_required; static_evidence");
         foreach (var entry in advisories)
         {
-            lines.Add($"- category={entry.RuleOrCategory}; ref={entry.HandoffId}; confidence={entry.Confidence}; reason={entry.Reason}");
+            if (entry.RuleOrCategory == "dead_code")
+            {
+                var razorStatus = entry.Reason.Contains("Razor-Referenzen nicht entscheidbar", StringComparison.Ordinal)
+                    ? " razorEvidence=unavailable;"
+                    : string.Empty;
+                lines.Add($"- category=dead_code; symbolIdentifier={entry.HandoffId}; ref={entry.SourcePath}:{entry.Line}; usage={entry.Usage}; confidence={entry.Confidence}; reason=no_production_static_reference;{(entry.TestReferences is > 0 ? $" testReferences={entry.TestReferences};" : string.Empty)}{razorStatus} countercheck=reflection,DI,generators,dynamic,markup/config,external_consumers");
+            }
+            else
+            {
+                lines.Add($"- category={entry.RuleOrCategory}; ref={entry.HandoffId}; confidence={entry.Confidence}; reason={entry.Reason}");
+            }
         }
     }
+
+    private static void AppendDeadCodeSummary(
+        List<string> lines,
+        IReadOnlyList<VerifyEvidenceEntry> evidence,
+        VerifyDeadCodeSummary? summary)
+    {
+        if (summary is null) return;
+        var shown = evidence.Count(entry => entry.RuleOrCategory == "dead_code");
+        int? truncatedBy = summary.Candidates is int candidates ? Math.Max(0, candidates - shown) : null;
+        lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; testOnly={ToCount(summary.TestOnly)}; unreferenced={ToCount(summary.Unreferenced)}; apiProtected={ToCount(summary.ApiProtected)}; undecidable={ToCount(summary.Undecidable)}; shown={shown}; truncatedBy={ToCount(truncatedBy)}; next={(summary.Candidates is > 0 ? "review_now" : "none")}");
+        if (summary.Candidates is > 0) lines.Add("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.");
+        if (summary.Cause is not null) lines.Add($"deadCodeCause: {summary.Cause}");
+    }
+
+    private static string ToCount(int? count) => count?.ToString(CultureInfo.InvariantCulture) ?? "unknown";
 
     private static string ToWire(object value) => value.ToString()!.ToLowerInvariant();
 }
 
 internal sealed record VerifyRenderAttempt(string? Text, bool ScopeProjected);
-
-internal sealed record VerifyAdvisoryProjection(
-    int TotalCount,
-    IReadOnlyList<VerifyEvidenceEntry> Entries,
-    string Completeness)
-{
-    internal static readonly VerifyAdvisoryProjection Empty = new(0, [], "not_requested");
-}
-
-internal static class VerifyAdvisoryProjector
-{
-    private const string AdvisoryKind = "advisory_candidate";
-    private const string AdvisorySeverity = "advisory";
-    private const string DeadCodeCategory = "dead_code";
-    private const string MagicValueCategoryPrefix = "magic_value:";
-    private const string MagicValueConfidence = "medium";
-    // Der Projektor rankt global; ein Scanner-Limit vorher würde Kandidaten abhängig von der Dokumentreihenfolge ausblenden.
-    private const int UnboundedCandidateLimit = int.MaxValue;
-
-    internal static async Task<VerifyAdvisoryProjection> CollectAsync(
-        Microsoft.CodeAnalysis.Solution solution,
-        IReadOnlySet<string>? scopeFiles,
-        CancellationToken cancellationToken,
-        Config? config = null)
-    {
-        if (scopeFiles is not { Count: > 0 }) return VerifyAdvisoryProjection.Empty;
-
-        try
-        {
-            var deadCode = await DeadCodeAdvisoryScanner.ScanAsync(
-                solution,
-                new DeadCodeAdvisoryOptions(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles, Config: config),
-                cancellationToken);
-            var deadCodeEntries = deadCode.DeadSymbols.Select(ToDeadCodeEvidence);
-
-            var magicValues = await MagicValueAdvisoryScanner.ScanAsync(new MagicValueAdvisoryScannerParameters(
-                solution,
-                null,
-                null,
-                null,
-                MinOccurrences: 2,
-                MaxResults: UnboundedCandidateLimit,
-                IgnoreNumbers: null,
-                IncludeTests: false,
-                IncludeSuppressed: false,
-                ChangedOnly: false,
-                cancellationToken,
-                ScopeFiles: scopeFiles));
-            if (magicValues.IsMalfunction) return new(deadCode.Summary.TotalDead, Rank(deadCodeEntries), "partial");
-
-            var magicValueEntries = magicValues.Payload!.MagicValues.Select(ToMagicValueEvidence);
-            var entries = deadCodeEntries.Concat(magicValueEntries);
-            return new(
-                deadCode.Summary.TotalDead + magicValues.Payload!.Summary.Total,
-                Rank(entries),
-                "complete");
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            return new(0, [], "unavailable");
-        }
-    }
-
-    private static IReadOnlyList<VerifyEvidenceEntry> Rank(IEnumerable<VerifyEvidenceEntry> entries) =>
-        entries
-            .OrderBy(entry => AdvisoryRank(entry))
-            .ThenBy(entry => entry.RuleOrCategory, StringComparer.Ordinal)
-            .ThenBy(entry => entry.SourcePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(entry => entry.Line)
-            .Take(VerifyTool.EvidenceLimit)
-            .ToList();
-
-    private static int AdvisoryRank(VerifyEvidenceEntry entry) => entry.Confidence switch
-    {
-        "high" => 0,
-        "medium" => 1,
-        _ => 2,
-    };
-
-    private static VerifyEvidenceEntry ToDeadCodeEvidence(DeadCodeEntry entry) => new(
-        AdvisoryKind,
-        DeadCodeCategory,
-        AdvisorySeverity,
-        entry.File,
-        entry.Line,
-        entry.Reason,
-        $"{entry.File}:{entry.Line}",
-        RequiresAgentJudgment: true,
-        Confidence: entry.Confidence,
-        EvidenceBoundary: entry.EvidenceBoundary,
-        CounterIndicators: entry.Countercheck ?? ["Reflection", "DI", "Generatoren"]);
-
-    private static VerifyEvidenceEntry ToMagicValueEvidence(MagicValueEntry entry) => new(
-        AdvisoryKind,
-        MagicValueCategoryPrefix + entry.Category,
-        AdvisorySeverity,
-        entry.FilePath,
-        entry.Line,
-        $"{entry.Occurrences} statische Literalfunde im Änderungskontext.",
-        $"{entry.FilePath}:{entry.Line}",
-        RequiresAgentJudgment: true,
-        Confidence: MagicValueConfidence,
-        EvidenceBoundary: entry.EvidenceBoundary,
-        CounterIndicators: ["Fachliche Semantik", "Laufzeitkonfiguration"]);
-}

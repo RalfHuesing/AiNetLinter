@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -158,7 +159,11 @@ internal static partial class DeadCodeAdvisoryScanner
             return false;
         }
 
-        if (IsApiProtected(typeSymbol, document, context)) return false;
+        if (IsApiProtected(typeSymbol, document, context))
+        {
+            context.ApiProtectedCount++;
+            return false;
+        }
 
         var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context.Solution, ct);
         if (referenceAnalysis.IsUndecidable)
@@ -224,7 +229,11 @@ internal static partial class DeadCodeAdvisoryScanner
         if (DeadCodeSuppression.IsSuppressed(member)) return;
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
-        if (IsApiProtected(member, document, context)) return;
+        if (IsApiProtected(member, document, context))
+        {
+            context.ApiProtectedCount++;
+            return;
+        }
 
         var referenceAnalysis = await AnalyzeReferencesAsync(member, context.Solution, ct);
         if (referenceAnalysis.IsUndecidable)
