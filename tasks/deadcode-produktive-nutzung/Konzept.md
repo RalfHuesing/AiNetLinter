@@ -4,156 +4,140 @@ execution_mode: autonomous
 open_questions: []
 ---
 
-# Konzept: Dead Code anhand produktiver Nutzung erkennen
+# Konzept: Dead Code nach produktiver Nutzung beurteilen
 
-## 1. Ziel
+## Intention
 
-AiNetLinter soll Dead Code als Code erkennen, der innerhalb der gesamten
-Solution keine produktive Nutzung besitzt.
+AiNetLinter soll im **einen bestehenden MCP-Aufruf `verify`** Produktionscode
+sichtbar machen, der innerhalb der geladenen Solution keine produktive
+statische Nutzung hat. Testaufrufe dürfen solchen Code nicht am Leben halten.
+Ein aufrufender Agent soll den Befund unmittelbar als priorisierte technische
+Schuld prüfen und bei bestätigter Entbehrlichkeit beheben können. Der Befund
+ist eine statische Advisory, keine automatische Löschentscheidung.
 
-Die Solution bleibt immer der vollständige statische Suchraum. Es gibt keinen
-fachlichen Modus „nur Projekt“ versus „solutionweit“. Entscheidend ist allein,
-welche Fundstellen als produktive Referenzen gelten und welche Deklarationen
-wegen einer ausdrücklich konfigurierten externen API geschützt werden.
+Der Suchraum für Referenzen ist immer die ganze geladene Roslyn-Solution.
+`verify(changes)` und `verify(solution)` unterscheiden nur, **welche
+Deklarationen** untersucht werden. Sie verwenden dieselbe Definition
+produktiver Nutzung und dieselbe projektbezogene API-Policy.
 
-Die zentrale Regel lautet:
+## Belegter Ist-Stand
 
-> Eine Referenz aus einem Test ist keine produktive Nutzung. Eine Referenz aus
-> produktivem Code innerhalb der Solution ist eine produktive Nutzung.
+- `DeadCodeAdvisoryScanner.CollectCandidateDocuments` schließt bei
+  `IncludeTests = false` Testprojekte als Kandidaten aus.
+- `IsSymbolUnreferencedAsync` sucht Referenzen nicht privater Symbole über die
+  gesamte Solution und behandelt bislang jede Fundstelle als Nutzung.
+  `HasReferencedInterfaceOrOverrideAsync` tut das auch für indirekte
+  Referenzen. Daher verdeckt ein Testaufruf einen test-only
+  Produktionsmember.
+- Produktiv ruft nur `VerifyAdvisoryProjector.CollectAsync` den Scanner auf.
+  Es existiert kein eigener Dead-Code-MCP-Aufruf. Der Projektor läuft derzeit
+  nur bei `verify(changes)`, erhält keine Konfiguration und fängt
+  Scannerfehler pauschal als `unavailable` ab.
+- `verify` hat die Scopes `changes` und `solution`, ein Content-only-Ergebnis
+  sowie einen eigenen Gate-Verdict. Advisories ändern den Gate-Verdict
+  derzeit nicht. Die Antwort ist auf ein knappes Budget begrenzt.
+- `ProjectOverrides` und `ProjectConfigResolver.ResolveForProject` existieren.
+  Die Dead-Code-Policy ist dort noch nicht modelliert. Bei mehreren
+  passenden Override-Mustern gewinnt bisher der erste Treffer.
 
-Eine `public`- oder `protected`-Deklaration ist zusätzlich nur dann von der
-Dead-Code-Aussage auszunehmen, wenn das zugehörige Projekt eine externe API
-bereitstellt. Diese API-Oberfläche muss definierbar sein; sie darf nicht
-unkritisch aus jedem einzelnen `public`-Modifier abgeleitet werden.
+## Scope
 
-Das Ergebnis bleibt eine statische, vorsichtige Analyse und keine automatische
-Löschentscheidung. Reflection, DI, Source Generatoren, `dynamic` und andere
-Laufzeitbindungen bleiben Gegenprüfungen beziehungsweise Unsicherheiten.
+### Muss
 
-## 2. Problem und aktuelle Lücke
+1. Produktions- und Testreferenzen für jedes geprüfte Symbol im
+   solutionweiten Suchraum getrennt bewerten, einschließlich
+   Interface-/Override-Referenzen.
+2. `verify(changes)` auf geänderte produktive Quelldateien und
+   `verify(solution)` auf alle produktiven Quelldateien anwenden.
+   Die Referenzsuche bleibt in beiden Fällen solutionweit.
+3. Die externe API-Oberfläche pro Projekt über die geladene Konfiguration
+   festlegen und vor dem Scan für jedes Kandidatenprojekt validieren.
+4. Dead-Code-Kandidaten im selben `verify`-Ergebnis vorrangig und
+   handlungsfähig ausgeben. Kandidaten ändern `verdict`, `score` und
+   `violationCount` nicht.
+5. Fehlende oder ungültige API-Einordnung als konkreten `verify`-Fehler
+   mit `isError: true` ausgeben, ohne Teilergebnis.
+6. Whitelist, symbolnahe Suppression, Razor-Gegenprüfung,
+   Scope-Projektion und bestehende Gate-Semantik erhalten.
+7. Tests und Dokumentation an den beschriebenen Vertrag anpassen.
 
-Die bestehende Implementierung untersucht Kandidatendokumente ohne Tests, sucht
-Referenzen für nicht-private Symbole jedoch über die gesamte Roslyn-Solution.
-`IncludeTests = false` begrenzt damit derzeit den Kandidatenbestand, nicht den
-Referenzbestand.
+### Nicht
 
-Folge:
+- Kein zweites Dead-Code-MCP-Tool und kein zusätzlicher `verify`-Parameter.
+- Kein automatisches Löschen, Umschreiben oder Gate-`fail` allein aufgrund
+  eines statischen Dead-Code-Kandidaten.
+- Keine Testcode-Dead-Code-Analyse im `verify`-Ergebnis. Das interne
+  `IncludeTests` bleibt ausschließlich ein Kandidatendokument-Filter.
+- Keine Projekt-lokale Referenzsuche, keine Erkennung externer Consumer
+  aus `OutputType`, Paketnamen oder Dateinamen.
+- Keine Namespace-, Klassen- oder Member-Allowlist für externe APIs.
+- Keine vollständige Reflection-, DI-, Generator- oder
+  `dynamic`-Analyse.
+- Keine Änderung der Codequalitätsregeln oder der CLI-Schnittstelle.
 
-```text
-Produktionsmember BulletList
-    keine produktive Referenz
-    Referenzen ausschließlich aus MarkdownBuilderTests
-    -> SymbolFinder findet Referenzen
-    -> Member gilt als benutzt
-    -> kein Dead-Code-Kandidat
-```
+## Fachlicher Vertrag
 
-Das widerspricht der fachlichen Definition. Würde `BulletList` gelöscht, würde
-nicht der Produktivcode, sondern nur sein direkter Unit-Test-Aufruf den Build
-brechen. Genau solche test-only verwendeten Produktionsmember sollen sichtbar
-werden.
+### 1. Kandidatenscope und Referenzrollen
 
-Die aktuelle Referenzsuche liegt in
-`src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeAdvisoryScanner.cs`.
-Die Kandidatenauswahl liegt dort separat in `CollectCandidateDocuments` und
-`ShouldScanProject`. Die Korrektur muss diese beiden Ebenen semantisch
-zusammenführen, ohne den solutionweiten Suchraum aufzugeben.
+`verify(changes)` nutzt exakt die vom bestehenden Verify-Scope aufgelösten
+geänderten C#-Quelldateien als Deklarationsscope. `verify(solution)` nutzt alle
+gültigen C#-Quelldateien produktiver Projekte. Testdokumente sind in beiden
+Scopes keine Dead-Code-Deklarationskandidaten. Ein leerer Scope liefert
+keinen globalen Clean-Claim; die bestehende Verify-Scope-Semantik bleibt
+maßgeblich.
 
-## 3. Fachliche Definition
+`verify` ruft den Scanner für beide Scopes mit
+`Accessibility=All`, `Confidence=Both`, `Kind=All`,
+`Mode=Members` und `IncludeTests=false` auf. Lokale
+Compiler-/IDE-Diagnostik ist kein Bestandteil dieses Dead-Code-Vertrags.
 
-### 3.1 Suchraum
+Eine Roslyn-Referenzstelle wird anhand ihres tatsächlichen
+`ReferenceLocation.Document` bewertet, nicht anhand des deklarierenden
+Symbols oder eines nachträglichen Textfilters:
 
-Für jedes geprüfte Symbol wird weiterhin die gesamte geladene Solution als
-Roslyn-Suchraum verwendet:
+| Rolle | Verbindliche Klassifizierung | Wirkung |
+|---|---|---|
+| `test` | `TestDetector.IsTestProject(document.Project)` oder bei vorhandenem `document.FilePath` `TestDetector.IsTestFile(document.FilePath)` ist wahr | Zählt nicht als produktive Nutzung. |
+| `production` | `document.Project.SupportsCompilation` ist wahr, `document.FilePath` ist vorhanden und die Testregel trifft nicht zu | Hält das Symbol am Leben. |
+| `unknown` | Dokument oder Projekt fehlt oder die Stelle lässt sich nicht verlässlich zuordnen | Verhindert einen Dead-Code-Kandidaten für dieses Symbol; erhöht den Zähler unentscheidbarer Symbole. |
 
-- alle Projekte der Solution;
-- alle passenden Source-Dokumente;
-- Projektgrenzen und Referenzbeziehungen gemäß Roslyn;
-- keine künstliche Begrenzung auf das deklarierende Projekt.
+Die Testregel hat Vorrang vor der Produktionsregel. Dieselbe physische Datei
+kann als Linked File in mehreren Roslyn-Projekten vorkommen; jede
+Referenzstelle wird anhand ihrer eigenen Dokument-/Projektidentität
+klassifiziert. Eine produktive Einbindung hält das Symbol am Leben.
+Mehrfachtreffer derselben Stelle dürfen den Nutzungsstatus nicht verändern
+oder Zähler künstlich erhöhen.
 
-Das ist notwendig, damit ein produktiver Aufrufer aus einem anderen Projekt
-den deklarierenden Code zuverlässig am Leben hält.
+Für ein Produktionssymbol gilt, auch bei `InternalsVisibleTo`:
 
-### 3.2 Produktive Referenz
-
-Eine gefundene Referenz ist produktiv, wenn ihre Referenzstelle in einem
-Produktionsprojekt beziehungsweise einer produktiven Quelldatei liegt.
-
-Für ein Produktionssymbol gelten insbesondere:
-
-- Referenzen aus Testprojekten zählen nicht.
-- Referenzen aus typischen Testpfaden zählen nicht.
-- Referenzen aus produktiven Projekten zählen.
-- Eine produktive Referenz aus einem anderen Projekt zählt unabhängig davon,
-  ob das deklarierende Projekt selbst eine Bibliothek oder ein Executable ist.
-- Eine `InternalsVisibleTo`-Beziehung macht eine Testreferenz nicht produktiv.
-  Eine Referenz aus einem nicht als Test erkannten Friend-Projekt bleibt eine
-  produktive Referenz.
-
-Die Klassifizierung soll anhand der vorhandenen Projekt- und Pfaderkennung
-erfolgen, insbesondere über `TestDetector` und die vorhandene Dokumenten-
- beziehungsweise Scope-Logik. Eine bloße Textsuche nach Testnamen ist kein
-Ersatz für die semantische Projektklassifizierung.
-
-### 3.3 Testcode
-
-Tests werden nicht als produktive Verbraucher behandelt. Das gilt auch dann,
-wenn ein Test absichtlich einen `internal`-Member direkt aufruft und über
-`InternalsVisibleTo` Zugriff erhält.
-
-`IncludeTests` darf weiterhin steuern, ob Testdokumente selbst als
-Dead-Code-Kandidaten untersucht werden. Es darf jedoch nicht dazu führen,
-dass Testreferenzen Produktionssymbole vor dem Dead-Code-Hinweis schützen.
-
-Die primäre Dead-Code-Aussage bezieht sich auf Produktionscode. Ein optionaler
-Testcode-Scan ist ein separater Wartungsfall und darf nicht die Aussage über
-Produktionscode verändern.
-
-### 3.4 API-Schutz
-
-Eine externe API ist eine Eigenschaft eines Projekts beziehungsweise einer
-explizit konfigurierten Projektoberfläche, nicht automatisch jedes `public`
-Symbol in jeder Solution.
-
-Empfohlene API-Semantik:
-
-| API-Status des Projekts | `public`/`protected` ohne Solution-Referenz |
+| Fundstellen nach Ausschluss von Deklarationsstellen | Ergebnis |
 |---|---|
-| `external_library` | Extern sichtbare Symbole sind API-geschützt; externe Consumer sind möglich. |
-| `closed_solution` | Extern sichtbare Symbole dürfen als Kandidat erscheinen, aber nur mit niedriger Sicherheit und Laufzeit-Gegenprüfung. |
-| `unknown` | Konfiguration unvollständig; der Dead-Code-MCP-Aufruf bricht mit einem verständlichen Konfigurationsfehler ab. |
+| Mindestens eine produktive Referenz | `live`; kein Dead-Code-Kandidat. |
+| Keine produktive, mindestens eine unbekannte Referenz | `undecidable`; kein Dead-Code-Kandidat, Advisory-Status `partial`. |
+| Keine produktive oder unbekannte, mindestens eine Testreferenz | Kandidat `test_only`. |
+| Keine Referenz | Kandidat `unreferenced`. |
 
-Der Default soll sicher sein: `unknown`. `unknown` ist dabei kein zulässiger
-operativer Analysezustand, sondern ein Sentinel für „Projekt-API noch nicht
-entschieden“. Für AiNetLinter selbst wird die eigene Solution explizit als
-`closed_solution` konfiguriert. Ein anderes Projekt kann seine DLL-Projekte
-als `external_library` markieren.
+`SymbolFinder` erhält weiterhin die vollständige Solution. Eine
+Roslyn-Optimierung für private Symbole ist nur zulässig, wenn sie zum
+solutionweiten Ergebnis äquivalent ist. `scopeFiles` darf ausschließlich
+Deklarationen begrenzen. Dieselbe Rollenbewertung gilt bei Referenzen
+auf Basismethoden und Interface-Member; ein test-only Aufruf über ein
+Interface oder eine Basisklasse schützt die Implementierung nicht.
+Bestehende Schutzregeln für tatsächliche Interface-/Override-Nutzung und
+Framework-Einstiegspunkte bleiben erhalten.
 
-Die Information wird nicht als Aufrufparameter und nicht als globaler
-Boolean geführt, sondern als Teil der geladenen Projektkonfiguration. Ein
-Boolean `PublicApi: true/false` wäre zu grob und hätte keinen sicheren dritten
-Zustand für unbekannte externe Consumer. Außerdem würde `true` entweder alle
-öffentlichen Symbole schützen oder eine zusätzliche Ausnahmelogik benötigen.
-Die Policy macht die Sicherheitsentscheidung explizit und wird über die
-vorhandenen `ProjectOverrides` automatisch anhand des Roslyn-Projekts
-aufgelöst. Bleibt der effektive Wert für ein im Dead-Code-Scope liegendes
-Projekt `unknown`, darf der Scanner kein Ergebnis erzeugen.
+Ein von `TestDetector` übersehenes Testprojekt erzeugt einen
+**fehlenden Kandidaten**, weil seine Referenzen als produktiv zählen.
+Eine fälschliche Testklassifizierung eines produktiven Aufrufers kann
+dagegen einen falschen Kandidaten erzeugen. Das ist eine Grenze der
+bestehenden heuristischen Testerkennung und verlangt die agentische
+Gegenprüfung; der Dead-Code-Scanner behauptet deshalb nie sichere
+Löschbarkeit. Unbekannte Referenzstellen dürfen nicht als unbenutzt
+interpretiert werden.
 
-Geschützt werden mindestens:
+### 2. Projektbezogene API-Policy
 
-- öffentliche Typen und Member;
-- `protected`-Member;
-- extern sichtbare `protected internal`-Member.
-
-`private protected` und rein `internal` bleiben grundsätzlich analysierbar,
-werden aber durch echte produktive Friend-Projekte am Leben gehalten. Die
-genaue Roslyn-Accessibility muss an dieser Stelle semantisch ausgewertet
-werden; Stringvergleiche auf Modifier sind unzulässig.
-
-Die Konfiguration soll projektbezogen sein und einen Solution-weiten Default
-besitzen. Das nutzt die bestehende Override-Struktur, damit die Policy nicht
-bei jedem Analyseaufruf mitgegeben oder von einem Agenten erinnert werden
-muss. Ein konzeptioneller Vertrag ist:
+Die Konfiguration erhält genau diese Properties und Werte:
 
 ```json
 {
@@ -166,7 +150,7 @@ muss. Ein konzeptioneller Vertrag ist:
         "ApiSurface": "external_library"
       }
     },
-    "AiNetLinter": {
+    "Application": {
       "DeadCode": {
         "ApiSurface": "closed_solution"
       }
@@ -175,353 +159,216 @@ muss. Ein konzeptioneller Vertrag ist:
 }
 ```
 
-`external_library` schützt in der ersten Umsetzung alle extern sichtbaren
-Symbole des Projekts. Eine feinere Eingrenzung über Namespaces oder einzelne
-Klassen ist ausdrücklich nicht Bestandteil dieses Scopes. Die konkreten
-Property-Namen müssen bei der Umsetzung an die bestehende
-Konfigurationsstruktur und deren Namenskonventionen angepasst werden; die
-Semantik dieses Vertrags bleibt verbindlich.
+`DeadCode.DefaultApiSurface` ist der solutionweite Default.
+Fehlt die Property, gilt `unknown`. `ProjectOverrides.<Muster>.DeadCode.ApiSurface`
+überschreibt sie für das über `ProjectConfigResolver.ResolveForProject`
+aufgelöste Roslyn-Projekt. Ein Override ohne `DeadCode.ApiSurface` erbt
+den Default. Die bestehende First-Match-Reihenfolge der
+`ProjectOverrides` bleibt gültig. `PathOverrides` ändern die
+Projekt-API-Policy nicht.
 
-### 3.5 Laufzeit- und externe Nutzung
+Die einzigen gültigen Werte sind exakt `unknown`, `closed_solution`
+und `external_library`. Groß-/Kleinschreibung, leere Werte und
+abweichende Schreibweisen sind ungültig und werden diagnostisch
+wie `unknown` behandelt; es gibt keinen stillen Rückfall auf
+`closed_solution`. Die Konfigurations-Deserialisierung muss solche Werte
+bis zur projektbezogenen Validierung erhalten können. Ein Ladefehler
+der gesamten Regelkonfiguration bleibt unter der bestehenden
+Verify-Konfigurationsfehlerbehandlung.
 
-Statische Referenzlosigkeit beweist nicht, dass ein Symbol gefahrlos gelöscht
-werden kann. Die Analyse muss daher weiterhin zwischen folgenden Aussagen
-unterscheiden:
+| Effektiver Wert | Fachliche Wirkung |
+|---|---|
+| `external_library` | Effektiv extern sichtbare Symbole sind API-geschützt und werden nicht als Dead-Code-Kandidaten ausgegeben. Nicht extern sichtbare Symbole werden geprüft. |
+| `closed_solution` | Auch effektiv extern sichtbare Symbole werden geprüft. Ohne produktive statische Referenz sind sie nur `low` confidence; externe bzw. dynamische Nutzung bleibt Gegenprüfung. |
+| `unknown` | `verify` bricht vor Gate- und Advisory-Analyse mit Konfigurationsfehler ab. |
 
-- **keine produktive statische Referenz gefunden:** Kandidat für Dead Code;
-- **API-geschützt:** keine sichere Aussage wegen möglicher externer Consumer;
-- **Laufzeitbindung möglich:** statisch unreferenziert, aber Gegenprüfung nötig;
-- **Konfiguration fehlt:** Dead-Code-Scan abgebrochen; der MCP-Aufrufer muss
-  die API-Einordnung beim Nutzer erfragen.
+Extern sichtbar wird **semantisch** über Roslyn-`Accessibility` und die
+gesamte enthaltende Typkette bestimmt. Ein öffentlicher Member in einem
+internen Typ ist nicht extern sichtbar. Öffentliche Typen und Member,
+`protected` und `protected internal` (`ProtectedOrInternal`) sind bei
+extern sichtbarer Typkette geschützt. `internal` und `private protected`
+(`ProtectedAndInternal`) sind es nicht. Auch bei
+`external_library` bleiben private und interne Member grundsätzlich
+prüfbar; `InternalsVisibleTo` führt weiterhin zu niedriger Sicherheit,
+solange externe Friend-Nutzung nicht ausgeschlossen ist.
 
-Bekannte Framework- und Einstiegspunktmarker bleiben über die bestehende
-Whitelist geschützt. Reflection, DI, Generatoren und `dynamic` bleiben als
-Countercheck im Ergebnis sichtbar. Ein `public`-Symbol außerhalb einer
-geschützten externen API darf bei `closed_solution` weiterhin als Kandidat
-erscheinen, sollte wegen möglicher Laufzeitbindung aber mindestens niedrige
-Sicherheit erhalten.
+Für die mitgelieferte `ainetlinter-rules.json` wird
+`DeadCode.DefaultApiSurface = closed_solution` ausdrücklich gesetzt.
+Das ist eine Aussage über diese Solution, **nicht** der Produktdefault
+für fremde Solutions.
 
-### 3.6 Fehlende API-Konfiguration als MCP-Fehler
+### 3. Preflight und Fehler
 
-Vor Beginn eines Dead-Code-Scans wird die effektive `ApiSurface`-Konfiguration
-für jedes Projekt im angeforderten Kandidatenscope aufgelöst. Ist mindestens
-ein solcher Wert `unknown`, bricht der MCP-Aufruf vor der eigentlichen
-Referenzanalyse mit einem Fehler ab.
+Vor dem Gate-Scan ermittelt `verify` zunächst die produktiven
+Kandidatendokumente seines effektiven Scopes. Es prüft die effektive
+`ApiSurface` für jedes darin vertretene Roslyn-Projekt. Projekte ohne
+Kandidatendokument und Testprojekte brauchen keine API-Einordnung.
 
-Der Fehler muss mindestens enthalten:
+Falls mindestens ein Kandidatenprojekt `unknown` oder einen ungültigen
+Wert hat, liefert `verify` **eine** Content-only-Fehlerantwort mit
+`isError: true`, `verdict: error` und Code
+`DEAD_CODE_API_SURFACE_NOT_CONFIGURED`. Sie enthält alle betroffenen
+Projektnamen in stabiler alphabetischer Reihenfolge, den Konfigurationsort
+`ainetlinter-rules.json`, die beiden gültigen operativen Werte und ein
+kopierbares `ProjectOverrides`-Beispiel für beide Werte. Die Antwort
+fordert den Agenten ausdrücklich auf, die Einordnung **beim Nutzer zu
+erfragen**, wenn sie aus Projektwissen nicht bereits eindeutig feststeht.
+Sie enthält weder Score/Violations noch partielle Dead-Code-Kandidaten.
+Eine ungültige projektbezogene Angabe nennt zusätzlich den betroffenen
+Feldpfad und Wert.
 
-- die Kennung beziehungsweise den Namen jedes nicht konfigurierten Projekts;
-- den Hinweis, dass `unknown` nicht für einen Dead-Code-Scan genügt;
-- den erwarteten Konfigurationsort in `ainetlinter-rules.json`;
-- ein kopierbares Beispiel für `closed_solution` und
-  `external_library`;
-- die Aufforderung an den aufrufenden Agenten, die Einordnung beim Nutzer zu
-  erfragen.
+Der Fehler ist eine Konfigurationsentscheidung, kein Dead-Code-Kandidat.
+Er darf nicht im `VerifyAdvisoryProjector` als `unavailable` verschluckt
+werden. Andere Analysefehler behalten ihre bisherige Zuständigkeit;
+Abbruch durch `CancellationToken` wird nicht als Konfigurationsfehler
+umgedeutet.
 
-Der Aufruf darf in diesem Fall keine partiellen Dead-Code-Kandidaten liefern.
-Das ist ein Konfigurationsfehler des Analyseauftrags und kein leerer
-Analyseausschnitt. Die MCP-Fehlerantwort bleibt dabei im geltenden
-Content-only-Vertrag und setzt `isError`.
+### 4. Einheitlicher `verify`-Output
 
-## 4. Architektur und betroffene Bereiche
+Bei gültiger Konfiguration berechnet `verify` den bisherigen
+Qualitäts-Gate-Verdict. Dead Code ist eine **vorrangige Advisory** im
+selben Content-Ergebnis. Ein Kandidat ändert `verdict`, `score` und
+`violationCount` nicht. Die Antwort darf ein Gate-`pass` und zugleich
+Dead-Code-Kandidaten enthalten.
 
-### 4.1 Source of Truth
-
-Die fachliche Entscheidung liegt in der Dead-Code-Analyse und nicht im
-Formatter:
-
-- `DeadCodeAdvisoryScanner` bestimmt Kandidaten und Referenzstatus.
-- `DeadCodeFilters` bestimmt Art und Accessibility-Filter.
-- `DeadCodeWhitelist` schützt bekannte Framework- und Einstiegspunktfälle.
-- `DeadCodeSuppression` verarbeitet bewusste symbolnahe Ausnahmen.
-- `TestDetector` und die Dokumentklassifizierung bestimmen, ob eine
-  Referenz produktiv oder testseitig ist.
-- Die Dead-Code-Konfiguration bestimmt die API-Oberfläche je Projekt.
-- `VerifyAdvisoryProjector` projiziert lediglich das Ergebnis in die
-  Verify-Antwort und darf die Fachsemantik nicht erneut interpretieren.
-
-### 4.2 Referenzprüfung
-
-Die bestehende Roslyn-Referenzsuche bleibt solutionweit. Nach der Suche werden
-Referenzstellen semantisch klassifiziert:
+Der Dead-Code-Teil enthält im knappen Antwortbudget immer eine
+separate Zusammenfassung:
 
 ```text
-Symbol deklarieren
-    -> Whitelist / Suppression / Accessibility / API-Schutz prüfen
-    -> SymbolFinder über die gesamte Solution
-    -> jede ReferenceLocation klassifizieren
-         Testreferenz       -> für Produktionssymbol ignorieren
-         Produktionsreferenz -> Symbol ist produktiv benutzt
-         unklassifizierbar   -> Ergebnis nicht sicher als dead behaupten
-    -> keine produktive Referenz
-         -> Dead-Code-Kandidat gemäß API- und Laufzeitregeln
+deadCode: status=complete|partial|unavailable; candidates=<N|unknown>;
+          testOnly=<N|unknown>; unreferenced=<N|unknown>;
+          apiProtected=<N|unknown>; undecidable=<N|unknown>;
+          shown=<N>; truncatedBy=<N|unknown>; next=review_now|none
 ```
 
-Die Filterung muss auf der tatsächlichen Referenz-Dokument- beziehungsweise
-Projektidentität basieren. Eine globale Nachbearbeitung der Textausgabe oder
-ein Ausschluss des gesamten Testprojekts aus der Solution ist nicht zulässig.
+`candidates` zählt alle statischen Kandidaten im Deklarationsscope,
+auch wenn nur die ersten Einträge gezeigt werden. `apiProtected` zählt
+alle im Deklarationsscope wegen `external_library` vor der
+Referenzsuche zurückgehaltenen Symbole, unabhängig davon, ob sie sonst
+einen Kandidaten ergeben hätten;
+`undecidable` zählt Symbole mit unbekannter Referenzrolle.
+`status=partial` gilt genau dann, wenn bei vollständig durchlaufenem
+Scan unentscheidbare Symbole vorliegen; andernfalls `complete`.
+`shown` und `truncatedBy` beziehen sich nur auf Dead-Code-Kandidaten.
+Bei `changes` ist `complete` ausschließlich eine Aussage über den
+geänderten Deklarationsscope, kein globaler Clean-Claim.
 
-### 4.3 Typen und Member
+Jeder gezeigte Dead-Code-Kandidat enthält mindestens
+`category=dead_code`,
+`symbolIdentifier=<h:...>` als opake Kennung aus demselben
+Handoff-Mechanismus wie `find_symbol`, nicht aus Anzeigename oder
+Dateiposition abgeleitet,
+`ref=<relativer Pfad>:<Zeile>`, `usage=test_only|unreferenced`,
+`confidence=high|low` und den Grund
+`no_production_static_reference`. Bei `test_only` steht die Anzahl
+der Testreferenzen dabei. Der Agent erhält außerdem eine kurze
+Gegenprüfungsangabe für Reflection, DI, Generatoren, `dynamic`,
+Markup/Konfiguration und externe Consumer. Der Text behauptet niemals
+„keine Referenzen in der Solution“, wenn Testreferenzen existieren.
+API-geschützte Symbole sind keine Kandidateneinträge; ihre Anzahl
+bleibt in der Zusammenfassung sichtbar.
 
-Die bisherige Containerlogik bleibt erhalten, wird aber mit produktiven
-Referenzen bewertet:
+Dead-Code-Kandidaten stehen im Advisory-Ranking **vor**
+Magic-Value-Advisories; innerhalb von Dead Code zuerst `high`,
+dann `low`, danach stabil nach Pfad, Zeile und Symbolkennung.
+Das bestehende Gesamt-Evidence-Limit und Content-Budget gelten weiter.
+Die Zusammenfassung einschließlich voller Zähler und Trunkierung
+darf beim Kürzen von Einträgen nicht verschwinden. `next=review_now`
+gilt bei mindestens einem Kandidaten. Ein unentscheidbarer Scope ohne
+Kandidaten liefert `next=none` und `status=partial`.
 
-- Ein vollständig unproduktiver privater Typ darf weiterhin als Container
-  erkannt werden.
-- Ein Typ mit produktiver Nutzung darf nicht allein deshalb als dead gelten,
-  weil seine einzelnen Member intern nicht von Tests aufgerufen werden.
-- Öffentliche API-Typen eines `external_library`-Projekts sind geschützt.
-- Private und interne Member eines API-Typs können weiterhin Dead-Code-
-  Kandidaten sein, wenn keine produktive Referenz existiert.
-- Interface-Implementierungen, Overrides und Framework-Lebenszyklus bleiben
-  über die bestehende Sonderlogik geschützt.
+Ein Scannerfehler ohne Konfigurationsursache liefert
+`status=unavailable` mit knapper Ursache. Noch nicht bestimmtere
+Zähler und `truncatedBy` lauten `unknown`, `shown=0` und
+`next=none`. Der Gate-Verdict folgt weiterhin dem Gate-Kern.
+`unavailable` darf nicht als „kein Dead Code“ formuliert werden.
+Die bestehende übergeordnete Advisory-`completeness` lautet
+`complete` nur, wenn Dead Code und Magic Values vollständig sind;
+`unavailable` bei nicht ausführbarem Dead-Code-Scan und sonst
+`partial`, wenn mindestens eine Advisory unvollständig ist.
 
-## 5. Muss-Kriterien
+### 5. Agentische Verwendung
 
-- Die Referenzsuche bleibt immer solutionweit.
-- Testreferenzen halten Produktionssymbole nicht am Leben.
-- `IncludeTests` steuert Kandidatendokumente, nicht die Definition
-  produktiver Nutzung eines Produktionssymbols.
-- Eine produktive Referenz aus jedem anderen Solution-Projekt hält ein Symbol
-  am Leben.
-- Friend-Referenzen aus Produktionsprojekten zählen; Friend-Referenzen aus
-  Testprojekten zählen für Produktionssymbole nicht.
-- Die API-Oberfläche ist explizit konfigurierbar, projektbezogen und wird nicht
-  als wiederkehrender Analyseaufruf-Parameter verlangt.
-- `external_library` schützt extern sichtbare API-Symbole vor einer
-  Dead-Code-Aussage.
-- `closed_solution` ermöglicht die Prüfung öffentlicher Symbole innerhalb
-  einer geschlossenen Solution.
-- `unknown` führt beim Dead-Code-MCP-Aufruf zu einem verständlichen
-  Konfigurationsfehler statt zu einem geschützten oder partiellen Ergebnis.
-- Der Fehler nennt alle betroffenen Projekte und zeigt den erwarteten
-  `ProjectOverrides`-Eintrag mit der Aufforderung zur Nutzerentscheidung.
-- Ungültige oder nicht auflösbare API-Konfiguration fällt sicher auf
-  `unknown` zurück und wird diagnostisch sichtbar.
-- Reflection, DI, Generatoren, `dynamic` und externe Consumer bleiben als
-  Gegenprüfung beziehungsweise Unsicherheit sichtbar.
-- Whitelist und Suppression behalten ihre bestehende Bedeutung.
-- Der Output unterscheidet zwischen fehlender produktiver Referenz,
-  API-Schutz und nicht entscheidbarer Laufzeitbindung.
-- Es werden keine Symbole automatisch gelöscht oder umgeschrieben.
+Ein Agent ruft `verify` einmal für den passenden Scope auf und
+behandelt `deadCode.next=review_now` als unmittelbaren Arbeitsauftrag
+nach den Gate-Verstößen. Er benötigt keinen zweiten Linter- oder
+Dead-Code-Aufruf. Für **gezielte Gegenprüfung einzelner Kandidaten**
+darf er semantische Folgetools wie `find_references`,
+`get_feature_context` und `search_pattern` nutzen. Dabei prüft er
+insbesondere Test-only-Nutzung, Interface-/Override-Aufrufe,
+Reflection, DI, Generatoren, `dynamic`, Razor/Markup,
+Konfiguration und mögliche externe Consumer.
 
-## 6. Akzeptanzkriterien
+Er klassifiziert jeden bearbeiteten Kandidaten als bestätigt,
+falsch positiv oder unklar. Bestätigten entbehrlichen Code kann er
+im normalen Änderungsworkflow entfernen und anschließend erneut
+`verify` ausführen. Bei falschem Positiv behebt er die
+Dead-Code-Erkennung oder dokumentiert eine begründete symbolnahe
+Suppression; bei unklarer Laufzeit-/API-Nutzung holt er die fehlende
+fachliche Information ein. `confidence=high` ist niemals ein
+Löschbeweis. Ein `verify`-Fehler wegen `ApiSurface` wird vor jeder
+Dead-Code-Bearbeitung durch Konfiguration oder Nutzerentscheidung
+aufgelöst.
 
-### 6.1 Produktions- und Testreferenzen
+## Akzeptanz
 
-- Ein `internal`-Produktionsmember, das ausschließlich aus einem Unit-Test
-  aufgerufen wird, wird als Dead-Code-Kandidat gefunden.
-- Ein `internal`-Produktionsmember mit einem produktiven Aufruf und beliebigen
-  Testaufrufen wird nicht als dead gemeldet.
-- Ein Produktionsmember mit Referenzen aus zwei verschiedenen
-  Produktionsprojekten bleibt lebendig.
-- Ein Testprojekt, das über `InternalsVisibleTo` auf einen Produktionsmember
-  zugreift, ändert dessen Produktions-Liveness nicht.
-- Die gleiche Datei- oder Projektreferenz wird nicht doppelt als produktive
-  Nutzung und Testnutzung gewertet.
-- Ein Test-only Helper wird nur dann als Testcode-Kandidat untersucht, wenn
-  der optionale Testscan ausdrücklich aktiviert ist.
+- Ein `internal`-Produktionsmember mit ausschließlich Testaufruf,
+  auch über `InternalsVisibleTo`, erscheint als `test_only`.
+  Derselbe Member mit mindestens einem produktiven Aufruf erscheint
+  nicht als Kandidat.
+- Ein produktiver Aufruf aus einem anderen Solution-Projekt zählt;
+  ein testseitiger Interface- oder Basismethodenaufruf zählt nicht.
+  Eine produktive Interface-/Override-Nutzung schützt weiterhin.
+- Die Klassifizierung deckt Referenzen aus erkannten Testprojekten,
+  Testpfaden, Produktionsprojekten und Friend-Projekten ab.
+  Eine nicht zuordenbare Referenz führt zu `undecidable`, nicht zu
+  einem Dead-Code-Kandidaten.
+- `external_library` schützt effektiv öffentliche, geschützte und
+  `protected internal`-Symbole, nicht öffentliche Member in
+  internen Typen. `closed_solution` meldet ungenutzte öffentliche
+  Symbole mit `low` confidence.
+- Fehlende oder ungültige Policy in irgendeinem Kandidatenprojekt
+  liefert den definierten `verify`-Fehler mit allen Projekten und
+  ohne Gate- oder Advisory-Teilergebnis. Ein anderes korrekt
+  konfiguriertes Projekt wird dadurch nicht falsch klassifiziert.
+- `verify(changes)` und `verify(solution)` liefern bei identischem
+  Deklarationsscope dieselbe Liveness-Beurteilung. `solution`
+  enthält Dead-Code-Advisories; `changes` behauptet keine
+  globale Vollständigkeit.
+- Gate-`pass` bleibt bei Dead-Code-Kandidaten möglich. Kandidaten
+  erscheinen vor Magic Values. Vollständige Zähler,
+  `status` und Trunkierung bleiben auch bei knappen Antworten
+  sichtbar. `symbolIdentifier` funktioniert unverändert als
+  Folgeparameter von `find_references`, auch bei Linked Files und
+  gleichnamigen Symbolen in verschiedenen Projekten. Die Antwort nennt für
+  test-only ausdrücklich die fehlende **produktive** statische
+  Referenz.
+- Whitelist, begründete Suppression, Razor-Evidenz,
+  Interface-/Override-Schutz und Content-only-Vertrag funktionieren
+  unverändert.
 
-### 6.2 API-Oberfläche
+## Verifikation und Dokumentation
 
-- Ein unreferenzierter öffentlicher Member in einem `external_library`-
-  Projekt wird nicht als Dead Code gemeldet.
-- Ein unreferenzierter geschützter Member in einem `external_library`-
-  Projekt wird nicht als Dead Code gemeldet.
-- Ein unreferenzierter öffentlicher Member in einem `closed_solution`-
-  Projekt kann als Kandidat erscheinen und wird nicht fälschlich als sicher
-  löschbar dargestellt.
-- Ein Dead-Code-Scan mit einem `unknown`-Projekt bricht mit `isError` ab und
-  liefert keine Kandidaten.
-- Der Fehler nennt das unbekannte Projekt, verweist auf
-  `ProjectOverrides.<Projekt>.DeadCode.ApiSurface` und fordert die
-  Nutzerentscheidung an.
-- Die Konfiguration eines einzelnen API-Projekts beeinflusst nicht die
-  Klassifizierung anderer Projekte.
-- Der Default ohne API-Konfiguration ist sicher und erzeugt keine
-  unbegründeten Public-API-Löschvorschläge.
-- Ein `external_library`-Projekt schützt alle extern sichtbaren Symbole.
-- Eine identische Konfiguration lässt sich über einen Projekt-Override
-  automatisch für jedes betroffene Projekt verwenden, ohne CLI- oder
-  MCP-Aufrufparameter.
+Die spätere Umsetzung erhält zuerst einen roten xUnit-v3-Regressionsfall
+für test-only verwendeten Produktionscode. FastTests decken
+Referenzrollen, Linked Files, Interface/Override, API-Sichtbarkeit,
+Projekt-Overrides, Preflight, Verify-Projektion, Ranking,
+Trunkierung und Fehlertext ab. Ein repräsentativer
+Verify-Vertragstest prüft `isError`, Content-only,
+Projektliste, Beispiel und fehlende Teilergebnisse. Der Fall
+`MarkdownBuilder.BulletList` wird als Regression mit seinem
+Testaufruf abgebildet.
 
-### 6.3 Sonderfälle
+Die Implementierung synchronisiert `Docs/linter/configuration.md`,
+`Docs/linter/cli.md`, die MCP-/Verify-Dokumentation,
+`ainetlinter-rules.json` und betroffene Agentenregeln. Dokumentiert
+werden der eine `verify`-Aufruf, beide Scopes, produktive
+Referenzsemantik, API-Werte und Default, Fehlerreaktion,
+Priorisierung sowie die Grenze zwischen Advisory und Löschentscheidung.
+Die Prüfzeitpunkte und Testgates richten sich ausschließlich nach
+`.agents/rules/AiNetLinter-Richtlinien.mdc` und
+`AiNetLinter-TestRichtlinien.mdc`.
 
-- Eine echte Interface-Nutzung schützt die konkrete Implementierung weiterhin.
-- Ein Override mit produktiver Nutzung der Basismethode bleibt geschützt.
-- Whitelist-Attribute und begründete Suppressions funktionieren unverändert.
-- Nicht entscheidbare Referenzstellen führen nicht zu einem unberechtigten
-  High-Confidence-Fund.
-- Die Antwort nennt bei einem Test-only Fall ausdrücklich, dass keine
-  produktive Referenz gefunden wurde.
-
-### 6.4 Verify-Integration
-
-- `verify` projiziert die Dead-Code-Kandidaten ohne erneute, abweichende
-  Test- oder API-Semantik.
-- `scopeFiles` begrenzt weiterhin die geprüften Deklarationen, nicht den
-  solutionweiten Referenzsuchraum.
-- Ein leerer Kandidatenscope wird weiterhin als Scope-Einschränkung und nicht
-  als globaler Clean-Claim ausgewiesen.
-- Die bestehenden Content-only-, Advisory- und Ranking-Verträge bleiben
-  erhalten.
-
-## 7. Fehler-, Unsicherheits- und Fallback-Semantik
-
-Die Analyse darf bei fehlender Klassifizierbarkeit keinen sicheren
-Löschvorschlag erzeugen.
-
-- Ist ein Referenzprojekt sicher als Testprojekt erkannt, wird die Referenz
-  für Produktionsliveness ignoriert.
-- Ist ein Referenzprojekt sicher produktiv, zählt die Referenz.
-- Kann eine Referenzstelle nicht zuverlässig klassifiziert werden, wird der
-  Kandidat als nicht entscheidbar beziehungsweise mit niedriger Sicherheit
-  ausgegeben oder aus dem sicheren Ergebnis zurückgehalten.
-- Ist die API-Oberfläche eines im Scan-Scope liegenden Projekts unbekannt,
-  bricht der Dead-Code-MCP-Aufruf vor der Analyse mit `isError` ab.
-- Fehler beim Laden der Dead-Code-Konfiguration führen nicht zu einem
-  stillen Wechsel auf `closed_solution`; der Fehler wird diagnostisch sichtbar
-  und fordert eine Nutzerentscheidung an.
-- Bestehende Roslyn-, Target-, Snapshot- und Analysefehler bleiben unter der
-  bisherigen Fehlerzuständigkeit.
-
-Ein einmaliges Nicht-Erkennen eines Testprojekts darf nicht still dazu führen,
-dass ein Produktionsmember als sicher tot gemeldet wird. Die Klassifizierung
-  muss daher entweder eine belastbare Testdetektion oder eine konservative
-  Unsicherheitsmarkierung liefern.
-
-## 8. Alternativen und Empfehlung
-
-### 8.1 API-Konfigurationsvarianten
-
-| Variante | Vorteil | Nachteil | Bewertung |
-|---|---|---|---|
-| Globales `PublicApi: true/false` | Sehr wenig Konfiguration | Kein sicherer `unknown`-Zustand; schützt in Bibliotheken zu viel oder lässt in geschlossenen Solutions zu viel offen | Nicht empfohlen |
-| Projektstatus ohne Feinabgrenzung | Automatisch, wenig Pflege, passt zu `ProjectOverrides` | Bei gemischter API werden öffentliche Nicht-API-Symbole mitgeschützt | Empfohlener Default |
-| Namespace- oder Klassen-Allowlist | Feinere Eingrenzung der API | Zusätzliche Pflege, Drift bei Umstrukturierungen und höheres Fehlkonfigurationsrisiko | Nicht im aktuellen Scope |
-
-Die Empfehlung lautet daher: `ApiSurface` projektbezogen und automatisch aus
-`ProjectOverrides` auflösen, mit sicherem globalem Default `unknown`. Für eine
-vollständig externe Bibliothek genügt `external_library` ohne weitere Pflege.
-Eine einzelne globale Boolean-Eigenschaft wird nicht eingeführt.
-
-### Alternative A: Tests aus der gesamten Solution entfernen
-
-Nicht empfohlen. Dadurch gingen produktive Referenzen aus einer normalen
-Solution-Sicht verloren, und Projekte, die Tests oder Testfixtures als
-kompilierte Abhängigkeit enthalten, würden falsch bewertet. Außerdem wäre der
-Suchraum nicht mehr wirklich solutionweit.
-
-### Alternative B: `IncludeTests` auch auf Referenzen anwenden
-
-Als alleinige Lösung nicht ausreichend. Das Flag ist heute ein
-Kandidatendokument-Filter. Es vermischt zwei unabhängige Fragen:
-
-1. Welche Deklarationen werden untersucht?
-2. Welche Referenzen gelten als produktive Nutzung?
-
-Die Referenzrolle muss unabhängig klassifiziert werden.
-
-### Alternative C: Testreferenzen nur als Low-Confidence-Nutzung behandeln
-
-Besser als das aktuelle Verhalten, aber für die gewünschte Definition nicht
-präzise genug. Ein Test-only Member würde weiterhin nicht als Dead Code
-erscheinen, obwohl seine produktive Nutzung fehlt.
-
-### Alternative D: Solutionweite Referenzsuche mit Produktionsfilter
-
-Empfohlen. Sie erhält den vollständigen Cross-Project-Suchraum und trennt die
-fachlich richtige Bedeutung der Fundstelle. Zusammen mit einer expliziten,
-projektbezogenen API-Oberfläche ist sie für AiNetLinter und externe DLL-
-Projekte gleichermaßen verwendbar.
-
-## 9. Non-Goals
-
-- Keine automatische Löschung von Dead-Code-Kandidaten.
-- Keine Änderung an Roslyn-Referenzauflösung oder Symbolidentität.
-- Kein „nur lokales Projekt“-Modus.
-- Kein „solutionweit versus nicht solutionweit“-Schalter.
-- Keine Annahme, dass jeder `public`-Modifier automatisch externe API ist.
-- Keine automatische, unzuverlässige Erkennung externer Consumer aus
-  `OutputType`, Paketmetadaten oder Dateinamen allein.
-- Keine vollständige Laufzeit- oder Reflection-Analyse.
-- Keine Garantie, dass ein Low-Confidence-Kandidat gefahrlos gelöscht werden
-  kann.
-- Keine Namespace- oder Klassen-Allowlist für die Public API in dieser ersten
-  Umsetzung.
-- Keine Änderung der Linter-Regeln für Codequalität außerhalb der
-  Dead-Code-Advisory-Pipeline.
-- Keine Aufwertung von Testcode zu Produktionscode.
-
-## 10. Verifikation
-
-Die spätere Umsetzung muss mindestens folgende Nachweise liefern:
-
-- Unit-Tests für reine Referenzklassifizierung:
-  Produktionsreferenz, Testreferenz, Friend-Produktionsreferenz,
-  Friend-Testreferenz und unbekannte Referenz.
-- Unit-Tests für `external_library`, `closed_solution` und `unknown` je
-  Projekt sowie für öffentliche, geschützte, interne und private Symbole.
-- Konfigurations- und Integrations-Tests für den Solution-weiten Default,
-  Projekt-Overrides und die automatische Zuordnung zur richtigen Roslyn-
-  Projektkonfiguration.
-- Vertragstest für einen Dead-Code-MCP-Aufruf mit `unknown`: `isError`,
-  betroffene Projektnamen, kopierbarer Konfigurationshinweis und keine
-  Dead-Code-Kandidaten.
-- Tests für Interface-Implementierungen, Overrides, Whitelist und Suppression.
-- Verify- beziehungsweise Integrationstests mit realer Solution und
-  mindestens einem Testprojekt.
-- Regressionstest für `MarkdownBuilder.BulletList`: nur Testreferenzen dürfen
-  den Produktionsmember nicht länger als benutzt markieren.
-- Prüfung, dass Testreferenzen weiterhin im solutionweiten Roslyn-Suchraum
-  gefunden, aber fachlich korrekt klassifiziert werden.
-- Prüfung der Antworttexte, insbesondere „keine produktiven Referenzen“ statt
-  einer irreführenden Aussage „keine Referenzen in der Solution“.
-- Vollständige Non-Stress-Testgates, `dotnet build` und der projektweite
-  MCP-Verify-Gate gemäß `AGENTS.md` nach Produktionsänderungen.
-
-Für dieses Konzept selbst sind wegen der Dokumentationsausnahme kein Build und
-keine Tests erforderlich. Eine Referenzprüfung, `git diff --check` und eine
-saubere Diff-Prüfung reichen aus.
-
-## 11. Dokumentationsbedarf
-
-Bei der späteren Implementierung sind bei neuen Konfigurations- oder
-CLI-Optionen zu synchronisieren:
-
-- `Docs/linter/configuration.md` mit API-Surface-Werten und Defaults;
-- `Docs/linter/cli.md` mit Dead-Code-Parametern und der Testsemantik;
-- `ainetlinter-rules.json` beziehungsweise die aktive Konfigurationsstruktur;
-- MCP-/Verify-Dokumentation mit solutionweitem Suchraum,
-  produktiver Referenzdefinition, API-Schutz und Unsicherheitssemantik.
-
-Zusätzlich muss die Dokumentation die automatische Auflösung über
-`ProjectOverrides` erklären. Ein Analyseaufruf darf die Projekt-API nicht als
-vergesslichen Pflichtparameter voraussetzen.
-
-Die Dokumentation muss ausdrücklich festhalten, dass `IncludeTests = false`
-nicht bedeutet, dass Testprojekte aus der Solution entfernt werden. Es bedeutet
-für Produktions-Dead-Code, dass Testreferenzen keine produktive Nutzung sind.
-
-## 12. Release-Gate
-
-Das Vorhaben ist erst umsetzungsfertig, wenn:
-
-- Produktions- und Testreferenzen im selben solutionweiten Suchraum getrennt
-  klassifiziert werden;
-- die API-Oberfläche pro Projekt definierbar ist und ein sicherer Default
-  existiert;
-- Test-only verwendete Produktionsmember als solche gefunden werden;
-- externe API-Symbole nicht fälschlich als Dead Code gemeldet werden;
-- unbekannte Laufzeit- und API-Bindungen nicht als sichere Löschbehauptung
-  erscheinen;
-- die Verify-Ausgabe die produktive Referenzsemantik korrekt beschreibt;
-- ein Dead-Code-Aufruf mit nicht konfigurierter API-Oberfläche deterministisch
-  mit `isError` und einer handlungsfähigen Nutzeraufforderung abbricht;
-- die vollständigen produktionsbezogenen Test-, Build- und MCP-Gates grün
-  sind;
-- die Konfigurations-, CLI- und MCP-Dokumentation synchronisiert ist.
-
-Der Status dieses Dokuments bleibt `draft`, bis der Nutzer das Konzept
-ausdrücklich zur Umsetzung freigibt. Die Freigabe startet die Umsetzung nicht
-automatisch.
+Dieses Dokument bleibt `draft` bis zur ausdrücklichen Freigabe des
+Nutzers. Die Freigabe dieses Konzepts startet weder Roadmap noch
+Umsetzung automatisch.
