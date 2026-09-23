@@ -1,14 +1,18 @@
 ---
-description: Verbindlicher MCP-First Workflow für C#/.NET-Codeanalyse mit AiNetLinter.
+description: Verbindlicher MCP-First Workflow für C#/.NET-Codeanalyse und Dekompilierung mit AiNetLinter.
 globs: *
 alwaysApply: true
 ---
 
 # AiNetLinter MCP-Workflow
 
-Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) die AiNetLinter-MCP-Tools proaktiv und primär nutzen; keine Textsuch-Kaskaden anstelle gezielter AST-Abfragen. `rg` ist für Nicht-C#-Dateien, exakte Texte und Kommentare sowie bei fehlgeschlagenen oder unvollständigen MCP-Abfragen sinnvoll.
+Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) und Assembly-Dekompilierung die AiNetLinter-MCP-Tools proaktiv und primär nutzen; keine Textsuch-Kaskaden anstelle gezielter AST-Abfragen.
 
-- `targetPath`: Absoluter Pfad zur `.sln`/`.slnx` des aktuellen Projekts; einmal ermitteln und wiederverwenden. Für Assembly-Tools stattdessen die `.dll`/`.exe` angeben.
+- `targetPath`: Absoluter Pfad; bestimmt deterministisch den Betriebsmodus:
+  - **Source-Modus** (`.sln`/`.slnx`): Statische Roslyn-Codeanalyse, Linter-Prüfung, Metriken und Symbolgraph.
+  - **Dekompilierungs- & Assembly-Modus** (`.dll`/`.exe`): Dekompiliert Binaries on-the-fly (`WholeProjectDecompiler`) in ein virtuelles Roslyn-Projekt. Erlaubt vollständige Quellcode-Einsicht (`get_symbol_body`), Mustersuche im Dekompilat (`search_assembly`) sowie Aufruf- und Symbolgraphen auf kompilierten Assemblies.
+- **Brücke Source ➔ Assembly**: `resolve_type_origin` ermittelt den DLL-Pfad externer Typen; diesen als `targetPath` setzen, um Third-Party-/NuGet-Code direkt zu dekompilieren und zu analysieren.
+- **Text- & Nicht-C#-Suche**: `search_pattern` (mit `enrichCSharp: true` für C#-AST-Evidenz in `.razor`, XAML, JSON, XML) nutzen; `rg` als Fallback für reine Texttreffer und Kommentare.
 - Folgeaufrufe: Für einzelne Symbole `symbolIdentifier` exakt aus vorherigen MCP-Ausgaben übernehmen; `get_symbol_body` verwendet `symbolIdentifiers` für Batchabfragen. Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
 - Bei `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 
@@ -16,11 +20,11 @@ Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) die AiN
 
 | Zweck | Tools und Hinweise |
 |---|---|
-| Einstieg und Code | `get_feature_context` (Symbol, Metriken, Aufrufer, Tests, Verstöße); `find_symbol`; `get_symbol_body`; `get_file_skeleton` (`filePaths`); `get_class_structure` |
-| Aufrufe und Grenzen | `get_call_tree`; `find_references`; `get_type_hierarchy`; `find_implementations`; `get_impact`; `dependency_graph` |
-| Qualität | `verify`; `get_hotspots`; `find_duplicates`; `pattern_detect`; `search_pattern`; `metrics_lookup`; `metrics_tree` |
-| Struktur | `get_file_tree` (`view: "summary"`; nie `view: "files"` auf dem Root); `get_namespace_tree` |
-| Assemblies | `inspect_assembly`; `search_assembly`; `find_assembly_extensions` |
+| Einstieg und Code | `get_feature_context` (Composite: Symbol, Metriken, Aufrufer, Tests, Verstöße); `find_symbol`; `get_symbol_body` (Quellcode aus Source oder Dekompilat lesen); `get_file_skeleton` (`filePaths`); `get_class_structure`; `get_test_context` (zugeordnete Tests zu Symbol) |
+| Aufrufe und Grenzen | `get_call_tree`; `find_references`; `get_type_hierarchy`; `find_implementations`; `get_impact`; `dependency_graph`; `resolve_type_origin` (Assembly-Herkunft & DLL-Pfad) |
+| Assemblies & Dekompilierung | `get_assembly_context` (Composite: Identität, dekompilierter Body, Callers, Impact, Struktur); `inspect_assembly` (Öffentliche API & Typen); `search_assembly` (Suche im Dekompilat: `text`, `data_access`, `external_calls`); `find_assembly_extensions`. *Hinweis: Auch Symbol-, Calltree- und Body-Tools funktionieren direkt auf `.dll`/`.exe`.* |
+| Qualität | `verify`; `get_hotspots`; `find_duplicates`; `pattern_detect`; `search_pattern` (`enrichCSharp: true`); `metrics_lookup`; `metrics_tree` |
+| Struktur | `get_file_tree` (`view: "summary"`; nie `view: "files"` auf dem Root); `get_namespace_tree`; `get_index_scope` (Scope-Überblick: Quellcode vs. Nicht-C#) |
 | Server | `get_server_health`; `reload_config` |
 
 ## Linter-Verstöße
