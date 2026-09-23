@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Blazor-Evidenz für Dead-Code-Kandidaten absichern
@@ -94,17 +94,19 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
    Dokument gehört nur dann zur Komponente, wenn sein normalisierter
    relativer Komponentenpfad und sein per SemanticModel aufgelöster
    Partial-Typ passen; derselbe Dateiname in einem anderen Ordner reicht
-   nicht. Ohne passendes Dokument oder Semantikmodell: `Unavailable`.
+   nicht. Ein Dateiname allein, ein nicht auflösbarer Typ oder ein fehlendes
+   Semantikmodell genügen nicht für `Available`: dann gilt `Unavailable`.
    Mit passendem, auswertbarem Dokument: `Available`, selbst wenn dort nur
    ein Markup-String und keine Handler-Referenz steht. Kein `obj`-Dateilesen.
 2. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeAdvisoryScanner.cs`:
    Index einmal in `ScanProjectAsync` erstellen und für die Member dieses
    Projekts verwenden. `IsSymbolUnreferencedAsync` bleibt der semantische
    Referenzentscheid. Nur bei `Unavailable` wird ein ansonsten `high`
-   eingestufter `.razor.cs`-Kandidat zu `low`; der Grund nennt fehlende
-   Razor-Evidenz. `NotComponent` und `Available` behalten ihre bisherige
-   Einstufung. `high`-Filter, `Summary.High`/`Low` und `Reason` aus der
-   endgültigen Einstufung berechnen, ohne Generator-Arbeit pro Member.
+   eingestufter `.razor.cs`-Kandidat zu `low`; bereits `low` bleibt `low`.
+   Der Grund nennt fehlende Razor-Evidenz. `NotComponent` und `Available`
+   behalten ihre bisherige Einstufung. `high`-Filter, `Summary.High`/`Low`
+   und `Reason` aus der endgültigen Einstufung berechnen, ohne Generator-Arbeit
+   pro Member.
    `DeadCodeAdvisoryDiagnosticsScanner.cs` verwendet denselben Index für
    diagnostikbasierte Kandidaten; kein zweites Razor-Erkennungsverfahren.
    Der `Unavailable`-Grund nennt „Razor-Referenzen nicht entscheidbar:
@@ -117,9 +119,10 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
    `summary.next` fordern übereinstimmend zuerst `countercheck`, nicht
    pauschal `ask_user`.
 4. `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` und
-   Formatter: Leere Standardbefunde für `.razor.cs` erklären die bereits
-   vorhandene Option `includeGenerated=true`, etwa als einzelne
-   `next: includeGenerated=true`-Zeile. Andere Befunde bleiben knapp.
+   Formatter: Nur wenn `includeGenerated=false`, das aufgelöste Symbol in
+   `.razor.cs` deklariert ist und die Antwort null Referenzen enthält,
+   ergänzt die Antwort genau eine `next: includeGenerated=true`-Zeile.
+   Bei Treffern und bei `includeGenerated=true` entfällt der Hinweis.
 5. `src/AiNetLinter/Mcp/Tools/Verify/VerifyTool.cs`:
    `VerifyAdvisoryProjector` übernimmt die belegte Einstufung;
    `VerifyResponseFormatter.AppendAdvisories` bleibt im 4-KiB-Budget.
