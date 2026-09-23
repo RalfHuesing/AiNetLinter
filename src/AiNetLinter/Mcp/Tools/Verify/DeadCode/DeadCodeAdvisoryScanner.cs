@@ -305,17 +305,20 @@ internal static partial class DeadCodeAdvisoryScanner
 
     private static ReferenceRole ClassifyReferenceRole(Document? document)
     {
-        if (document?.Project is null || !document.Project.SupportsCompilation || document.FilePath is null)
+        if (document?.Project is null)
         {
             return ReferenceRole.Unknown;
         }
 
-        if (TestDetector.IsTestProject(document.Project) || TestDetector.IsTestFile(document.FilePath))
+        if (TestDetector.IsTestProject(document.Project)
+            || (document.FilePath is not null && TestDetector.IsTestFile(document.FilePath)))
         {
             return ReferenceRole.Test;
         }
 
-        return ReferenceRole.Production;
+        return document.Project.SupportsCompilation && document.FilePath is not null
+            ? ReferenceRole.Production
+            : ReferenceRole.Unknown;
     }
 
     private enum ReferenceRole { Production, Test, Unknown }

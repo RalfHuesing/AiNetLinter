@@ -176,6 +176,50 @@ public sealed class DeadCodeReferenceRoleTests
     }
 
     [Fact]
+    public async Task ScanAsync_TestProjectReferenceWithoutFilePath_IsTestOnly()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("Service.cs", "namespace Product; public sealed class Service { public void Execute() { } }")],
+                VirtualProjectDirectory: "src/Product"),
+            new ProjectSpec("ProductTests", [], ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
+        var testProject = testSolution.Solution.Projects.Single(project => project.Name == "ProductTests");
+        var testCaller = testProject.AddDocument(
+            "UnmappedTestCaller.cs",
+            SourceText.From("namespace ProductTests; public sealed class UnmappedTestCaller { public void Run() => new Product.Service().Execute(); }"));
+
+        var result = await ScanMethodsAsync(testCaller.Project.Solution);
+
+        var candidate = Assert.Single(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
+        Assert.Equal("test_only", candidate.Usage);
+        Assert.Equal(1, candidate.TestReferences);
+    }
+
+    [Fact]
+    public async Task ScanAsync_StaticTypeWithUnknownMemberReference_CountsEachUndecidableSymbolOnce()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("StaticService.cs", "namespace Product; public static class StaticService { public static void Execute() { } }")],
+                VirtualProjectDirectory: "src/Product"));
+        var productProject = testSolution.Solution.Projects.Single(project => project.Name == "Product");
+        var unmappedCaller = productProject.AddDocument(
+            "UnmappedCaller.cs",
+            SourceText.From("namespace Product; public sealed class UnmappedCaller { public void Run() => StaticService.Execute(); }"));
+
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
+            unmappedCaller.Project.Solution,
+            new DeadCodeAdvisoryOptions(
+                Accessibility: DeadCodeAccessibilityFilter.All,
+                Confidence: DeadCodeConfidenceFilter.Both,
+                Kind: DeadCodeKindFilter.All),
+            CancellationToken.None);
+
+        Assert.Equal(2, result.Summary.Undecidable);
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
+    }
+
+    [Fact]
     public async Task ScanAsync_LinkedFileInProductionAndTestProjects_ProductionReferenceKeepsMemberLive()
     {
         const string linkedFile = "SharedCaller.cs";
