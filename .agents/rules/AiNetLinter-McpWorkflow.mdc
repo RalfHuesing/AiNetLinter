@@ -4,48 +4,32 @@ globs: *
 alwaysApply: true
 ---
 
-# AiNetLinter MCP-First Workflow (C# Semantik)
+# AiNetLinter MCP-Workflow
 
-Bei C#-Aufgaben (Code-Erkundung, Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) **immer pro-aktiv** die semantischen MCP-Tools des für das aktuelle Projekt konfigurierten AiNetLinter-Servers anstelle manueller Textsuch-Kaskaden (`rg` + seitenweises Dateilesen) verwenden. Sie liefern präzisen AST-Kontext in 1 Turn.
+Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) die AiNetLinter-MCP-Tools proaktiv und primär nutzen; keine Textsuch-Kaskaden anstelle gezielter AST-Abfragen. `rg` ist für Nicht-C#-Dateien, exakte Texte und Kommentare sowie bei fehlgeschlagenen oder unvollständigen MCP-Abfragen sinnvoll.
 
-## 🎯 Werkzeug-Wahl & Fallback-Strategie
+- `targetPath`: Absoluter Pfad zur `.sln`/`.slnx` des aktuellen Projekts; einmal ermitteln und wiederverwenden. Für Assembly-Tools stattdessen die `.dll`/`.exe` angeben.
+- Folgeaufrufe: Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
+- Bei `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 
-- **Pro-aktiver MCP-Einsatz für C#-Semantik (Priorität 1):** Für Symbole, Typen, Aufrufe, Hierarchien, Referenzen, Auswirkungsanalysen (Impact) und Code-Audits immer pro-aktiv und als primäres Werkzeug `AiNetLinter` MCP-Tools nutzen.
-- **Wann `rg` / lokale Textsuche sinnvoll und erlaubt ist:**
-  - `rg` ist keineswegs verboten, sondern eine wertvolle Ergänzung.
-  - **Nicht-C#-Dateien:** JSON, YAML, `.csproj`, Markdown, Scripts, Configs, Logs.
-  - **Reine Textsuche:** Exakte String-Literale, Fehlermeldungen, Kommentare.
-  - **Pragmatischer Fallback:** Wenn ein MCP-Tool fehlschlägt, keine Treffer liefert oder unvollständig ist.
-  - **Gezielte Edits:** Wenn der exakte Zeilenbereich bereits bekannt ist.
+## Werkzeugwahl
 
-## Standard-Parameter & Handoff
+| Zweck | Tools und Hinweise |
+|---|---|
+| Einstieg und Code | `get_feature_context` (Symbol, Metriken, Aufrufer, Tests, Verstöße); `find_symbol`; `get_symbol_body`; `get_file_skeleton` (`filePaths`); `get_class_structure` |
+| Aufrufe und Grenzen | `get_call_tree`; `find_references`; `get_type_hierarchy`; `find_implementations`; `get_impact`; `dependency_graph` |
+| Qualität | `verify`; `get_hotspots`; `find_duplicates`; `pattern_detect`; `search_pattern`; `metrics_lookup`; `metrics_tree` |
+| Struktur | `get_file_tree` (`view: "summary"`; nie `view: "files"` auf dem Root); `get_namespace_tree` |
+| Assemblies | `inspect_assembly`; `search_assembly`; `find_assembly_extensions` |
+| Server | `get_server_health`; `reload_config` |
 
-- **`targetPath` (Pflicht)**: Absoluter Pfad zur `.sln`- oder `.slnx`-Datei des aktuellen Projekts (einmalig im Workspace ermitteln und für alle Aufrufe wiederverwenden).
-- **Folgeaufrufe & Handoff**: Ausschließlich die im Content als Handoff-ID ausgewiesenen kanonischen IDs (z. B. von `find_symbol`, `get_file_skeleton`, `get_feature_context`) verwenden – niemals Anzeigenamen erraten oder aus freien Beschreibungen ableiten. Status und Vollständigkeitsmarker ebenfalls ausschließlich aus dem Content übernehmen.
-- **Budget-Limit**: Bei Fehler `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
-- **Qualitätsprüfung**: Während Änderungen `verify(targetPath)` ohne zusätzliche Scope-, Filter-, Schwellenwert- oder Detektorparameter aufrufen. Für den vollständigen Abschluss ausschließlich `verify(targetPath, scope: "solution")` verwenden; ein Gate ist nur bei `verdict=pass`, `score=10.0` und `violationCount=0` erfüllt.
+## Linter-Verstöße
 
----
+- Ursache und Geltungsbereich vor der Änderung klären. Betroffene Symbole oder Dateien mit passenden MCP-Tools untersuchen; Aufrufer, Abhängigkeiten und Tests prüfen, soweit die Änderung sie berührt.
+- Die kleinste fachlich kohärente Änderung umsetzen, die die Ursache behebt. Bei Längen- und Komplexitätsverstößen Verantwortlichkeiten sinnvoll schneiden. Vorhandene Bausteine nutzen; neue Typen oder Komponenten brauchen eine eigenständige Aufgabe. Verhalten und Verträge erhalten, betroffene Tests anpassen.
+- Keine bloße Kennzahl-Optimierung: kein rein metrisches Verschieben oder Aufsplitten, keine funktionslosen Delegationshüllen, Suppressions oder Regel- und Schwellenwertänderungen zur Umgehung des Befunds.
+- Bleibt nach gezielter Analyse die fachliche Grenze unklar, entsteht ein erheblicher Scope-Konflikt oder erscheint der Befund falsch, ist die Arbeit daran blockiert. Implementierer melden Befund, Ursachenhypothese und Lösungsoptionen an den Parent-Agenten; ohne Parent-Agent an den Nutzer. Bis zur Entscheidung keine Umgehung einbauen.
 
-## Workflow & Tool-Referenz
+## Qualitätsprüfung
 
-| Kategorie | Ziel | MCP-Tool (`AiNetLinter`) | Wichtigste Parameter & Hinweise |
-|---|---|---|---|
-| **Erkundung & Code** | **Einstieg / Kontext** | `get_feature_context` | `symbolIdentifier: "..."` (Signatur, Members, Aufrufer, Tests & Violations in 1 Call) |
-| | **Symbol finden** | `find_symbol` | `pattern: "..."`, optional `kind: "class"\|"method"\|...` |
-| | **Code lesen** | `get_symbol_body` | `symbolIdentifiers: ["..."]` (exakter Rumpf ohne Datei-Overhead) |
-| | **Datei-Skelett** | `get_file_skeleton` | `filePath: "..."` (Typen und Member-Signaturen ohne Rümpfe) |
-| | **Klassenstruktur** | `get_class_structure` | `symbolIdentifier: "..."` (Detaillierte Member-Übersicht) |
-| **Graphen & Hierarchie** | **Aufrufbaum** | `get_call_tree` | `symbolIdentifier: "..."`, `direction: "incoming"\|"outgoing"` |
-| | **Hierarchie / Impl.** | `get_type_hierarchy` / `find_implementations` | `symbolIdentifier: "..."` |
-| | **Impact vor Änderung** | `get_impact` | `symbolIdentifier: "..."` (betroffene Aufrufer & relevante Tests) |
-| | **Referenzen** | `find_references` | `symbolIdentifier: "..."` (alle Verwendungsstellen) |
-| **Qualität & Analyse** | **Qualitätsprüfung** | `verify` | `changes` (Default während Arbeit); `solution` als vollständiger Abschlussnachweis |
-| | **Hotspots & Duplikate** | `get_hotspots` / `find_duplicates` | Ermittelt Problemzonen und Code-Duplizierung |
-| | **Mustererkennung** | `pattern_detect` / `search_pattern` | Mustersuche auf AST-Ebene bzw. Regex über C#-Code |
-| | **Metriken** | `metrics_lookup` / `metrics_tree` | Komplexitäts- und Qualitätsmetriken abfragen |
-| **Projekt & Assembly** | **Projektstruktur** | `get_file_tree` | `fileFilter: "*.cs"`, `view: "summary"` (*nie `view="files"` auf Root!*) |
-| | **Namespaces & Graph** | `get_namespace_tree` / `dependency_graph` | Namespace-Hierarchie und Komponentenabhängigkeiten |
-| | **Assemblies (.dll)** | `inspect_assembly` / `search_assembly` | `targetPath: "<pfad.dll>"` (Metadaten, Typen & API dekompilieren) |
-| | **Assembly-Extensions**| `find_assembly_extensions` | Extension Methods in kompilierter Assembly finden |
-| | **Status & Health** | `get_server_health` / `reload_config` | Serverzustand prüfen / Konfiguration dynamisch neu laden |
+Während Änderungen `verify(targetPath)` ohne zusätzliche Parameter nutzen. Zum Abschluss `verify(targetPath, scope: "solution")`; das Gate besteht nur bei `verdict=pass`, `score=10.0` und `violationCount=0`.
