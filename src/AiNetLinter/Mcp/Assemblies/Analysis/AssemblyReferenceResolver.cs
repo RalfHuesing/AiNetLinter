@@ -29,12 +29,15 @@ internal sealed class AssemblyReferenceResolver
     internal const string BoundaryDiagnosticCode = "assembly-reference-boundary";
     internal const string NativeMetadataFailureMessage = "Die Datei enthält keine .NET-Metadaten.";
 
+    private static FileStream OpenReadShared(string path) =>
+        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
     internal AssemblyReferenceResolution Resolve(string assemblyPath)
     {
         var canonicalPath = AssemblyFingerprintCalculator.Canonicalize(assemblyPath);
         try
         {
-            using var stream = File.OpenRead(canonicalPath);
+            using var stream = OpenReadShared(canonicalPath);
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata)
             {
@@ -211,7 +214,7 @@ internal sealed class AssemblyReferenceResolver
     {
         try
         {
-            using var stream = File.OpenRead(path);
+            using var stream = OpenReadShared(path);
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata) throw new BadImageFormatException("Keine .NET-Metadaten vorhanden.");
             metadata = ReadMetadata(peReader.GetMetadataReader());
@@ -288,7 +291,7 @@ internal sealed class AssemblyReferenceResolver
     {
         try
         {
-            using var stream = File.OpenRead(path);
+            using var stream = OpenReadShared(path);
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata) throw new BadImageFormatException("Keine .NET-Metadaten vorhanden.");
             identity = ReadIdentity(peReader.GetMetadataReader());

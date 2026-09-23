@@ -155,7 +155,7 @@ internal static class AnalysisTargetResolver
 
     private static string CreateFingerprint(string canonicalPath)
     {
-        using var stream = File.OpenRead(canonicalPath);
+        using var stream = new FileStream(canonicalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 
