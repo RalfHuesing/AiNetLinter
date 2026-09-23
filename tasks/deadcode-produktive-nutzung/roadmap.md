@@ -134,7 +134,7 @@ StressTests werden nicht ausgeführt.
     serieller `pwsh scripts/test-integration.ps1`-Lauf grün;
     eigener Commit.
 
-- [ ] **Audit — Konzept und Anwendung abgleichen**
+- [x] **Audit — Konzept und Anwendung abgleichen**
   - Intention: Ein unabhängiger, lesender Audit bestätigt die
     vollständige Umsetzung ohne neue Produktänderung.
   - Scope: Ein lesender Audit gleicht Konzept-Akzeptanz mit Code,
