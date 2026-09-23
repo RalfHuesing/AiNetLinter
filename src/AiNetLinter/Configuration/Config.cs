@@ -12,6 +12,7 @@ public sealed record Config : ILinterEngineConfig
     public UiSeparationConfig UiSeparation { get; init; } = new();
     public FileFiltersConfig FileFilters { get; init; } = new();
     public WebConfig Web { get; init; } = new();
+    public DeadCodeConfig DeadCode { get; init; } = new();
     public IReadOnlyDictionary<string, RuleMetadataEntry> RuleMetadata { get; init; }
         = new Dictionary<string, RuleMetadataEntry>();
     public IReadOnlyCollection<NamespaceRule> ForbiddenNamespaceDependencies { get; init; } = Array.Empty<NamespaceRule>();

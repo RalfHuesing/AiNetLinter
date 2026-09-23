@@ -844,6 +844,28 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 }
 ```
 
+### Dead-Code-API-Oberfläche
+
+`DeadCode.DefaultApiSurface` legt die API-Policy für Projekte ohne passenden Projekt-Override fest. Der Produktdefault ist `unknown`; `verify` verlangt dann vor jeder Gate-Analyse eine ausdrückliche Projekteinstufung. Erlaubte operative Werte sind `closed_solution` und `external_library`.
+
+- `external_library` schützt semantisch extern sichtbare Typen und Member vor Dead-Code-Kandidaten. Sichtbarkeit berücksichtigt auch die enthaltende Typkette.
+- `closed_solution` prüft auch öffentliche APIs. Kandidaten auf extern sichtbaren Symbolen erhalten `low` confidence.
+- `unknown`, fehlende Werte und ungültige Schreibweisen brechen `verify` mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab.
+
+Ein Projekt-Override ersetzt den globalen Wert. Die erste passende `ProjectOverrides`-Zeile gewinnt; ein Override ohne `DeadCode.ApiSurface` erbt den Default. `PathOverrides` haben keinen Einfluss auf diese Projektentscheidung.
+
+```json
+{
+  "DeadCode": { "DefaultApiSurface": "unknown" },
+  "ProjectOverrides": {
+    "PublicSdk": { "DeadCode": { "ApiSurface": "external_library" } },
+    "Application": { "DeadCode": { "ApiSurface": "closed_solution" } }
+  }
+}
+```
+
+Die mitgelieferte `ainetlinter-rules.json` setzt `closed_solution` ausdrücklich für diese Solution. Das ändert den Produktdefault für andere Konfigurationen nicht.
+
 ### StaticTestSentinel-Konfiguration
 
 Der `StaticTestSentinel` meldet Klassen als nicht abgedeckt, wenn ihre maximale kognitive Komplexität über `MinCognitiveComplexityForTest` liegt und keine Testabdeckung gefunden wurde. Für Klassen, bei denen Unit-Tests schwierig oder nicht sinnvoll sind, bietet die Sektion `"TestSentinel"` gezielte Exemptions.

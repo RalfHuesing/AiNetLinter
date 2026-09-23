@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Output;
@@ -22,6 +23,16 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 internal static partial class DeadCodeAdvisoryScanner
 {
     public const int DefaultMaxResults = 50;
+
+    internal static IReadOnlyList<DeadCodeApiSurfaceIssue> ValidateApiSurface(
+        Solution solution,
+        IReadOnlySet<string>? scopeFiles,
+        Config config) => DeadCodeApiSurfacePolicy.FindUnconfiguredProjects(solution, scopeFiles, config);
+
+    internal static List<Document> CollectCandidateDocumentsForPolicy(
+        Solution solution,
+        string solutionDir,
+        DeadCodeAdvisoryOptions args) => CollectCandidateDocuments(solution, solutionDir, args);
 
     /// <summary>
     /// Fuehrt den Dead-Code-Scan gemaess der uebergebenen Parameter ueber die Solution aus.
@@ -147,6 +158,8 @@ internal static partial class DeadCodeAdvisoryScanner
             return false;
         }
 
+        if (IsApiProtected(typeSymbol, document, context)) return false;
+
         var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context.Solution, ct);
         if (referenceAnalysis.IsUndecidable)
         {
@@ -211,6 +224,7 @@ internal static partial class DeadCodeAdvisoryScanner
         if (DeadCodeSuppression.IsSuppressed(member)) return;
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
+        if (IsApiProtected(member, document, context)) return;
 
         var referenceAnalysis = await AnalyzeReferencesAsync(member, context.Solution, ct);
         if (referenceAnalysis.IsUndecidable)
@@ -223,6 +237,14 @@ internal static partial class DeadCodeAdvisoryScanner
         {
             AddDeadSymbol(context, member, document, hasInternalsVisibleTo, referenceAnalysis);
         }
+    }
+
+    private static bool IsApiProtected(ISymbol symbol, Document document, DeadCodeScanContext context)
+    {
+        if (context.Args.Config is null) return false;
+        var config = ProjectConfigResolver.ResolveForProject(document.Project.Name, context.Args.Config);
+        return string.Equals(config.DeadCode?.DefaultApiSurface, "external_library", StringComparison.Ordinal)
+            && DeadCodeApiSurfacePolicy.IsExternallyVisible(symbol);
     }
 
     private static async Task<SymbolReferenceAnalysis> AnalyzeReferencesAsync(

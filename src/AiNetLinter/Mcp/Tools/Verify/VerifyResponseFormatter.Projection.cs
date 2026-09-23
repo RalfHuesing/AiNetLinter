@@ -4,11 +4,38 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ModelContextProtocol.Protocol;
+using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 namespace AiNetLinter.Mcp.Tools.Verify;
 
 internal static partial class VerifyResponseFormatter
 {
+    internal static CallToolResult ApiSurfaceNotConfigured(IReadOnlyList<DeadCodeApiSurfaceIssue> issues)
+    {
+        var lines = new List<string>
+        {
+            "Für jedes produktive Kandidatenprojekt muss die externe API-Oberfläche ausdrücklich eingeordnet werden.",
+            $"projects: [{string.Join(", ", issues.Select(issue => issue.ProjectName))}]",
+            "config: ainetlinter-rules.json; gültige Werte: closed_solution, external_library",
+            "Wenn die Einordnung nicht aus Projektwissen eindeutig feststeht, beim Nutzer erfragen.",
+            "Beispiele:",
+            "\"ProjectOverrides\": {",
+            "  \"PublicSdk\": { \"DeadCode\": { \"ApiSurface\": \"external_library\" } },",
+            "  \"Application\": { \"DeadCode\": { \"ApiSurface\": \"closed_solution\" } }",
+            "}",
+        };
+
+        foreach (var issue in issues.Where(issue => issue.Value is not null))
+        {
+            lines.Insert(2, $"invalid: {issue.FieldPath}={issue.Value}");
+        }
+
+        return Error(
+            "DEAD_CODE_API_SURFACE_NOT_CONFIGURED",
+            string.Join("\n", lines),
+            "DeadCode.DefaultApiSurface setzen oder für jedes aufgeführte Projekt ProjectOverrides.<Muster>.DeadCode.ApiSurface konfigurieren.");
+    }
+
     private static VerifySuccessPreparation PrepareSuccessResponse(VerifySuccessParameters parameters)
     {
         var score = parameters.Score;

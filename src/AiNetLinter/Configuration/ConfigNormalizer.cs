@@ -22,6 +22,7 @@ public static class ConfigNormalizer
         var patterns = NormalizeClassNamePatterns(testSentinel.ClassNamePatterns);
         var fileFilters = config.FileFilters ?? new FileFiltersConfig();
         var global = config.Global ?? new GlobalConfig();
+        var deadCode = config.DeadCode ?? new DeadCodeConfig();
 
         return config with
         {
@@ -32,6 +33,7 @@ public static class ConfigNormalizer
                 ExemptWhenInheritsFrom = testSentinel.ExemptWhenInheritsFrom ?? Array.Empty<string>(),
             },
             FileFilters = fileFilters,
+            DeadCode = deadCode,
         };
     }
 

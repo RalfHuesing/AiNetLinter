@@ -30,6 +30,14 @@ public sealed class ConfigNormalizerTests
     }
 
     [Fact]
+    public void Normalize_RestoresUnknownDeadCodePolicy_WhenSectionIsNull()
+    {
+        var normalized = ConfigNormalizer.Normalize(CreateBaseConfig() with { DeadCode = null! });
+
+        Assert.Equal("unknown", normalized.DeadCode.DefaultApiSurface);
+    }
+
+    [Fact]
     public void Normalize_ThrowsForNullPatternEntry()
     {
         var config = CreateBaseConfig() with

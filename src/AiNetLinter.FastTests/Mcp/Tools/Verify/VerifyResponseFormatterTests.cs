@@ -3,6 +3,7 @@
 using System;
 using System.Text;
 using AiNetLinter.Mcp.Tools.Verify;
+using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -11,6 +12,31 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 [Trait("Category", "Unit")]
 public sealed class VerifyResponseFormatterTests
 {
+    [Fact]
+    public void ApiSurfaceNotConfigured_ReturnsContentOnlyErrorWithCompleteProjectListAndNoGateResult()
+    {
+        var result = VerifyResponseFormatter.ApiSurfaceNotConfigured(
+        [
+            new DeadCodeApiSurfaceIssue("Alpha", "DeadCode.DefaultApiSurface", null),
+            new DeadCodeApiSurfaceIssue("Zeta", "ProjectOverrides.Zeta.DeadCode.ApiSurface", "Closed_Solution"),
+        ]);
+
+        var text = GetText(result);
+        Assert.True(result.IsError);
+        Assert.Single(result.Content);
+        Assert.Contains("verdict: error", text, StringComparison.Ordinal);
+        Assert.Contains("code: DEAD_CODE_API_SURFACE_NOT_CONFIGURED", text, StringComparison.Ordinal);
+        Assert.Contains("projects: [Alpha, Zeta]", text, StringComparison.Ordinal);
+        Assert.Contains("invalid: ProjectOverrides.Zeta.DeadCode.ApiSurface=Closed_Solution", text, StringComparison.Ordinal);
+        Assert.Contains("ProjectOverrides.<Muster>.DeadCode.ApiSurface", text, StringComparison.Ordinal);
+        Assert.Contains("external_library", text, StringComparison.Ordinal);
+        Assert.Contains("closed_solution", text, StringComparison.Ordinal);
+        Assert.Contains("beim Nutzer erfragen", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("score:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("violationCount:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("deadCode:", text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Success_LongGateEvidence_UsesDeterministicWholeEntriesWithinFixedUtf8Budget()
     {

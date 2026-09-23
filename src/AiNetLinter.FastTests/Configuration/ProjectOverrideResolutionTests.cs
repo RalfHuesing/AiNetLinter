@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using AiNetLinter.Configuration;
 using AiNetLinter.TestKit;
@@ -29,5 +30,27 @@ public sealed class ProjectOverrideResolutionTests
 
         Assert.False(resolved.Global.EnforceSealedClasses);
         Assert.Equal(100, resolved.Metrics.MaxMethodLineCount);
+    }
+
+    [Fact]
+    public void ResolveForProject_DeadCodeApiSurface_UsesFirstMatchAndInheritsWhenMissing()
+    {
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            DeadCode = new DeadCodeConfig { DefaultApiSurface = "closed_solution" },
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["Sdk*"] = new() { DeadCode = new DeadCodeConfigOverride { ApiSurface = "external_library" } },
+                ["SdkPublic"] = new() { DeadCode = new DeadCodeConfigOverride { ApiSurface = "closed_solution" } },
+                ["Application"] = new(),
+            },
+            PathOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["**"] = new() { DeadCode = new DeadCodeConfigOverride { ApiSurface = "external_library" } },
+            },
+        };
+
+        Assert.Equal("external_library", ProjectConfigResolver.ResolveForProject("SdkPublic", config).DeadCode.DefaultApiSurface);
+        Assert.Equal("closed_solution", ProjectConfigResolver.ResolveForProject("Application", config).DeadCode.DefaultApiSurface);
     }
 }

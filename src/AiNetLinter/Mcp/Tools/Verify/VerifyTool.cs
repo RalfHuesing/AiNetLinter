@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Core.Git;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using AiNetLinter.Models;
@@ -37,6 +38,8 @@ internal static class VerifyTool
         var configSnapshot = server.GetConfigSnapshot();
         if (configSnapshot.Config is null) return VerifyResponseFormatter.Incomplete(
             scope, VerifyDecisionReason.NotConfigured, "Die Lint-Regelkonfiguration ist nicht verfügbar.");
+        if (configSnapshot.Config is not Config config) return VerifyResponseFormatter.Error(
+            "ANALYSIS_FAILURE", "Die Dead-Code-Konfiguration konnte nicht gelesen werden.", "Konfiguration neu laden und den identischen verify-Aufruf wiederholen.");
 
         var projection = scope == VerifyScope.Solution
             ? VerifyScopeProjector.ForSolution(solution)
@@ -44,9 +47,15 @@ internal static class VerifyTool
         if (projection.IncompleteReason is not null) return VerifyResponseFormatter.Incomplete(
             scope, projection.IncompleteReason.Value, projection.Recovery);
 
+        var apiSurfaceIssues = DeadCodeAdvisoryScanner.ValidateApiSurface(
+            solution,
+            projection.ScopeFiles,
+            config);
+        if (apiSurfaceIssues.Count > 0) return VerifyResponseFormatter.ApiSurfaceNotConfigured(apiSurfaceIssues);
+
         var scoreResult = await VerifyGateScanner.ComputeScoreAsync(new VerifyGateScannerParameters(
             solution,
-            configSnapshot.Config,
+            config,
             server.Console,
             projection.ScopeFilter,
             cancellationToken,
@@ -57,7 +66,7 @@ internal static class VerifyTool
             "ANALYSIS_FAILURE", "Der Verify-Gatekern konnte nicht vollständig bestimmt werden.", "Den identischen verify-Aufruf einmal erneut ausführen.");
 
         var advisory = scope == VerifyScope.Changes
-            ? await VerifyAdvisoryProjector.CollectAsync(solution, projection.ScopeFiles, cancellationToken)
+            ? await VerifyAdvisoryProjector.CollectAsync(solution, projection.ScopeFiles, cancellationToken, config)
             : VerifyAdvisoryProjection.Empty;
 
         return VerifyResponseFormatter.Success(new VerifySuccessParameters(
@@ -387,7 +396,8 @@ internal static class VerifyAdvisoryProjector
     internal static async Task<VerifyAdvisoryProjection> CollectAsync(
         Microsoft.CodeAnalysis.Solution solution,
         IReadOnlySet<string>? scopeFiles,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Config? config = null)
     {
         if (scopeFiles is not { Count: > 0 }) return VerifyAdvisoryProjection.Empty;
 
@@ -395,7 +405,7 @@ internal static class VerifyAdvisoryProjector
         {
             var deadCode = await DeadCodeAdvisoryScanner.ScanAsync(
                 solution,
-                new DeadCodeAdvisoryOptions(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles),
+                new DeadCodeAdvisoryOptions(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles, Config: config),
                 cancellationToken);
             var deadCodeEntries = deadCode.DeadSymbols.Select(ToDeadCodeEvidence);
 

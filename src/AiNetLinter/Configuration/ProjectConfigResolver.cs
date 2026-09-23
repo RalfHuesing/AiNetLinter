@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
@@ -99,20 +100,20 @@ public static class ProjectConfigResolver
     /// <returns>Die für das Projekt effektive Linter-Konfiguration.</returns>
     public static Config ResolveForProject(string projectName, Config globalConfig)
     {
-        if (globalConfig.ProjectOverrides == null || globalConfig.ProjectOverrides.Count == 0)
-        {
-            return globalConfig;
-        }
+        var matchedOverride = FindProjectOverride(projectName, globalConfig);
+        return matchedOverride is { } pair ? MergeConfig(globalConfig, pair.Value) : globalConfig;
+    }
+
+    internal static KeyValuePair<string, ProjectOverrideEntry>? FindProjectOverride(string projectName, Config globalConfig)
+    {
+        if (globalConfig.ProjectOverrides is null || globalConfig.ProjectOverrides.Count == 0) return null;
 
         foreach (var pair in globalConfig.ProjectOverrides)
         {
-            if (IsMatch(projectName, pair.Key))
-            {
-                return MergeConfig(globalConfig, pair.Value);
-            }
+            if (IsMatch(projectName, pair.Key)) return pair;
         }
 
-        return globalConfig;
+        return null;
     }
 
     private static bool IsMatch(string name, string pattern)
@@ -130,6 +131,9 @@ public static class ProjectConfigResolver
             TestSentinel = TestSentinelConfigApplier.Apply(global.TestSentinel, overrides.TestSentinel),
             UiSeparation = UiSeparationConfigApplier.Apply(global.UiSeparation, overrides.UiSeparation),
             Web = WebConfigApplier.Apply(global.Web, overrides.Web),
+            DeadCode = overrides.DeadCode?.ApiSurface is null
+                ? global.DeadCode
+                : global.DeadCode with { DefaultApiSurface = overrides.DeadCode.ApiSurface },
         };
     }
 }

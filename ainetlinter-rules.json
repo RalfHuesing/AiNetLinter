@@ -377,6 +377,9 @@
       "BanInlineTernaryInAttributes": true
     }
   },
+  "DeadCode": {
+    "DefaultApiSurface": "closed_solution"
+  },
   "RuleMetadata": {
     "MaxLineCount": {
       "Severity": "error",

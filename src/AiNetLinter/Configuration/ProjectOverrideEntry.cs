@@ -33,4 +33,6 @@ public sealed record ProjectOverrideEntry
     public UiSeparationConfigOverride? UiSeparation { get; init; }
 
     public WebConfigOverride? Web { get; init; }
+
+    public DeadCodeConfigOverride? DeadCode { get; init; }
 }

@@ -60,7 +60,7 @@ StressTests werden nicht ausgeführt.
     Produktionsänderung mit seinem exakten Testnamen ohne
     `--no-build`.
 
-- [ ] **2 — Projekt-API-Policy und Verify-Preflight**
+- [x] **2 — Projekt-API-Policy und Verify-Preflight**
   - Intention: Extern sichtbare APIs werden nur auf ausdrückliche
     Projektentscheidung hin geprüft oder geschützt; fehlende
     Entscheidungen sind im einzigen `verify`-Aufruf handlungsfähig.
