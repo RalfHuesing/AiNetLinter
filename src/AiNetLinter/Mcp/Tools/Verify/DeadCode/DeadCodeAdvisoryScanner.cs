@@ -20,7 +20,7 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// <summary>
 /// Statische Scan-Pipeline fuer das Auffinden von unreferenziertem/totem Code in einer Roslyn-Solution.
 /// </summary>
-internal static class DeadCodeAdvisoryScanner
+internal static partial class DeadCodeAdvisoryScanner
 {
     public const int DefaultMaxResults = 50;
 
@@ -53,6 +53,8 @@ internal static class DeadCodeAdvisoryScanner
     {
         var compilation = await project.GetCompilationAsync(ct);
         if (compilation is null) return;
+
+        context.RazorEvidenceIndex = await RazorGeneratedEvidenceIndex.CreateAsync(project, ct);
 
         var entryPoint = compilation.GetEntryPoint(ct);
         var hasInternalsVisibleTo = CheckInternalsVisibleTo(compilation.Assembly);
@@ -302,102 +304,6 @@ internal static class DeadCodeAdvisoryScanner
                 }
             }
         }
-    }
-
-    private static void AddDeadSymbol(
-        DeadCodeScanContext context,
-        ISymbol symbol,
-        Document document,
-        bool hasInternalsVisibleTo)
-    {
-        var kindStr = GetSymbolKindString(symbol);
-        var accessibilityStr = GetAccessibilityString(symbol.DeclaredAccessibility);
-        var confidenceStr = ClassifyConfidence(symbol, hasInternalsVisibleTo);
-
-        if (context.Args.Confidence == DeadCodeConfidenceFilter.High && !confidenceStr.Equals("high", StringComparison.OrdinalIgnoreCase)) return;
-        if (context.Args.Confidence == DeadCodeConfidenceFilter.Low && !confidenceStr.Equals("low", StringComparison.OrdinalIgnoreCase)) return;
-
-        var syntaxRef = symbol.DeclaringSyntaxReferences.FirstOrDefault();
-        var line = 1;
-        var column = 1;
-        var filePath = document.FilePath ?? "";
-
-        if (syntaxRef != null)
-        {
-            var span = syntaxRef.GetSyntax().GetLocation().GetLineSpan();
-            line = span.StartLinePosition.Line + 1;
-            column = span.StartLinePosition.Character + 1;
-            filePath = span.Path;
-        }
-
-        var relativePath = PathNormalizer.ToRelative(context.SolutionDir, filePath);
-        var limitsApplies = DetermineLimitsApplies(symbol, hasInternalsVisibleTo);
-
-        var reason = confidenceStr == "high"
-            ? "Keine Referenzen innerhalb der Solution gefunden (privates/internes Element ohne Framework-Marker)."
-            : "Keine Referenzen in der Solution gefunden (oeffentliche API oder moegliche Framework-Bindung).";
-
-        var containerTypeName = symbol.ContainingType?.ToDisplayString() ?? symbol.ContainingNamespace?.ToDisplayString() ?? "";
-
-        var entry = new DeadCodeEntry(
-            Id: symbol.ToDisplayString(),
-            Kind: kindStr,
-            ContainerType: containerTypeName,
-            SymbolName: symbol.Name,
-            File: relativePath,
-            Line: line,
-            Column: column,
-            Accessibility: accessibilityStr,
-            Confidence: confidenceStr,
-            Reason: reason,
-            LimitsApplies: limitsApplies,
-            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "externe Consumer"]);
-
-        context.DeadSymbols.Add(entry);
-
-        if (context.ByKind.TryGetValue(kindStr, out var count))
-            context.ByKind[kindStr] = count + 1;
-        else
-            context.ByKind[kindStr] = 1;
-    }
-
-    private static DeadCodeScanResult BuildScanResult(DeadCodeScanContext context)
-    {
-        var totalDead = context.DeadSymbols.Count;
-        var highCount = context.DeadSymbols.Count(s => s.Confidence.Equals("high", StringComparison.OrdinalIgnoreCase));
-        var lowCount = context.DeadSymbols.Count(s => s.Confidence.Equals("low", StringComparison.OrdinalIgnoreCase));
-
-        var isTruncated = context.DeadSymbols.Count > context.Args.MaxResults;
-        var paginatedSymbols = isTruncated ? context.DeadSymbols.Take(context.Args.MaxResults).ToList() : context.DeadSymbols;
-
-        var summary = new DeadCodeSummary(
-            DocumentsInScope: context.DocumentsInScope,
-            ScannedSymbols: context.ScannedCount,
-            TotalDead: totalDead,
-            High: highCount,
-            Low: lowCount,
-            ByKind: context.ByKind,
-            Status: isTruncated ? "truncated" : totalDead == 0 ? "empty" : "checked",
-            Cause: totalDead == 0
-                ? $"Keine Kandidaten in den {context.DocumentsInScope} Dokumenten des angeforderten Scopes; kein globaler Clean-Claim."
-                : "Statische Referenzsuche im angeforderten Scope.",
-            Confidence: isTruncated ? "medium" : "high",
-            ReturnedCandidates: paginatedSymbols.Count,
-            TruncatedBy: isTruncated ? totalDead - paginatedSymbols.Count : 0,
-            Next: new DeadCodeRecommendedNextAction(
-                isTruncated ? "continue" : "countercheck",
-                isTruncated ? "maxResults erhoehen oder Scope verfeinern." : "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."));
-
-        var recommendedAction = new DeadCodeRecommendedNextAction(
-            Action: "ask_user",
-            Reason: "Kandidaten manuell gegen Reflection, DI, Generatoren, dynamic und externe Consumer gegenpruefen; keine Loeschentscheidung.");
-
-        return new DeadCodeScanResult(
-            DeadSymbols: paginatedSymbols,
-            Summary: summary,
-            Limits: DeadCodeLimits.DefaultLimits,
-            RecommendedNextAction: recommendedAction,
-            IsTruncated: isTruncated);
     }
 
     private static string ClassifyConfidence(ISymbol symbol, bool hasInternalsVisibleTo)

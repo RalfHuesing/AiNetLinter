@@ -68,6 +68,16 @@ internal static class DeadCodeAdvisoryDiagnosticsScanner
         var (symbol, symbolName, containerType, kind, id) = await ResolveDiagnosticSymbolAsync(diag, document, ct);
         if (symbol is not null && DeadCodeSuppression.IsSuppressed(symbol)) return;
 
+        var confidence = "high";
+        var reason = $"Compiler-Diagnose {diag.Id}: {diag.GetMessage()}";
+        var countercheck = (IReadOnlyList<string>)["Reflection", "DI", "Generatoren", "dynamic", "externe Consumer"];
+        var status = context.RazorEvidenceIndex.GetStatus(symbol, document);
+        var assessment = RazorGeneratedEvidenceIndex.Assess(status, confidence, reason, countercheck);
+        if (context.Args.Confidence == DeadCodeConfidenceFilter.High
+            && !assessment.Confidence.Equals("high", StringComparison.OrdinalIgnoreCase)) return;
+        if (context.Args.Confidence == DeadCodeConfidenceFilter.Low
+            && !assessment.Confidence.Equals("low", StringComparison.OrdinalIgnoreCase)) return;
+
         var entry = new DeadCodeEntry(
             Id: id,
             Kind: kind,
@@ -77,10 +87,10 @@ internal static class DeadCodeAdvisoryDiagnosticsScanner
             Line: line,
             Column: column,
             Accessibility: "private",
-            Confidence: "high",
-            Reason: $"Compiler-Diagnose {diag.Id}: {diag.GetMessage()}",
+            Confidence: assessment.Confidence,
+            Reason: assessment.Reason,
             LimitsApplies: [],
-            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "externe Consumer"]);
+            Countercheck: assessment.Countercheck);
 
         context.DeadSymbols.Add(entry);
         context.ScannedCount++;

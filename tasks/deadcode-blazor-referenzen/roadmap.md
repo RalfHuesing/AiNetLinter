@@ -29,7 +29,7 @@ in Punkt 1 und den abschließenden vollständigen FastTest-Lauf ausführen.
     Kandidat. Ohne Web-Import schützt der Markup-String den Handler nicht.
     Gezielter Integrationstest und vorgeschriebene Gates sind grün.
 
-- [ ] **2. Fehlende Razor-Evidenz konservativ einstufen**
+- [x] **2. Fehlende Razor-Evidenz konservativ einstufen**
   - Intention: Fehlende oder nicht auswertbare Razor-Generierung darf keinen
     `high`-Befund für referenzlose Code-Behind-Member erzeugen.
   - Scope: Zuerst einen isolierten roten FastTest mit `TestTempDirectory`,

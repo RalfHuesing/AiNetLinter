@@ -202,5 +202,6 @@ internal sealed class DeadCodeScanContext(
     public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
+    public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
     public int ScannedCount { get; set; }
 }
