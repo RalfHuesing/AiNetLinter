@@ -101,11 +101,21 @@ internal static partial class FindReferencesTool
         var traversal = await CallGraphTraversal.ExpandAsync(new ReferenceTraversalRequest(solution, symbol!, request.Depth, Math.Max(1, request.MaxResults), ct, AssemblySymbolIdentity: state.HandoffSymbolIdentity, ScopeFilter: scopeFilter));
         traversal = traversal with { Scope = new FindSymbolScopeDto(McpScopeValues.ToWireValue(request.ScopeType), request.IncludeGenerated) };
         var formatted = ProjectResponseBudget(traversal, request.MaxResponseBytes, symbol!.ToDisplayString());
-        var minimumResponseBytes = VisibleTextBytes(formatted);
+        var suggestGeneratedRazorReferences = !request.IncludeGenerated
+            && traversal.Completeness.TotalCallSiteCount == 0
+            && IsDeclaredInRazorCodeBehind(symbol);
+        var responseText = suggestGeneratedRazorReferences
+            ? $"{formatted.Text}\nnext: includeGenerated=true"
+            : formatted.Text;
+        var minimumResponseBytes = Encoding.UTF8.GetByteCount(responseText);
         return minimumResponseBytes > request.MaxResponseBytes
             ? BudgetTooSmall(request.MaxResponseBytes, minimumResponseBytes)
-            : McpToolResults.Text(formatted.Text);
+            : McpToolResults.Text(responseText);
     }
+
+    private static bool IsDeclaredInRazorCodeBehind(ISymbol symbol) =>
+        symbol.DeclaringSyntaxReferences.Any(reference =>
+            reference.SyntaxTree.FilePath.EndsWith(".razor.cs", StringComparison.OrdinalIgnoreCase));
 
     private static TransitiveCallGraphFormatResult ProjectResponseBudget(
         ReferenceTraversalResult traversal,

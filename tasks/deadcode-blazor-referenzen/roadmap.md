@@ -51,7 +51,7 @@ in Punkt 1 und den abschließenden vollständigen FastTest-Lauf ausführen.
     normale Einstufung. Filter, Summary und Reason stimmen mit der
     endgültigen Einstufung überein; vorgeschriebene Gates sind grün.
 
-- [ ] **3. Gegenprüfung in MCP-Antworten sichtbar machen**
+- [x] **3. Gegenprüfung in MCP-Antworten sichtbar machen**
   - Intention: Agenten erkennen leere Standardreferenzsuchen und prüfen
     Advisory-Kandidaten vor einer Löschentscheidung eigenständig.
   - Scope: `FindReferencesTool` samt Formatter, Dead-Code-Resultat und

@@ -419,6 +419,13 @@ niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene n�
 
 Bei einem Assembly-`targetPath` bleiben `includeReferences=false` und der bisherige Root-Snapshot der Default. Mit `includeReferences=true` werden höchstens 32 eröffnete Root-/Referenz-Sessions geprüft. `find_symbol`, `find_references` und `get_symbol_body` ergänzen einen gemeinsamen, zeilenweise parsebaren `Assembly-Scope`: `requestedIncludeReferences`, `effectiveSearchMode`, Lease-Status, gesuchte/gesamte/gecappte Assemblys, fachliche Query-Vollständigkeit, Ergebnis-/Diagnose-Trunkierung sowie sichere Assembly-Identitäten (`assemblyName`, Target- und Content-Token). Vollständige Cache- oder Materialisatpfade werden dort nie ausgegeben. Der `[ASSEMBLY]`-Header nennt davon getrennt `snapshotStatus` und `snapshotCompleteness`: Sie beschreiben ausschließlich den geladenen Decompiler-Snapshot, nicht die Vollständigkeit der konkreten Abfrage. Jede Assembly-Herkunft bleibt außerdem über `origin` an Treffern beziehungsweise über `navigation` am Payload sichtbar; `navigation.completeness` wird bei Session-Diagnostics, nicht auflösbaren Referenzen oder dem Session-Limit auf `partial` gesetzt. Der dekompilierte Root-Snapshot wird beim Öffnen der Session eager mit `WholeProjectDecompiler` als Projekt materialisiert; die erzeugten `.cs`-Dateien werden als echte Roslyn-Dokumente geladen. Fehlende Call-Sites sind deshalb ein begrenztes Ergebnis des geladenen Snapshots und der Traversierungsgrenzen, kein Beleg dafür, dass außerhalb dieses Scopes keine Aufrufer existieren. `get_symbol_body` liest verfügbare Bodies aus diesen bereits geladenen Syntaxbäumen über den direkten `SourceSymbolBodyResolver`-Pfad und weist `contentMode=source` aus; eine nachträgliche Dekompilierung einzelner Bodies findet nicht statt. Interface- sowie abstract-/extern-Member bleiben als `bodyAvailability=unavailable` mit Hinweis sichtbar.
 
+Bei einer leeren Standardabfrage (`includeGenerated=false`) für ein Symbol aus
+`.razor.cs` ergänzt `find_references` genau eine Textzeile
+`next: includeGenerated=true`. Sie empfiehlt, mögliche semantische Blazor-Aufrufe
+im geladenen generierten C# zu prüfen. Bei Treffern und bei
+`includeGenerated=true` entfällt sie; ein bloßer Razor-Markup-Name zählt nicht
+als Referenz.
+
 Eine kanonische Referenz-Handoff-ID behält ihren belegten Owner über Eviction und
 Serverneustart. Mit `includeReferences=false` wird nur diese Owner-Assembly
 (`symbol_owner_only`) geöffnet; Root, Geschwister und transitive Referenzen bleiben
@@ -557,10 +564,13 @@ Ungültige Requests, Assembly-Ziele und exogene Fehler sind `verdict=error` mit
 
 Nur bei `changes` können zusätzliche Advisory-Einträge erscheinen. Ihre gemeinsame
 Zeile markiert `review_required` und `static_evidence`; pro Eintrag bleiben nur
-Kategorie, `ref`, Confidence und Grund sichtbar. Die ausführliche Unsicherheits-
-und Gegenindikator-Policy wird nicht je Eintrag wiederholt. Advisorys sind weder
-Lösch- oder Änderungsanweisungen noch Teil des Gate-Entscheids. `solution`
-enthält diese Heuristik-Kandidaten nicht.
+Kategorie, `ref`, Confidence und Grund sichtbar. Ein `.razor.cs`-Kandidat mit
+fehlender oder nicht auswertbarer Razor-Generierung trägt einen sichtbaren
+Razor-Unsicherheitsgrund und `confidence=low`; im vollständigen Ergebnis nennen
+`recommendedNextAction` und `summary.next` `countercheck`, bei Trunkierung beide
+`continue`. Die ausführliche Unsicherheits- und Gegenindikator-Policy wird nicht
+je Eintrag wiederholt. Advisorys sind weder Lösch- oder Änderungsanweisungen noch
+Teil des Gate-Entscheids. `solution` enthält diese Heuristik-Kandidaten nicht.
 
 **`pattern_detect` — Content im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`) und `feature-envy` (`AvoidExcessiveMiddleMen`). Der Content nennt:
 

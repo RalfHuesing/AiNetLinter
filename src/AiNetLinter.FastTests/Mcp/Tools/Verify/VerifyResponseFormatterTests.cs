@@ -87,6 +87,33 @@ public sealed class VerifyResponseFormatterTests
     }
 
     [Fact]
+    public void Success_RazorAdvisoryReasonRemainsVisibleWithinTheFixedBudgetWithoutChangingVerdict()
+    {
+        const string razorReason = "Razor-Referenzen nicht entscheidbar: generiertes C# fehlt oder ist nicht auswertbar; Razor-Generierung/Projektladung gegenprüfen.";
+        var advisory = new VerifyAdvisoryProjection(
+            1,
+            [new VerifyEvidenceEntry(
+                "advisory_candidate",
+                "dead_code",
+                "advisory",
+                "src/Foo.razor.cs",
+                12,
+                razorReason,
+                "src/Foo.razor.cs:12",
+                RequiresAgentJudgment: true,
+                Confidence: "low",
+                EvidenceBoundary: "statisch",
+                CounterIndicators: ["Razor-Generierung/Projektladung"])],
+            "complete");
+
+        var text = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), advisory)));
+
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
+        Assert.Contains(razorReason, text, StringComparison.Ordinal);
+        Assert.Contains("verdict: pass\ncompleteness: complete\nscore: 10.0\nviolationCount: 0", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Error_OversizedText_UsesTheFixedUtf8BudgetAndPreservesErrorSemantics()
     {
         var result = VerifyResponseFormatter.Error(

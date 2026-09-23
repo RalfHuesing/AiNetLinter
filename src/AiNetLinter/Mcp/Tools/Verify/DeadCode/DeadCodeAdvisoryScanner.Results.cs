@@ -65,6 +65,10 @@ internal static partial class DeadCodeAdvisoryScanner
         var lowCount = context.DeadSymbols.Count(s => s.Confidence.Equals("low", StringComparison.OrdinalIgnoreCase));
         var isTruncated = totalDead > context.Args.MaxResults;
         var paginatedSymbols = isTruncated ? context.DeadSymbols.Take(context.Args.MaxResults).ToList() : context.DeadSymbols;
+        var action = isTruncated ? "continue" : "countercheck";
+        var actionReason = isTruncated
+            ? "maxResults erhoehen oder Scope verfeinern; Gegenpruefung nach dem vollstaendigen Ergebnis."
+            : "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen.";
         var summary = new DeadCodeSummary(
             DocumentsInScope: context.DocumentsInScope,
             ScannedSymbols: context.ScannedCount,
@@ -80,11 +84,15 @@ internal static partial class DeadCodeAdvisoryScanner
             ReturnedCandidates: paginatedSymbols.Count,
             TruncatedBy: isTruncated ? totalDead - paginatedSymbols.Count : 0,
             Next: new DeadCodeRecommendedNextAction(
-                isTruncated ? "continue" : "countercheck",
-                isTruncated ? "maxResults erhoehen oder Scope verfeinern." : "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."));
-        var recommendedAction = new DeadCodeRecommendedNextAction(
-            Action: "ask_user",
-            Reason: "Kandidaten manuell gegen Reflection, DI, Generatoren, dynamic und externe Consumer gegenpruefen; keine Loeschentscheidung.");
+                totalDead == 0 ? "countercheck" : action,
+                totalDead == 0
+                    ? "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."
+                    : actionReason));
+        var recommendedAction = totalDead == 0
+            ? new DeadCodeRecommendedNextAction(
+                Action: "ask_user",
+                Reason: "Kandidaten manuell gegen Reflection, DI, Generatoren, dynamic und externe Consumer gegenpruefen; keine Loeschentscheidung.")
+            : new DeadCodeRecommendedNextAction(action, actionReason);
 
         return new DeadCodeScanResult(
             DeadSymbols: paginatedSymbols,

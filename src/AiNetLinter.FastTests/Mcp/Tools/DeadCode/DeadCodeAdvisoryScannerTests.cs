@@ -328,6 +328,44 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
+    public async Task ScanAsync_NextActionsRecommendCountercheckOrContinueConsistently()
+    {
+        using var completeSolution = CreateSolution(
+            ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
+        var complete = await DeadCodeAdvisoryScanner.ScanAsync(
+            completeSolution.Solution,
+            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            CancellationToken.None);
+
+        using var truncatedSolution = CreateSolution(
+            ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
+        var truncated = await DeadCodeAdvisoryScanner.ScanAsync(
+            truncatedSolution.Solution,
+            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method, MaxResults: 1),
+            CancellationToken.None);
+
+        Assert.Equal("countercheck", complete.RecommendedNextAction.Action);
+        Assert.Equal(complete.RecommendedNextAction.Action, complete.Summary.Next?.Action);
+        Assert.Equal("continue", truncated.RecommendedNextAction.Action);
+        Assert.Equal(truncated.RecommendedNextAction.Action, truncated.Summary.Next?.Action);
+    }
+
+    [Fact]
+    public async Task ScanAsync_EmptyResult_PreservesExistingNextActions()
+    {
+        using var testSolution = CreateSolution(("Service.cs", "public class Service { public void Work() { } }"));
+
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
+            testSolution.Solution,
+            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            CancellationToken.None);
+
+        Assert.Empty(result.DeadSymbols);
+        Assert.Equal("ask_user", result.RecommendedNextAction.Action);
+        Assert.Equal("countercheck", result.Summary.Next?.Action);
+    }
+
+    [Fact]
     public async Task ScanAsync_WithScopeFilter_LimitsToMatchingFiles()
     {
         using var testSolution = CreateSolution(

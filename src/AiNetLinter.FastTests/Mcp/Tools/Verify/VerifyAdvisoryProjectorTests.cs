@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,6 +70,33 @@ public sealed class VerifyAdvisoryProjectorTests
         var expectedTotal = await CollectPerFileTotalAsync(testSolution.Solution, scopeFiles);
 
         Assert.Equal(expectedTotal, combined.TotalCount);
+    }
+
+    [Fact]
+    public async Task CollectAsync_UnavailableRazorEvidence_ProjectsTheReasonAndLowConfidence()
+    {
+        using var tempDirectory = TestTempDirectory.Create("verify-razor-advisory-");
+        tempDirectory.CreateFile("src/Foo.razor");
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            Path.Combine(tempDirectory.DirectoryPath, "RazorAdvisory.slnx"),
+            new ProjectSpec("RazorAdvisory", [
+                ("src/Foo.razor", ""),
+                ("src/Foo.razor.cs", "namespace RazorAdvisory; public sealed partial class Foo { private void Unused() { } }")],
+                VirtualProjectDirectory: "."));
+        var scopeFiles = testSolution.Solution.Projects
+            .SelectMany(project => project.Documents)
+            .Select(document => Path.GetFullPath(document.FilePath!))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var result = await VerifyAdvisoryProjector.CollectAsync(
+            testSolution.Solution,
+            scopeFiles,
+            CancellationToken.None);
+
+        var razorEntry = Assert.Single(result.Entries, entry =>
+            entry.RuleOrCategory == "dead_code" && entry.Reason.Contains("Razor-Referenzen nicht entscheidbar", StringComparison.Ordinal));
+        Assert.Equal("low", razorEntry.Confidence);
+        Assert.Contains("Razor-Generierung/Projektladung gegenprüfen", razorEntry.Reason, StringComparison.Ordinal);
     }
 
     private static string ProbeSource(string typeName, string route) => $$"""

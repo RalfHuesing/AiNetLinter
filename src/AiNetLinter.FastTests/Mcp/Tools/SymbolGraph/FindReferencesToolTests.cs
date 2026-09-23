@@ -70,6 +70,56 @@ public sealed partial class FindReferencesToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_EmptyRazorCodeBehindResult_RecommendsGeneratedReferencesExactlyOnce()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("RazorApp", [
+                ("src/Foo.razor.cs", "namespace RazorApp; public sealed class Foo { public void Handle() { } }"),
+                ("src/RegularService.cs", "namespace RazorApp; public sealed class RegularService { public void Handle() { } }")])));
+        var state = context.CreateServer();
+
+        var result = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("RazorApp.Foo.Handle", 50, 1, IncludeGenerated: false),
+            CancellationToken.None);
+        var regularResult = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("RazorApp.RegularService.Handle", 50, 1, IncludeGenerated: false),
+            CancellationToken.None);
+        var generatedOptInResult = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("RazorApp.Foo.Handle", 50, 1, IncludeGenerated: true),
+            CancellationToken.None);
+
+        var text = TextOf(result);
+        Assert.Equal(1, text.Split("next: includeGenerated=true", StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("next: includeGenerated=true", TextOf(regularResult), StringComparison.Ordinal);
+        Assert.DoesNotContain("next: includeGenerated=true", TextOf(generatedOptInResult), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RazorCodeBehindResultWithHitsOrGeneratedOptIn_OmitsGeneratedReferenceHint()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("RazorApp", [
+                ("src/Foo.razor.cs", "namespace RazorApp; public sealed class Foo { public void Handle() { } }"),
+                ("src/Caller.cs", "namespace RazorApp; public sealed class Caller { public void Call(Foo foo) => foo.Handle(); }")])));
+        var state = context.CreateServer();
+
+        var withHits = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("RazorApp.Foo.Handle", 50, 1, IncludeGenerated: false),
+            CancellationToken.None);
+        var withGeneratedOptIn = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("RazorApp.Foo.Handle", 50, 1, IncludeGenerated: true),
+            CancellationToken.None);
+
+        Assert.DoesNotContain("next: includeGenerated=true", TextOf(withHits), StringComparison.Ordinal);
+        Assert.DoesNotContain("next: includeGenerated=true", TextOf(withGeneratedOptIn), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ResolveSymbolAsync_QualifiedName_ReturnsSingleMatch()
     {
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, "Greeter.Greet", CancellationToken.None);
