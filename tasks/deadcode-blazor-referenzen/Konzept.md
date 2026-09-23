@@ -123,9 +123,9 @@ aber mit getrennten fachlichen Entscheidungen.
 
 ## Arbeitsgedächtnis (nur Draft)
 
-- Empfehlung: nur Code-Behind-Member; Komponententypen über Routen und Tags
-  brauchen eigene Semantik und Tests.
-- Empfehlung: Bei fehlender Razor-Generierung `low` mit klarer Unsicherheit,
-  damit der Kandidat sichtbar bleibt.
-- Gezielte Integrationstests mit echter Blazor-Fixture sind Teil der Abnahme;
-  der Repo-Workflow verlangt für ihren Lauf einen ausdrücklichen Auftrag.
+- Die drei Scope-Entscheidungen (nur Code-Behind-Member, `low` bei fehlender
+  Razor-Evidenz und `find_references`-Hinweis) hat der Nutzer bestätigt.
+- Offen ist nur der technische Nachweis, ob der aktuelle Scanner einen echten
+  Blazor-False-Positive erzeugt. Der Nutzer hat dafür einen gezielten
+  Rot-Test durch einen Luna-Subagenten ausdrücklich beauftragt. Nach dessen
+  Ergebnis den belegten Fehlerpfad und die Akzeptanzkriterien präzisieren.
