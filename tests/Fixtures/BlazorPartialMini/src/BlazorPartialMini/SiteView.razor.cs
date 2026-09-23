@@ -1,11 +1,17 @@
 using Microsoft.AspNetCore.Components;
+using System.Threading.Tasks;
 
 namespace BlazorPartialMini;
 
 public partial class SiteView
 {
-    [Parameter]
-    public string? Message { get; set; }
+    private string Title => "Ready";
+
+    private void HandleClick() { }
+
+    private Task HandleConfirm() => Task.CompletedTask;
+
+    private void UnusedControlMember() { }
 
     protected override Task OnInitializedAsync() => base.OnInitializedAsync();
 
