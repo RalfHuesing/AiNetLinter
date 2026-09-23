@@ -30,7 +30,7 @@ IntegrationTests laufen seriell und werden nicht abgebrochen.
 Bei einem Fehler gilt die Wiederholungsregel des Konzepts;
 StressTests werden nicht ausgeführt.
 
-- [ ] **1 — Produktive Referenzsemantik im Scanner**
+- [x] **1 — Produktive Referenzsemantik im Scanner**
   - Intention: Test-only genutzter Produktionscode wird im
     solutionweiten Roslyn-Suchraum als Dead-Code-Kandidat erkannt.
   - Scope: Zuerst einen roten xUnit-v3-Test mit einer synthetischen

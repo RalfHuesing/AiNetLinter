@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -148,7 +147,14 @@ internal static partial class DeadCodeAdvisoryScanner
             return false;
         }
 
-        var isDead = await IsSymbolUnreferencedAsync(typeSymbol, document, context.Solution, ct);
+        var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context.Solution, ct);
+        if (referenceAnalysis.IsUndecidable)
+        {
+            context.UndecidableCount++;
+            return false;
+        }
+
+        var isDead = referenceAnalysis.IsDeadCandidate;
         if (!isDead) return false;
 
         if (typeSymbol.IsStatic)
@@ -156,7 +162,7 @@ internal static partial class DeadCodeAdvisoryScanner
             foreach (var member in typeSymbol.GetMembers())
             {
                 if (member.IsImplicitlyDeclared) continue;
-                var memberIsDead = await IsSymbolUnreferencedAsync(member, document, context.Solution, ct);
+                var memberIsDead = (await AnalyzeReferencesAsync(member, context.Solution, ct)).IsDeadCandidate;
                 if (!memberIsDead)
                 {
                     return false;
@@ -167,11 +173,11 @@ internal static partial class DeadCodeAdvisoryScanner
         if (typeSymbol.DeclaredAccessibility == Accessibility.Private)
         {
             context.DeadContainerTypes.Add(typeSymbol);
-            AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo);
+            AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo, referenceAnalysis);
             return true;
         }
 
-        AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo);
+        AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo, referenceAnalysis);
         return false;
     }
 
@@ -206,73 +212,118 @@ internal static partial class DeadCodeAdvisoryScanner
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
 
-        var isDead = await IsSymbolUnreferencedAsync(member, document, context.Solution, ct);
-        if (isDead)
+        var referenceAnalysis = await AnalyzeReferencesAsync(member, context.Solution, ct);
+        if (referenceAnalysis.IsUndecidable)
         {
-            AddDeadSymbol(context, member, document, hasInternalsVisibleTo);
+            context.UndecidableCount++;
+            return;
+        }
+
+        if (referenceAnalysis.IsDeadCandidate)
+        {
+            AddDeadSymbol(context, member, document, hasInternalsVisibleTo, referenceAnalysis);
         }
     }
 
-    private static async Task<bool> IsSymbolUnreferencedAsync(
-        ISymbol symbol,
-        Document declaringDocument,
-        Solution solution,
-        CancellationToken ct)
-    {
-        if (await HasReferencedInterfaceOrOverrideAsync(symbol, solution, ct))
-        {
-            return false;
-        }
-
-        if (symbol.DeclaredAccessibility == Accessibility.Private)
-        {
-            var containerDocs = symbol.ContainingType?.DeclaringSyntaxReferences
-                .Select(r => solution.GetDocument(r.SyntaxTree))
-                .OfType<Document>()
-                .ToImmutableHashSet();
-
-            var declaringDocs = symbol.DeclaringSyntaxReferences
-                .Select(r => solution.GetDocument(r.SyntaxTree))
-                .OfType<Document>()
-                .ToImmutableHashSet();
-
-            var effectiveDocs = (containerDocs != null && !containerDocs.IsEmpty)
-                ? containerDocs
-                : (declaringDocs.IsEmpty ? ImmutableHashSet.Create(declaringDocument) : declaringDocs);
-
-            var references = await SymbolFinder.FindReferencesAsync(symbol, solution, documents: effectiveDocs, cancellationToken: ct);
-            return references.All(r => !r.Locations.Any());
-        }
-        else
-        {
-            var references = await SymbolFinder.FindReferencesAsync(symbol, solution, ct);
-            return references.All(r => !r.Locations.Any());
-        }
-    }
-
-    private static async Task<bool> HasReferencedInterfaceOrOverrideAsync(
+    private static async Task<SymbolReferenceAnalysis> AnalyzeReferencesAsync(
         ISymbol symbol,
         Solution solution,
         CancellationToken ct)
     {
-        if (symbol is IMethodSymbol method && method.IsOverride && method.OverriddenMethod != null)
+        var referenceSymbols = GetRelatedReferenceSymbols(symbol).ToArray();
+        var seenLocations = new HashSet<(DocumentId DocumentId, Microsoft.CodeAnalysis.Text.TextSpan Span)>();
+        var hasProductionReference = false;
+        var hasUnknownReference = false;
+        var testReferenceCount = 0;
+
+        foreach (var referenceSymbol in referenceSymbols)
         {
-            var baseRefs = await SymbolFinder.FindReferencesAsync(method.OverriddenMethod, solution, ct);
-            if (baseRefs.Any(r => r.Locations.Any())) return true;
-        }
-        else if (symbol is IPropertySymbol property && property.IsOverride && property.OverriddenProperty != null)
-        {
-            var baseRefs = await SymbolFinder.FindReferencesAsync(property.OverriddenProperty, solution, ct);
-            if (baseRefs.Any(r => r.Locations.Any())) return true;
+            var references = await SymbolFinder.FindReferencesAsync(referenceSymbol, solution, ct);
+            var declarations = referenceSymbol.DeclaringSyntaxReferences
+                .Select(reference => (reference.SyntaxTree, reference.Span))
+                .ToHashSet();
+
+            foreach (var location in references.SelectMany(reference => reference.Locations))
+            {
+                if (location.Location.SourceTree is { } sourceTree
+                    && declarations.Contains((sourceTree, location.Location.SourceSpan)))
+                {
+                    continue;
+                }
+
+                if (location.Document is { } referenceDocument
+                    && !seenLocations.Add((referenceDocument.Id, location.Location.SourceSpan)))
+                {
+                    continue;
+                }
+
+                switch (ClassifyReferenceRole(location.Document))
+                {
+                    case ReferenceRole.Production:
+                        hasProductionReference = true;
+                        break;
+                    case ReferenceRole.Test:
+                        testReferenceCount++;
+                        break;
+                    default:
+                        hasUnknownReference = true;
+                        break;
+                }
+            }
         }
 
-        foreach (var ifaceMember in GetImplementedInterfaceMembers(symbol))
+        return new SymbolReferenceAnalysis(
+            HasProductionReference: hasProductionReference,
+            HasUnknownReference: hasUnknownReference,
+            TestReferenceCount: testReferenceCount);
+    }
+
+    private static IEnumerable<ISymbol> GetRelatedReferenceSymbols(ISymbol symbol)
+    {
+        yield return symbol;
+
+        if (symbol is IMethodSymbol method)
         {
-            var ifaceRefs = await SymbolFinder.FindReferencesAsync(ifaceMember, solution, ct);
-            if (ifaceRefs.Any(r => r.Locations.Any())) return true;
+            for (var overriddenMethod = method.OverriddenMethod; overriddenMethod is not null; overriddenMethod = overriddenMethod.OverriddenMethod)
+            {
+                yield return overriddenMethod;
+            }
+        }
+        else if (symbol is IPropertySymbol property)
+        {
+            for (var overriddenProperty = property.OverriddenProperty; overriddenProperty is not null; overriddenProperty = overriddenProperty.OverriddenProperty)
+            {
+                yield return overriddenProperty;
+            }
         }
 
-        return false;
+        foreach (var interfaceMember in GetImplementedInterfaceMembers(symbol))
+        {
+            yield return interfaceMember;
+        }
+    }
+
+    private static ReferenceRole ClassifyReferenceRole(Document? document)
+    {
+        if (document?.Project is null || !document.Project.SupportsCompilation || document.FilePath is null)
+        {
+            return ReferenceRole.Unknown;
+        }
+
+        if (TestDetector.IsTestProject(document.Project) || TestDetector.IsTestFile(document.FilePath))
+        {
+            return ReferenceRole.Test;
+        }
+
+        return ReferenceRole.Production;
+    }
+
+    private enum ReferenceRole { Production, Test, Unknown }
+
+    private readonly record struct SymbolReferenceAnalysis(bool HasProductionReference, bool HasUnknownReference, int TestReferenceCount)
+    {
+        public bool IsUndecidable => !HasProductionReference && HasUnknownReference;
+        public bool IsDeadCandidate => !HasProductionReference && !HasUnknownReference;
     }
 
     private static IEnumerable<ISymbol> GetImplementedInterfaceMembers(ISymbol symbol)

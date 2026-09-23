@@ -13,7 +13,8 @@ internal static partial class DeadCodeAdvisoryScanner
         DeadCodeScanContext context,
         ISymbol symbol,
         Document document,
-        bool hasInternalsVisibleTo)
+        bool hasInternalsVisibleTo,
+        DeadCodeAdvisoryScanner.SymbolReferenceAnalysis referenceAnalysis)
     {
         var kindStr = GetSymbolKindString(symbol);
         var accessibilityStr = GetAccessibilityString(symbol.DeclaredAccessibility);
@@ -49,9 +50,13 @@ internal static partial class DeadCodeAdvisoryScanner
             Column: column,
             Accessibility: accessibilityStr,
             Confidence: assessment.Confidence,
-            Reason: assessment.Reason,
+            Reason: referenceAnalysis.TestReferenceCount > 0
+                ? $"Keine produktiven statischen Referenzen; {referenceAnalysis.TestReferenceCount} Testreferenz(en) gefunden."
+                : assessment.Reason,
             LimitsApplies: DetermineLimitsApplies(symbol, hasInternalsVisibleTo),
-            Countercheck: assessment.Countercheck);
+            Countercheck: assessment.Countercheck,
+            Usage: referenceAnalysis.TestReferenceCount > 0 ? "test_only" : "unreferenced",
+            TestReferences: referenceAnalysis.TestReferenceCount);
 
         context.DeadSymbols.Add(entry);
         if (context.ByKind.TryGetValue(kindStr, out var count)) context.ByKind[kindStr] = count + 1;
@@ -87,7 +92,8 @@ internal static partial class DeadCodeAdvisoryScanner
                 totalDead == 0 ? "countercheck" : action,
                 totalDead == 0
                     ? "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."
-                    : actionReason));
+                    : actionReason),
+            Undecidable: context.UndecidableCount);
         var recommendedAction = totalDead == 0
             ? new DeadCodeRecommendedNextAction(
                 Action: "ask_user",

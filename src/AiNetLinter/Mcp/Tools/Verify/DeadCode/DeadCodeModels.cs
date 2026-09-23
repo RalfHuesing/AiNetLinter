@@ -132,7 +132,9 @@ internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("limitsApplies")] IReadOnlyList<string> LimitsApplies,
     [property: JsonPropertyName("resultType")] string ResultType = "candidate",
     [property: JsonPropertyName("evidenceBoundary")] string EvidenceBoundary = "statische Referenzsuche innerhalb der Solution; keine Laufzeit- oder externen Consumer-Beweise",
-    [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null);
+    [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null,
+    [property: JsonPropertyName("usage")] string Usage = "unreferenced",
+    [property: JsonPropertyName("testReferences")] int TestReferences = 0);
 
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
@@ -149,7 +151,8 @@ internal sealed record DeadCodeSummary(
     [property: JsonPropertyName("confidence")] string Confidence = "medium",
     [property: JsonPropertyName("returnedCandidates")] int ReturnedCandidates = 0,
     [property: JsonPropertyName("truncatedBy")] int TruncatedBy = 0,
-    [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null);
+    [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null,
+    [property: JsonPropertyName("undecidable")] int Undecidable = 0);
 
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
@@ -204,4 +207,5 @@ internal sealed class DeadCodeScanContext(
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
     public int ScannedCount { get; set; }
+    public int UndecidableCount { get; set; }
 }
