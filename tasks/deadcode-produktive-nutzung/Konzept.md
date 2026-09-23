@@ -350,8 +350,8 @@ Referenzen bewertet:
 - Eine echte Interface-Nutzung schützt die konkrete Implementierung weiterhin.
 - Ein Override mit produktiver Nutzung der Basismethode bleibt geschützt.
 - Whitelist-Attribute und begründete Suppressions funktionieren unverändert.
-- Generated Documents und nicht entscheidbare Referenzstellen führen nicht
-  zu einem unberechtigten High-Confidence-Fund.
+- Nicht entscheidbare Referenzstellen führen nicht zu einem unberechtigten
+  High-Confidence-Fund.
 - Die Antwort nennt bei einem Test-only Fall ausdrücklich, dass keine
   produktive Referenz gefunden wurde.
 
