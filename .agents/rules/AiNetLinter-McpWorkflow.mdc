@@ -9,7 +9,7 @@ alwaysApply: true
 Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) die AiNetLinter-MCP-Tools proaktiv und primär nutzen; keine Textsuch-Kaskaden anstelle gezielter AST-Abfragen. `rg` ist für Nicht-C#-Dateien, exakte Texte und Kommentare sowie bei fehlgeschlagenen oder unvollständigen MCP-Abfragen sinnvoll.
 
 - `targetPath`: Absoluter Pfad zur `.sln`/`.slnx` des aktuellen Projekts; einmal ermitteln und wiederverwenden. Für Assembly-Tools stattdessen die `.dll`/`.exe` angeben.
-- Folgeaufrufe: Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
+- Folgeaufrufe: Für einzelne Symbole `symbolIdentifier` exakt aus vorherigen MCP-Ausgaben übernehmen; `get_symbol_body` verwendet `symbolIdentifiers` für Batchabfragen. Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
 - Bei `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 
 ## Werkzeugwahl

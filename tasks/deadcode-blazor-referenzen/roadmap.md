@@ -7,7 +7,7 @@ Build, MCP-Verify und FastTests gilt
 in Punkt 1 und den abschließenden vollständigen FastTest-Lauf ausführen.
 `KnowHowToAI` bleibt unverändert.
 
-- [ ] **1. Echte Blazor-Bindungen als Regression belegen**
+- [x] **1. Echte Blazor-Bindungen als Regression belegen**
   - Intention: Ein semantisch gebundener Code-Behind-Member darf nicht als
     Dead Code erscheinen; ein unbenutzter Kontrollmember muss sichtbar bleiben.
   - Scope: `tests/Fixtures/BlazorPartialMini` um Web-Import, `@onclick`,
