@@ -1,7 +1,6 @@
 ---
-status: draft
+status: ready
 execution_mode: autonomous
-open_questions: []
 ---
 
 # Konzept: Dead Code nach produktiver Nutzung beurteilen
@@ -239,8 +238,11 @@ deadCode: status=complete|partial|unavailable; candidates=<N|unknown>;
           testOnly=<N|unknown>; unreferenced=<N|unknown>;
           apiProtected=<N|unknown>; undecidable=<N|unknown>;
           shown=<N>; truncatedBy=<N|unknown>; next=review_now|none
+deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.
 ```
 
+`deadCodeHint` erscheint genau einmal, wenn `candidates > 0`;
+bei null oder unbekannter Kandidatenzahl entfällt die Zeile.
 `candidates` zählt alle statischen Kandidaten im Deklarationsscope,
 auch wenn nur die ersten Einträge gezeigt werden. `apiProtected` zählt
 alle im Deklarationsscope wegen `external_library` vor der
@@ -342,7 +344,7 @@ aufgelöst.
   Folgeparameter von `find_references`, auch bei Linked Files und
   gleichnamigen Symbolen in verschiedenen Projekten. Die Antwort nennt für
   test-only ausdrücklich die fehlende **produktive** statische
-  Referenz.
+  Referenz und zeigt den einmaligen Fehlalarm-Hinweis.
 - Whitelist, begründete Suppression, Razor-Evidenz,
   Interface-/Override-Schutz und Content-only-Vertrag funktionieren
   unverändert.
@@ -369,6 +371,5 @@ Die Prüfzeitpunkte und Testgates richten sich ausschließlich nach
 `.agents/rules/AiNetLinter-Richtlinien.mdc` und
 `AiNetLinter-TestRichtlinien.mdc`.
 
-Dieses Dokument bleibt `draft` bis zur ausdrücklichen Freigabe des
-Nutzers. Die Freigabe dieses Konzepts startet weder Roadmap noch
-Umsetzung automatisch.
+Dieses Konzept ist vom Nutzer für die Roadmap freigegeben. Die
+Umsetzung startet erst auf seinen gesonderten Auftrag.
