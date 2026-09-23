@@ -30,6 +30,13 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
   Ohne `includeGenerated` sind vorhandene Blazor-Aufrufe für Agenten
   unsichtbar. Zusätzlich fehlt bei nicht ladbarer Razor-Generierung eine
   verlässliche Confidence-Grenze für `.razor.cs`-Kandidaten.
+- Ein gezielter FastTest mit `Foo.razor`, `Foo.razor.cs` und einer normalen
+  `RegularService.cs` scannt zwei Kandidatendokumente, aber keine generierten
+  Dokumente. Aktuell erhalten beide privaten Code-Behind-Methoden und die
+  normale C#-Kontrolle `high`. Die erwartete Einstufung ist `low` mit
+  Razor-Unsicherheitsgrund für **beide** Code-Behind-Methoden und weiterhin
+  `high` für die normale C#-Methode. Dieser Test ist vor Produktcodeänderung
+  rot und belegt die zu korrigierende Confidence-Lücke.
 
 ## Scope
 
@@ -43,10 +50,16 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
   dafür nicht vorsorglich umgebaut.
 - Fehlt zu einer vorhandenen `.razor`-Datei das generierte Dokument im
   geladenen Projekt oder ist es nicht auswertbar, darf ein referenzloses
-  Member der zugehörigen `.razor.cs` nicht `confidence: high` erhalten. Der
-  Kandidat bleibt mit `confidence: low` und konkretem Grund zur
-  unvollständigen Razor-Evidenz sichtbar. Bei auswertbarem generiertem
-  Dokument mit null Referenzen gilt die normale Dead-Code-Bewertung.
+  Member der zugehörigen `.razor.cs` nicht `confidence: high` erhalten.
+  **Alle** referenzlosen Member dieser Komponente bleiben mit
+  `confidence: low` und konkretem Grund zur unvollständigen Razor-Evidenz
+  sichtbar; ohne generierte Semantik ist auch ein tatsächlich unbenutztes
+  Member nicht sicher unterscheidbar. Bei auswertbarem generiertem Dokument
+  mit null semantischen Referenzen gilt die normale Dead-Code-Bewertung.
+- Dieselbe Confidence-Grenze gilt für Kandidaten aus Compiler-/IDE-Diagnosen
+  in `DeadCodeMode.Locals` und `Both`, etwa ein privates `@ref`-Feld in einer
+  `.razor.cs`. Der Herkunftsweg des Kandidaten darf keine widersprüchliche
+  `high`-Aussage erzeugen.
 - `find_references` behält `includeGenerated=false` als Standard. Ein leeres
   Ergebnis für ein `.razor.cs`-Member weist knapp auf
   `includeGenerated=true` als Gegenprüfung hin. `verify` zeigt bei einem
@@ -62,35 +75,54 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
   Reflection; der Task behandelt Code-Behind-Member.
 - Keine Namenstextsuche in Markup oder `obj` als Nutzungsbeweis und keine
   Ausblendung eines Kandidaten allein wegen eines gleichnamigen Razor-Texts.
+- Ein bloßer Name in einem generierten Markup-String zählt nicht als
+  semantische Referenz. Eine syntaktisch geschriebene, aber vom Razor-Compiler
+  nicht gebundene Eventangabe schützt den Member nicht.
 - Keine Änderung an Testreferenz-Definition, externer API-Oberfläche,
   Konfigurationsschema, CLI, `verify`-Scopes oder Commit-Range-Analyse.
 - Keine Änderung am externen `KnowHowToAI`-Repository.
 
 ## Technischer Vertrag und Code-Anker
 
-1. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeAdvisoryScanner.cs`:
-   `IsSymbolUnreferencedAsync` bleibt für belegte Razor-Referenzen der
-   Referenzentscheid. `ClassifyConfidence`/`AddDeadSymbol` behandeln nur den
-   neuen Fall fehlender Razor-Evidenz.
-   Als Code-Behind gilt eine Partial-Typdeklaration `Foo` in `Foo.razor.cs`
-   mit gleichnamiger `Foo.razor` im selben Verzeichnis. Generierte Dokumente
-   über Roslyn (`Project.GetSourceGeneratedDocumentsAsync`) pro Projekt
-   einmal ermitteln und über den relativen Komponentenpfad sowie den
-   Partial-Typ zuordnen; ein bloß gleicher Dateiname in einem anderen
-   Verzeichnis zählt nicht. Eine vorhandene generierte Datei gilt nur als
-   auswertbar, wenn Roslyn ihr C#-Dokument und Semantikmodell liefert. Keine
-   Generator-Ausführung pro Member.
-2. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeModels.cs`:
-   Bestehende Felder `confidence`, `reason` und `countercheck` nutzen. Ein
-   zusätzliches internes Statusmodell nur bei nachgewiesenem Bedarf;
-   keinen neuen öffentlichen Parameter.
-3. `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` und
+1. Neue interne Datei
+   `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/RazorGeneratedEvidenceIndex.cs`
+   im Namespace `AiNetLinter.Mcp.Tools.Verify.DeadCode`: Statuswerte
+   `NotComponent`, `Available`, `Unavailable`. Als Code-Behind gilt nur eine
+   Partial-Typdeklaration `Foo` in `Foo.razor.cs` mit `Foo.razor` im selben
+   Verzeichnis. Beim Projektstart einmal
+   `Project.GetSourceGeneratedDocumentsAsync(ct)` auswerten. Ein generiertes
+   Dokument gehört nur dann zur Komponente, wenn sein normalisierter
+   relativer Komponentenpfad und sein per SemanticModel aufgelöster
+   Partial-Typ passen; derselbe Dateiname in einem anderen Ordner reicht
+   nicht. Ohne passendes Dokument oder Semantikmodell: `Unavailable`.
+   Mit passendem, auswertbarem Dokument: `Available`, selbst wenn dort nur
+   ein Markup-String und keine Handler-Referenz steht. Kein `obj`-Dateilesen.
+2. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeAdvisoryScanner.cs`:
+   Index einmal in `ScanProjectAsync` erstellen und für die Member dieses
+   Projekts verwenden. `IsSymbolUnreferencedAsync` bleibt der semantische
+   Referenzentscheid. Nur bei `Unavailable` wird ein ansonsten `high`
+   eingestufter `.razor.cs`-Kandidat zu `low`; der Grund nennt fehlende
+   Razor-Evidenz. `NotComponent` und `Available` behalten ihre bisherige
+   Einstufung. `high`-Filter, `Summary.High`/`Low` und `Reason` aus der
+   endgültigen Einstufung berechnen, ohne Generator-Arbeit pro Member.
+   `DeadCodeAdvisoryDiagnosticsScanner.cs` verwendet denselben Index für
+   diagnostikbasierte Kandidaten; kein zweites Razor-Erkennungsverfahren.
+   Der `Unavailable`-Grund nennt „Razor-Referenzen nicht entscheidbar:
+   generiertes C# fehlt oder ist nicht auswertbar“ und als Gegencheck die
+   Razor-Generierung/Projektladung.
+3. `src/AiNetLinter/Mcp/Tools/Verify/DeadCode/DeadCodeModels.cs`:
+   Die vorhandenen Felder `confidence`, `reason` und `countercheck` nutzen;
+   keinen neuen öffentlichen Parameter. `recommendedNextAction` und
+   `summary.next` fordern übereinstimmend zuerst `countercheck`, nicht
+   pauschal `ask_user`.
+4. `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` und
    Formatter: Leere Standardbefunde für `.razor.cs` erklären die bereits
-   vorhandene Option `includeGenerated=true`. Andere Befunde bleiben knapp.
-4. `src/AiNetLinter/Mcp/Tools/Verify/VerifyTool.cs`:
+   vorhandene Option `includeGenerated=true`, etwa als einzelne
+   `next: includeGenerated=true`-Zeile. Andere Befunde bleiben knapp.
+5. `src/AiNetLinter/Mcp/Tools/Verify/VerifyTool.cs`:
    `VerifyAdvisoryProjector` übernimmt die belegte Einstufung;
    `VerifyResponseFormatter.AppendAdvisories` bleibt im 4-KiB-Budget.
-5. `Docs/mcp/tools.md` beschreibt Razor-Gegenprüfung und die Grenze bei
+6. `Docs/mcp/tools.md` beschreibt Razor-Gegenprüfung und die Grenze bei
    fehlenden generierten Dokumenten. Agentenregeln auf Widersprüche prüfen;
    keine zweite allgemeine Advisory-Policy formulieren.
 
@@ -108,16 +140,27 @@ Das Ergebnis bleibt ein Advisory, keine Löschanweisung.
   `DeadCodeAdvisoryScanner.ScanAsync` und
   `VerifyAdvisoryProjector.CollectAsync` melden sie nicht als `dead_code`.
   Der unbenutzte Kontrollmember bleibt Kandidat. Das belegt die Korrektur
-  und den Erhalt der Erkennung.
+  und den Erhalt der Erkennung. Ein getrennter Fall ohne den Web-Import
+  belegt, dass der Name im generierten Markup-String den Member nicht
+  fälschlich schützt.
 - Ein zuerst rot nachgewiesener Fall mit `.razor.cs` und vorhandenem
   `.razor`, aber ohne auswertbares generiertes Razor-Dokument erwartet
-  `low` und einen Grund für unvollständige Evidenz statt `high`. Ein
-  `find_references`-Vertragstest prüft den Hinweis bei leerem
+  für alle Code-Behind-Member `low` und einen Grund für unvollständige
+  Evidenz statt `high`; eine private Methode in `RegularService.cs` bleibt
+  `high`. Der Test verwendet `TestTempDirectory` und eine Adhoc-Solution
+  ohne Source Generator, prüft `DocumentsInScope=2` und ist aktuell rot.
+  Ein diagnostikbasierter privater Code-Behind-Feldkandidat folgt derselben
+  Low-Regel; eine normale C#-Diagnose behält ihre bisherige Einstufung.
+  Ein `find_references`-Vertragstest prüft den Hinweis bei leerem
   Standardergebnis und sein Ausbleiben bei sichtbaren Treffern.
 - Reine Entscheidungs- und Formatierungsvarianten gehören in FastTests;
   die echte Razor-/MSBuild-Grenze in IntegrationTests. Temporärdateien nur
   über `AiNetLinter.TestKit.TestTempDirectory` oder die vorhandene Fixture.
-  Rot-Test-First und Gates folgen den Repo-Regeln.
+  Bei jedem Fixture-Test `DocumentsInScope > 0` belegen: der zentrale
+  Dateifilter schließt Pfade mit Segment `worktrees` aus. Für diesen
+  Integrationstest einen Checkout-Pfad ohne dieses Segment verwenden;
+  ein leerer Scan ist kein grüner Nachweis. Rot-Test-First und Gates folgen
+  den Repo-Regeln.
 
 ## Abgrenzung zum bestehenden Dead-Code-Konzept
 
@@ -127,12 +170,3 @@ Den Akzeptanzpunkt zu generierten Dokumenten übernimmt dieser Task konkret
 für Blazor; die allgemeine Behandlung unentscheidbarer Referenzstellen
 bleibt im alten Konzept. Beide Vorhaben berühren dieselbe Referenzprüfung,
 aber mit getrennten fachlichen Entscheidungen.
-
-## Arbeitsgedächtnis (nur Draft)
-
-- Die drei Scope-Entscheidungen (nur Code-Behind-Member, `low` bei fehlender
-  Razor-Evidenz und `find_references`-Hinweis) hat der Nutzer bestätigt.
-- Der Luna-Repro im isolierten Worktree war nach Korrektur der Fixture grün:
-  gebundener Handler nicht dead, Kontrollmember dead, generierte Referenz
-  semantisch aufgelöst. Vor der Freigabe noch den Fall fehlender generierter
-  Razor-Dokumente gezielt rot prüfen und die Confidence-Regel daran messen.
