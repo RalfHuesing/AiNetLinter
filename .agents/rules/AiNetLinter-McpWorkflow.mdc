@@ -26,9 +26,10 @@ Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) die AiN
 ## Linter-Verstöße
 
 - Ursache und Geltungsbereich vor der Änderung klären. Betroffene Symbole oder Dateien mit passenden MCP-Tools untersuchen; Aufrufer, Abhängigkeiten und Tests prüfen, soweit die Änderung sie berührt.
+- Advisory-Kandidaten vor Änderungen eigenständig gegenprüfen: C#-Referenzen sowie Bindungen in `.razor`, XAML, Markup und Konfiguration; Reflection, DI, Generatoren, `dynamic` und externe Consumer berücksichtigen. `confidence: high` ist kein Löschbeweis. Ergebnis mit Evidenz als bestätigt, falsch positiv oder unklar einordnen.
 - Die kleinste fachlich kohärente Änderung umsetzen, die die Ursache behebt. Bei Längen- und Komplexitätsverstößen Verantwortlichkeiten sinnvoll schneiden. Vorhandene Bausteine nutzen; neue Typen oder Komponenten brauchen eine eigenständige Aufgabe. Verhalten und Verträge erhalten, betroffene Tests anpassen.
 - Keine bloße Kennzahl-Optimierung: kein rein metrisches Verschieben oder Aufsplitten, keine funktionslosen Delegationshüllen, Suppressions oder Regel- und Schwellenwertänderungen zur Umgehung des Befunds.
-- Bleibt nach gezielter Analyse die fachliche Grenze unklar, entsteht ein erheblicher Scope-Konflikt oder erscheint der Befund falsch, ist die Arbeit daran blockiert. Implementierer melden Befund, Ursachenhypothese und Lösungsoptionen an den Parent-Agenten; ohne Parent-Agent an den Nutzer. Bis zur Entscheidung keine Umgehung einbauen.
+- Ist ein Befund falsch positiv, den Zielcode nicht ändern und die Evidenz an den Parent-Agenten, sonst an den Nutzer melden. Bleibt die fachliche Grenze unklar oder entsteht ein erheblicher Scope-Konflikt, ist die Arbeit daran bis zur Entscheidung blockiert; Befund, Ursachenhypothese und Lösungsoptionen melden. Keine Umgehung einbauen.
 
 ## Qualitätsprüfung
 
