@@ -71,7 +71,7 @@ in Punkt 1 und den abschließenden vollständigen FastTest-Lauf ausführen.
     Verify zeigt den passenden Razor-Grund innerhalb seines 4-KiB-Budgets.
     `Docs/mcp/tools.md`, Tests und vollständiges Abschlussgate sind grün.
 
-- [ ] **Audit**
+- [x] **Audit**
   - Intention: Die Umsetzung gegen das freigegebene Konzept und die echte
     Blazor-Grenze prüfen.
   - Scope: Code, Tests, Dokumentation, Gate-Nachweise und die drei
