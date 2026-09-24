@@ -68,6 +68,51 @@ public sealed class ConstructorHandoffLifecycleTests
         await AssertConstructorHandoffWorksAsync(state, typeName, classStructureSignature, resolvedSignature, callSiteLine);
     }
 
+    [Fact]
+    public async Task GetClassStructureMethodHandoff_RemainsResolvable()
+    {
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\MethodHandoffLifecycle.slnx",
+            new ProjectSpec("App", [
+                ("Methods.cs", """
+                    namespace TestNs;
+
+                    public sealed class Counterprobe
+                    {
+                        public void Run() { }
+                    }
+
+                    public static class Consumer
+                    {
+                        public static void Use(Counterprobe value)
+                        {
+                            value.Run();
+                        }
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/App"));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var structure = await GetClassStructureTool.ExecuteAsync(state, "TestNs.Counterprobe", "name", CancellationToken.None);
+        var structureText = TextOf(structure);
+        var row = structureText.Split('\n').SingleOrDefault(line =>
+            line.StartsWith("| Method | Run |", StringComparison.Ordinal));
+        Assert.True(row is not null, structureText);
+
+        var handoffId = Regex.Match(row!, @"handoffId: `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant)
+            .Groups["id"].Value;
+        Assert.NotEmpty(handoffId);
+
+        var references = await FindReferencesTool.ExecuteAsync(
+            state, new FindReferencesRequest(handoffId, MaxResults: 50, Depth: 1), CancellationToken.None);
+        var referencesText = TextOf(references);
+
+        Assert.False(references.IsError is true, referencesText);
+        Assert.Contains("Methods.cs:12", referencesText, StringComparison.Ordinal);
+        Assert.Contains("Counterprobe.Run", referencesText, StringComparison.Ordinal);
+    }
+
     private static async Task AssertConstructorHandoffWorksAsync(
         McpCodeGraphServer state,
         string typeName,

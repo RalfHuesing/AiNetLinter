@@ -173,6 +173,42 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Fact]
+    public async Task TryResolveByStableIdAsync_SourceHandoffRespectsProjectBinding()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            new ProjectSpec("First", [("First.cs", "namespace Probe; public sealed class Current { }")]),
+            new ProjectSpec("Second", [("Second.cs", "namespace Probe; public sealed class Current { }")]));
+        var firstProject = owner.Solution.Projects.Single(project => project.Name == "First");
+        var firstCompilation = (await firstProject.GetCompilationAsync())!;
+        var firstSymbol = firstCompilation.GetTypeByMetadataName("Probe.Current")!;
+        var rawId = DocumentationCommentId.CreateDeclarationId(firstSymbol)!;
+        var identity = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+        var handoff = identity.FormatHandoff(firstSymbol, firstProject.Id)!;
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            handoff,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(error);
+        Assert.True(SymbolEqualityComparer.Default.Equals(firstSymbol, resolved));
+
+        var unknownProjectHandoff = identity.Format($"{rawId}~p:{Guid.NewGuid():N}")!;
+        var (unknownProjectResolved, unknownProjectError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            unknownProjectHandoff,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(unknownProjectResolved);
+        Assert.NotNull(unknownProjectError);
+        Assert.Contains("SYMBOL_NOT_FOUND", TextOf(unknownProjectError!), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TryResolveByStableIdAsync_SourceHandoffMissingDeclarationReturnsSymbolNotFound()
     {
         using var owner = RoslynTestSolutionFactory.CreateSolution(
@@ -184,6 +220,27 @@ public sealed class SymbolIdentifierResolverTests
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
             identity.Format("T:Probe.Missing")!,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(resolved);
+        Assert.NotNull(error);
+        Assert.Contains("SYMBOL_NOT_FOUND", TextOf(error!), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_UnknownConstructorHandoffReturnsSymbolNotFound()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { }");
+        var identity = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+        var unknownConstructorHandoff = identity.Format("M:Probe.Current.#ctor(System.String)")!;
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            unknownConstructorHandoff,
             CancellationToken.None,
             identity);
 
