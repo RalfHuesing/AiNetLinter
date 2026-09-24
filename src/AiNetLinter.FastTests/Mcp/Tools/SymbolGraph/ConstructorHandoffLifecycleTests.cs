@@ -6,11 +6,14 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.FastTests;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.Verify;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -21,10 +24,10 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 public sealed class ConstructorHandoffLifecycleTests
 {
     [Theory]
-    [InlineData("Overloaded", "Overloaded.Overloaded()", "Overloaded.Overloaded()", 20)]
-    [InlineData("Overloaded", "Overloaded.Overloaded(string label)", "Overloaded.Overloaded(string)", 21)]
-    [InlineData("Parameterless", "Parameterless.Parameterless()", "Parameterless.Parameterless()", 22)]
-    [InlineData("Positional", "Positional.Positional(string Name)", "Positional.Positional(string)", 23)]
+    [InlineData("Overloaded", "Overloaded.Overloaded()", "Overloaded.Overloaded()", 21)]
+    [InlineData("Overloaded", "Overloaded.Overloaded(string label)", "Overloaded.Overloaded(string)", 22)]
+    [InlineData("Parameterless", "Parameterless.Parameterless()", "Parameterless.Parameterless()", 23)]
+    [InlineData("Positional", "Positional.Positional(string Name)", "Positional.Positional(string)", 24)]
     public async Task GetClassStructureConstructorHandoffs_AreReusableByCommonFollowUpTools(
         string typeName,
         string classStructureSignature,
@@ -49,6 +52,7 @@ public sealed class ConstructorHandoffLifecycleTests
                     }
 
                     public sealed record Positional(string Name);
+                    public sealed record ParameterlessRecord();
 
                     public static class Consumer
                     {
@@ -58,6 +62,7 @@ public sealed class ConstructorHandoffLifecycleTests
                             _ = new Overloaded("label");
                             _ = new Parameterless();
                             _ = new Positional("record");
+                            _ = new ParameterlessRecord();
                         }
                     }
                     """)
@@ -66,6 +71,116 @@ public sealed class ConstructorHandoffLifecycleTests
             new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
 
         await AssertConstructorHandoffWorksAsync(state, typeName, classStructureSignature, resolvedSignature, callSiteLine);
+    }
+
+    [Theory]
+    [InlineData("public Overloaded()", "Overloaded.Overloaded()", 13)]
+    [InlineData("public Overloaded(string label)", "Overloaded.Overloaded(string)", 14)]
+    public async Task GetFileSkeletonConstructorHandoffs_AreReusableByCommonFollowUpTools(
+        string skeletonSignature,
+        string resolvedSignature,
+        int callSiteLine)
+    {
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ConstructorSkeletonHandoffLifecycle.slnx",
+            new ProjectSpec("App", [
+                ("Constructors.cs", """
+                    namespace TestNs;
+
+                    public sealed class Overloaded
+                    {
+                        public Overloaded() { }
+                        public Overloaded(string label) { _ = label; }
+                    }
+
+                    public static class Consumer
+                    {
+                        public static void Use()
+                        {
+                            _ = new Overloaded();
+                            _ = new Overloaded("label");
+                        }
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/App"));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var skeleton = await GetFileSkeletonTool.ExecuteAsync(state, ["Constructors.cs"], CancellationToken.None);
+        var skeletonText = TextOf(skeleton);
+        var row = skeletonText.Split('\n').SingleOrDefault(line =>
+            line.Contains(skeletonSignature, StringComparison.Ordinal));
+        Assert.True(row is not null, skeletonText);
+
+        var handoffId = Regex.Match(row!, @"handoffId: `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant)
+            .Groups["id"].Value;
+        Assert.NotEmpty(handoffId);
+
+        await AssertFollowUpToolsResolveConstructorAsync(state, handoffId, resolvedSignature, callSiteLine);
+    }
+
+    [Fact]
+    public async Task VerifyConstructorHandoff_IsReusableWithoutChangingItsIdentifier()
+    {
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ConstructorVerifyHandoffLifecycle.slnx",
+            new ProjectSpec("App", [
+                ("Constructors.cs", """
+                    namespace TestNs;
+
+                    public sealed record ParameterlessRecord
+                    {
+                        public ParameterlessRecord() { }
+                    }
+                    """)
+            ], VirtualProjectDirectory: "src/App"));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(
+                null,
+                Config: TestHelper.CreateDefaultConfig(),
+                ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var verify = await VerifyTool.ExecuteAsync(state, VerifyScope.Solution, CancellationToken.None);
+        var verifyText = TextOf(verify);
+        var candidate = verifyText.Split('\n').SingleOrDefault(line =>
+            line.Contains("category=dead_code", StringComparison.Ordinal)
+            && line.Contains("Constructors.cs:5", StringComparison.Ordinal));
+        Assert.True(candidate is not null, verifyText);
+
+        var handoffId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
+            .Groups["id"].Value;
+        Assert.NotEmpty(handoffId);
+        Assert.Contains("dead_code", candidate, StringComparison.Ordinal);
+        Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
+
+        await AssertFollowUpToolsResolveConstructorAsync(
+            state,
+            handoffId,
+            "ParameterlessRecord.ParameterlessRecord()");
+    }
+
+    [Theory]
+    [InlineData("find_references")]
+    [InlineData("get_symbol_body")]
+    [InlineData("get_feature_context")]
+    public async Task ConstructorFollowUpTools_UnknownHandoff_ReturnsRecoverableError(string toolName)
+    {
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\InvalidConstructorHandoff.slnx",
+            new ProjectSpec("App", [("Constructors.cs", "namespace TestNs; public sealed record Probe();")], VirtualProjectDirectory: "src/App"));
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var result = toolName switch
+        {
+            "find_references" => await FindReferencesTool.ExecuteAsync(state, new FindReferencesRequest("h:unknown999", MaxResults: 50, Depth: 1), CancellationToken.None),
+            "get_symbol_body" => await GetSymbolBodyTool.ExecuteAsync(state, ["h:unknown999"], 80, CancellationToken.None),
+            _ => await GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions("h:unknown999"), CancellationToken.None)
+        };
+
+        var text = TextOf(result);
+        Assert.False(result.IsError is true, text);
+        Assert.Contains("HANDOFF_UNKNOWN", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -131,20 +246,36 @@ public sealed class ConstructorHandoffLifecycleTests
             .Groups["id"].Value;
         Assert.NotEmpty(handoffId);
 
+        await AssertFollowUpToolsResolveConstructorAsync(state, handoffId, resolvedSignature, callSiteLine);
+    }
+
+    private static async Task AssertFollowUpToolsResolveConstructorAsync(
+        McpCodeGraphServer state,
+        string handoffId,
+        string resolvedSignature,
+        int? callSiteLine = null)
+    {
         var references = await FindReferencesTool.ExecuteAsync(
             state, new FindReferencesRequest(handoffId, MaxResults: 50, Depth: 1), CancellationToken.None);
         var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
         var context = await GetFeatureContextTool.ExecuteAsync(
             state, new FeatureContextOptions(handoffId), CancellationToken.None);
 
-        var expectedCallSite = $"Constructors.cs:{callSiteLine}";
+        var expectedCallSite = callSiteLine is int line ? $"Constructors.cs:{line}" : null;
+        string[] expectedReferences = expectedCallSite is null ? [] : [expectedCallSite, "..ctor"];
         var failures = new[]
         {
-            FollowUpFailure(references, handoffId, "find_references", expectedCallSite, "..ctor"),
+            FollowUpFailure(references, handoffId, "find_references", expectedReferences),
             FollowUpFailure(body, handoffId, "get_symbol_body", resolvedSignature),
-            FollowUpFailure(context, handoffId, "get_feature_context", resolvedSignature, expectedCallSite, "Consumer.Use")
-        }.Where(failure => failure is not null).ToArray();
-        Assert.True(failures.Length == 0, string.Join(Environment.NewLine, failures));
+            FollowUpFailure(context, handoffId, "get_feature_context", expectedCallSite is null
+                ? [resolvedSignature]
+                : [resolvedSignature, expectedCallSite, "Consumer.Use"])
+        }.Where(failure => failure is not null).ToList();
+        if (expectedCallSite is null && TextOf(references).Contains("Aufruf von", StringComparison.Ordinal))
+        {
+            failures.Add($"find_references returned an unexpected constructor call site for {handoffId}.");
+        }
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
     private static string? FollowUpFailure(
