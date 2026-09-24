@@ -131,9 +131,9 @@ internal static class SymbolIdentifierResolver
 
     /// <summary>
     /// Loest einen stabilen Symbol-Identifikator (DocumentationCommentId, z. B. <c>M:Ns.Type.Method(System.Int32)</c>)
-    /// zu genau einem <see cref="ISymbol"/> auf. Iteriert dazu ueber alle
-    /// <see cref="Microsoft.CodeAnalysis.DeclaredSymbolInfo"/>s aller Projekte, weil
-    /// <see cref="SymbolFinder"/> keine direkte DocumentationCommentId-Suche anbietet. Wenn
+    /// zu genau einem <see cref="ISymbol"/> auf. Fragt dazu die
+    /// <see cref="DocumentationCommentId.GetSymbolsForDeclarationId(string, Compilation)"/>
+    /// fuer jede Projekt-Compilation ab und beruecksichtigt nur Quellsymbole. Wenn
     /// <paramref name="stableId"/> kein gueltiges DocumentationCommentId-Praefix
     /// (<c>M:</c>/<c>T:</c>/<c>P:</c>/<c>F:</c>/<c>E:</c>/<c>!:</c>) traegt, wird der Aufruf
     /// als Fehlschlag gewertet und der Aufrufer kann auf <see cref="FindReferencesTool.ResolveSymbolAsync"/>
