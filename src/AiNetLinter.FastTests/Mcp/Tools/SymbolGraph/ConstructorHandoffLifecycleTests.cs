@@ -249,7 +249,7 @@ public sealed class ConstructorHandoffLifecycleTests
         await AssertFollowUpToolsResolveConstructorAsync(state, handoffId, resolvedSignature, callSiteLine);
     }
 
-    private static async Task AssertFollowUpToolsResolveConstructorAsync(
+    internal static async Task AssertFollowUpToolsResolveConstructorAsync(
         McpCodeGraphServer state,
         string handoffId,
         string resolvedSignature,

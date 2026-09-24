@@ -137,6 +137,31 @@ public sealed class DeadCodeReferenceRoleTests
     }
 
     [Fact]
+    public async Task ScanAsync_ProductiveInterfaceCallKeepsConcreteImplementationLive()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("IService.cs", "namespace Product; public interface IService { void Execute(); }"),
+                ("Service.cs", "namespace Product; public sealed class Service : IService { public void Execute() { } private void IndependentUnused() { } }")],
+                VirtualProjectDirectory: "src/Product"),
+            new ProjectSpec("Consumer", [
+                ("Consumer.cs", "namespace Consumer; public sealed class Consumer { public void Run(Product.IService service) => service.Execute(); }")],
+                ProjectReferences: ["Product"], VirtualProjectDirectory: "src/Consumer"));
+
+        var result = await ScanMethodsAsync(testSolution.Solution);
+
+        Assert.DoesNotContain(result.DeadSymbols, symbol =>
+            symbol.ContainerType == "Product.Service" && symbol.SymbolName == "Execute");
+        var independentCandidate = Assert.Single(
+            result.DeadSymbols,
+            symbol => symbol.ContainerType == "Product.Service" && symbol.SymbolName == "IndependentUnused");
+        Assert.Equal("unreferenced", independentCandidate.Usage);
+        Assert.Equal(0, independentCandidate.TestReferences);
+        Assert.Equal("high", independentCandidate.Confidence);
+        Assert.Contains("Keine Referenzen innerhalb der Solution gefunden", independentCandidate.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ScanAsync_TestOnlyBaseCall_DoesNotKeepOverrideLive()
     {
         using var testSolution = CreateSolution(

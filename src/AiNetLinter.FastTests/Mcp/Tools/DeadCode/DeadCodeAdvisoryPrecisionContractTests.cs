@@ -78,6 +78,97 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
     }
 
     [Fact]
+    public async Task ScanAsync_AssignedOnlyPrivateFieldIsReportedByDiagnosticWhileWriteOnlyPropertyStaysUnclassified()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("State.cs", """
+            namespace Product;
+            public sealed class State
+            {
+                private int _assignedOnly = 1;
+                private int AssignedOnlyProperty { get; set; }
+
+                public void Update(int value)
+                {
+                    AssignedOnlyProperty = value;
+                }
+            }
+            """)], VirtualProjectDirectory: "src/Product"));
+
+        var compilation = await testSolution.Solution.Projects.Single().GetCompilationAsync();
+        Assert.Contains(compilation!.GetDiagnostics(), diagnostic => diagnostic.Id == "CS0414");
+
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
+            testSolution.Solution,
+            new DeadCodeAdvisoryOptions(
+                Accessibility: DeadCodeAccessibilityFilter.Private,
+                Confidence: DeadCodeConfidenceFilter.Both,
+                Kind: DeadCodeKindFilter.All,
+                Mode: DeadCodeMode.Both),
+            CancellationToken.None);
+
+        var field = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_assignedOnly");
+        Assert.Equal("field", field.Kind);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "AssignedOnlyProperty");
+        Assert.False(result.DeletionClaim);
+    }
+
+    [Fact]
+    public async Task ScanAsync_PublicPropertyUsedOnlyBySerializerRemainsAnUncertainSameSymbolCandidate()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Payload.cs", """
+            namespace Product;
+            public sealed class Payload
+            {
+                public string Value { get; init; } = "";
+            }
+
+            public static class Serializer
+            {
+                public static string Serialize(Payload payload) =>
+                    System.Text.Json.JsonSerializer.Serialize(payload);
+            }
+            """)], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
+
+        var property = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Value");
+        Assert.Equal("unreferenced", property.Usage);
+        Assert.Equal("low", property.Confidence);
+        Assert.Contains("jsonSerializer", property.LimitsApplies);
+        Assert.Contains("reflection", property.LimitsApplies);
+        Assert.False(result.DeletionClaim);
+    }
+
+    [Fact]
+    public async Task ScanAsync_UnreferencedPublicCallbackConventionRemainsAnAdvisoryWithExternalUseLimits()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Callbacks.cs", """
+            namespace Product;
+            [System.AttributeUsage(System.AttributeTargets.Method)]
+            public sealed class RuntimeCallbackAttribute : System.Attribute { }
+
+            public sealed class CallbackTarget
+            {
+                [RuntimeCallback]
+                public void Initialize() { }
+            }
+            """)], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Method);
+
+        var callback = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Initialize");
+        Assert.Equal("unreferenced", callback.Usage);
+        Assert.Equal("low", callback.Confidence);
+        Assert.Contains("publicApiSurface", callback.LimitsApplies);
+        Assert.Contains("reflection", callback.LimitsApplies);
+        Assert.Contains(callback.Countercheck!, check => check.Contains("Consumer", StringComparison.OrdinalIgnoreCase));
+        Assert.False(result.DeletionClaim);
+    }
+
+    [Fact]
     public async Task ScanAsync_TestOnlyInterfaceCallKeepsImplementationTestOnlyAndReportsInterfaceBoundary()
     {
         using var testSolution = CreateSolution(

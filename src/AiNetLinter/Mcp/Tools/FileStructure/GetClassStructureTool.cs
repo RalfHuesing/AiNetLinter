@@ -127,7 +127,7 @@ internal static partial class GetClassStructureTool
     {
         var classifier = new McpScopeClassifier();
         var (files, locations, totalLines) = await CollectDeclarationFilesAsync(namedType, solution, solutionDir, classifier, args.Scope, ct);
-        var extractedMembers = ExtractMembers(namedType, solutionDir, handoffIdentity);
+        var extractedMembers = ExtractMembers(namedType, solution, solutionDir, handoffIdentity);
         var scopedMembers = await FilterMembersByScopeAsync(extractedMembers, solution, solutionDir, classifier, args.Scope, ct);
         var sortedMembers = SortMembers(
             FilterMembers(scopedMembers.VisibleMembers, args.KindFilter, args.NameFilter),
@@ -246,6 +246,7 @@ internal static partial class GetClassStructureTool
 
     private static List<ClassStructureMemberEntry> ExtractMembers(
         INamedTypeSymbol namedType,
+        Solution solution,
         string solutionDir,
         AnalysisSymbolIdentity? handoffIdentity)
     {
@@ -257,7 +258,7 @@ internal static partial class GetClassStructureTool
         foreach (var m in namedType.GetMembers())
         {
             if (IsExcludedMember(m)) continue;
-            result.Add(CreateMemberEntry(m, solutionDir, handoffIdentity));
+            result.Add(CreateMemberEntry(m, solutionDir, handoffIdentity, solution));
         }
         return result;
     }
@@ -322,7 +323,8 @@ internal static partial class GetClassStructureTool
     private static ClassStructureMemberEntry CreateMemberEntry(
         ISymbol m,
         string solutionDir,
-        AnalysisSymbolIdentity? handoffIdentity)
+        AnalysisSymbolIdentity? handoffIdentity,
+        Solution solution)
     {
         var syntaxNode = m.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
         var loc = syntaxNode?.GetLocation() ?? m.Locations.FirstOrDefault(l => l.IsInSource) ?? m.Locations.FirstOrDefault();
@@ -353,14 +355,21 @@ internal static partial class GetClassStructureTool
             LineCount: lineCount,
             Signature: signature,
             FilePath: memberFilePath,
-            HandoffId: FormatMemberHandoff(m, handoffIdentity));
+            HandoffId: FormatMemberHandoff(m, handoffIdentity, solution));
     }
 
-    private static string? FormatMemberHandoff(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity)
+    private static string? FormatMemberHandoff(
+        ISymbol symbol,
+        AnalysisSymbolIdentity? handoffIdentity,
+        Solution solution)
     {
         if (handoffIdentity is null || symbol.IsImplicitlyDeclared || !symbol.Locations.Any(location => location.IsInSource))
             return null;
-        var internalId = handoffIdentity.FormatHandoff(symbol);
+        var sourceTree = symbol.Locations.First(location => location.IsInSource).SourceTree;
+        var projectId = sourceTree is null ? null : solution.GetDocument(sourceTree)?.Project.Id;
+        var internalId = projectId is null
+            ? handoffIdentity.FormatHandoff(symbol)
+            : handoffIdentity.FormatHandoff(symbol, projectId);
         return string.IsNullOrWhiteSpace(internalId) ? null : internalId;
     }
 
