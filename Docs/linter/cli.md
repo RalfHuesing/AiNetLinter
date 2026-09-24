@@ -163,6 +163,16 @@ Sie sind statische Hinweise und ändern das Gate-Verdict, den Score und die
 Verstoßzahl nicht. Test-only bedeutet, dass keine produktive statische Referenz
 gefunden wurde; die angezeigten Testreferenzen bleiben sichtbar.
 
+Die API-Policy für Dead-Code-Prüfungen verwendet standardmäßig
+`DeadCode.DefaultApiSurface: "closed_solution"`. Damit werden auch öffentlich
+sichtbare Symbole geprüft und entsprechende Kandidaten mit niedriger Confidence
+ausgegeben. Für Projekte mit externen API-Nutzern kann der Wert auf
+`external_library` gesetzt werden. Das frühere Literal `unknown` wird beim
+Laden als `closed_solution` migriert; neue Konfigurationen verwenden nur
+`closed_solution` oder `external_library`. Andere ungültige Werte führen für
+betroffene produktive Kandidatenprojekte zu
+`DEAD_CODE_API_SURFACE_NOT_CONFIGURED`.
+
 Vor einer Entfernung sind Reflection, DI, Generatoren, `dynamic`, Markup und
 Konfiguration sowie externe Consumer gegenzuprüfen. Ein Kandidat ist keine
 Löschentscheidung.

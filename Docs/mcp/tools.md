@@ -572,6 +572,15 @@ unentscheidbare Referenzstellen hin; `unavailable` enthält unbekannte Zähler u
 eine knappe Ursache. Auch bei gekürzten Einträgen bleibt diese Zusammenfassung
 erhalten. `deadCodeHint` erscheint genau einmal, wenn Kandidaten existieren.
 
+Die API-Policy ist standardmäßig `DeadCode.DefaultApiSurface=closed_solution`;
+damit werden auch extern sichtbare Symbole geprüft und bei fehlender produktiver
+statischer Referenz mit niedriger Confidence ausgegeben. `external_library`
+schützt extern sichtbare Typen und Member. Das frühere Literal `unknown` wird
+beim Laden als `closed_solution` normalisiert. Andere ungültige Werte erzeugen
+vor der Gate-Analyse `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` für die betroffenen
+produktiven Kandidatenprojekte. Ein nicht gesetzter Projekt-Override erbt den
+globalen Default.
+
 Dead-Code-Einträge stehen vor Magic-Value-Advisories und enthalten einen
 `symbolIdentifier` im kanonischen `h:...`-Format für `find_references`, den
 Deklarationspfad mit Zeile, `usage=test_only|unreferenced`, Confidence und

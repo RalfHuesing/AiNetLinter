@@ -846,17 +846,18 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 
 ### Dead-Code-API-Oberfläche
 
-`DeadCode.DefaultApiSurface` legt die API-Policy für Projekte ohne passenden Projekt-Override fest. Der Produktdefault ist `unknown`; `verify` verlangt dann vor jeder Gate-Analyse eine ausdrückliche Projekteinstufung. Erlaubte operative Werte sind `closed_solution` und `external_library`.
+`DeadCode.DefaultApiSurface` legt die API-Policy für Projekte ohne passenden Projekt-Override fest. Der Produktdefault ist `closed_solution`; fehlt die Property, prüft `verify` auch öffentlich sichtbare APIs als Dead-Code-Kandidaten. Für Bibliotheken mit externen Nutzern kann `external_library` ausdrücklich gesetzt werden.
 
 - `external_library` schützt semantisch extern sichtbare Typen und Member vor Dead-Code-Kandidaten. Sichtbarkeit berücksichtigt auch die enthaltende Typkette.
 - `closed_solution` prüft auch öffentliche APIs. Kandidaten auf extern sichtbaren Symbolen erhalten `low` confidence.
-- `unknown`, fehlende Werte und ungültige Schreibweisen brechen `verify` mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab.
+- `unknown` wird beim Laden der Konfiguration als Legacy-Wert zu `closed_solution` normalisiert. Neue Konfigurationen verwenden ausschließlich `closed_solution` oder `external_library`.
+- Andere ungültige Schreibweisen brechen `verify` für betroffene produktive Kandidatenprojekte mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab. Fehlende globale Werte erhalten den Produktdefault. Ein fehlendes oder `null`-Projekt-Override erbt den globalen Wert.
 
 Ein Projekt-Override ersetzt den globalen Wert. Die erste passende `ProjectOverrides`-Zeile gewinnt; ein Override ohne `DeadCode.ApiSurface` erbt den Default. `PathOverrides` haben keinen Einfluss auf diese Projektentscheidung.
 
 ```json
 {
-  "DeadCode": { "DefaultApiSurface": "unknown" },
+  "DeadCode": { "DefaultApiSurface": "closed_solution" },
   "ProjectOverrides": {
     "PublicSdk": { "DeadCode": { "ApiSurface": "external_library" } },
     "Application": { "DeadCode": { "ApiSurface": "closed_solution" } }
@@ -864,7 +865,7 @@ Ein Projekt-Override ersetzt den globalen Wert. Die erste passende `ProjectOverr
 }
 ```
 
-Die mitgelieferte `ainetlinter-rules.json` setzt `closed_solution` ausdrücklich für diese Solution. Das ändert den Produktdefault für andere Konfigurationen nicht.
+Die mitgelieferte `ainetlinter-rules.json` setzt `closed_solution` ausdrücklich für diese Solution; der Wert entspricht zugleich dem Produktdefault.
 
 ### StaticTestSentinel-Konfiguration
 

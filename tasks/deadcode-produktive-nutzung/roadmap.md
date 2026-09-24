@@ -1,6 +1,13 @@
 # Roadmap: Dead Code nach produktiver Nutzung beurteilen
 
-Verbindlicher Vertrag: [Konzept.md](Konzept.md). Die Punkte werden
+> **Nachtrag nach Commit `396e6795`:** Punkt 2 dokumentiert die ursprüngliche
+> Umsetzung mit `unknown` als Pflichtentscheidung. Der aktuelle Produktdefault
+> ist `closed_solution`; `unknown` wird als Legacy-Wert beim Laden dorthin
+> migriert. Der damalige Umsetzungsumfang bleibt als Verlauf erhalten.
+
+Ursprünglicher fachlicher Vertrag: [Konzept.md](Konzept.md). Für das aktuell
+implementierte Verhalten gilt [Docs/linter/configuration.md](../../Docs/linter/configuration.md).
+Die Punkte werden
 seriell bearbeitet. Jeder Umsetzungspunkt ist eine Agent-Session:
 Ist-Stand mit AiNetLinter-MCP prüfen, eigene Änderungen samt
 Verhaltenstests abschließen, die Gates nach

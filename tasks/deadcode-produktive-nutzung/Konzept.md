@@ -5,6 +5,15 @@ execution_mode: autonomous
 
 # Konzept: Dead Code nach produktiver Nutzung beurteilen
 
+> **Implementierungsnachtrag (Commit `396e6795`):** Dieses Konzept hält die
+> ursprüngliche Designentscheidung fest. Der damals vorgesehene Pflichtwert
+> `unknown` und der Abbruch bei fehlender Einordnung wurden später geändert:
+> Der Produktdefault ist jetzt `closed_solution`, und das Legacy-Literal
+> `unknown` wird beim Laden als `closed_solution` normalisiert. Effektive
+> Optionen für neue Konfigurationen sind `closed_solution` und
+> `external_library`. Verbindliche aktuelle Nutzerdokumentation steht in
+> [Docs/linter/configuration.md](../../Docs/linter/configuration.md).
+
 ## Intention
 
 AiNetLinter soll im **einen bestehenden MCP-Aufruf `verify`** Produktionscode
