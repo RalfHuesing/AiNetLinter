@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Konzept: Konstruktor-Handoffs
@@ -31,7 +31,3 @@ Die [Rot-Tests](../../src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/Constructo
 ## Verifikation
 
 Die Regressionstests verwenden die tatsächlich ausgegebene Handoff-ID als Eingabe, nicht eine aus Namen nachgebaute ID. Die vorhandenen Rot-Tests prüfen Konstruktor-Signatur und passende Aufrufstelle; bei einer späteren Korrektur sind außerdem die Fehlerfälle für nicht vorhandene und veraltete Handoffs sowie die bestehenden Build-, Verify- und FastTests-Gates zu prüfen. Der aktuelle rote Teststand ist der vom Nutzer beauftragte Reproduktionsschritt, kein abgeschlossenes Quality-Gate.
-
-## Arbeitsgedächtnis (nur Draft)
-
-**Offene Scope-Entscheidung:** Empfehlung: den bestätigten Konstruktor-Handoff-Defekt beheben und andere Symbolarten nur als Gegenprobe absichern. Eine Ausweitung auf komplexe Signaturen allgemein erfordert zusätzliche reproduzierte Fälle und vergrößert den Prüfbereich. Die Dead-Code-Klassifikation bleibt eine separate Aufgabe.
