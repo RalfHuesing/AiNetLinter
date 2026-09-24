@@ -22,9 +22,9 @@ public static class ConfigNormalizer
         var patterns = NormalizeClassNamePatterns(testSentinel.ClassNamePatterns);
         var fileFilters = config.FileFilters ?? new FileFiltersConfig();
         var global = config.Global ?? new GlobalConfig();
-        var deadCode = NormalizeDeadCode(config.DeadCode ?? new DeadCodeConfig());
-        var projectOverrides = NormalizeOverrides(config.ProjectOverrides);
-        var pathOverrides = NormalizeOverrides(config.PathOverrides);
+        var deadCode = config.DeadCode ?? new DeadCodeConfig();
+        var projectOverrides = config.ProjectOverrides ?? new Dictionary<string, ProjectOverrideEntry>();
+        var pathOverrides = config.PathOverrides ?? new Dictionary<string, ProjectOverrideEntry>();
 
         return config with
         {
@@ -39,33 +39,6 @@ public static class ConfigNormalizer
             ProjectOverrides = projectOverrides,
             PathOverrides = pathOverrides,
         };
-    }
-
-    private static DeadCodeConfig NormalizeDeadCode(DeadCodeConfig deadCode) =>
-        deadCode.DefaultApiSurface is "unknown"
-            ? deadCode with { DefaultApiSurface = "closed_solution" }
-            : deadCode;
-
-    private static IReadOnlyDictionary<string, ProjectOverrideEntry> NormalizeOverrides(
-        IReadOnlyDictionary<string, ProjectOverrideEntry>? overrides)
-    {
-        if (overrides is null || overrides.Count == 0)
-            return overrides ?? new Dictionary<string, ProjectOverrideEntry>();
-
-        Dictionary<string, ProjectOverrideEntry>? normalized = null;
-        foreach (var pair in overrides)
-        {
-            var deadCode = pair.Value.DeadCode;
-            if (deadCode?.ApiSurface is not "unknown") continue;
-
-            normalized ??= new Dictionary<string, ProjectOverrideEntry>(overrides);
-            normalized[pair.Key] = pair.Value with
-            {
-                DeadCode = deadCode with { ApiSurface = "closed_solution" },
-            };
-        }
-
-        return normalized ?? overrides;
     }
 
     private static IReadOnlyList<string> NormalizeClassNamePatterns(IReadOnlyList<string>? patterns)

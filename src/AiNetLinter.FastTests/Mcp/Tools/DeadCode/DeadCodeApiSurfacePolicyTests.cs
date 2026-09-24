@@ -104,7 +104,30 @@ public sealed class DeadCodeApiSurfacePolicyTests
     }
 
     [Fact]
-    public void ConfigLoader_DefaultsApiSurfaceAndMapsLegacyUnknownWhilePreservingInvalidValues()
+    public void ValidateApiSurface_ReportsUnknownProjectOverrideAsInvalid()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\UnknownApiSurfaceOverride.slnx",
+            new ProjectSpec("Alpha", [("Alpha.cs", "public sealed class Alpha { }")], VirtualProjectDirectory: "."),
+            new ProjectSpec("Zeta", [("Zeta.cs", "public sealed class Zeta { }")], VirtualProjectDirectory: "."));
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            DeadCode = new DeadCodeConfig { DefaultApiSurface = "closed_solution" },
+            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
+            {
+                ["Alpha"] = new() { DeadCode = new DeadCodeConfigOverride { ApiSurface = "unknown" } },
+            },
+        };
+
+        var issue = Assert.Single(DeadCodeAdvisoryScanner.ValidateApiSurface(solution.Solution, null, config));
+
+        Assert.Equal("Alpha", issue.ProjectName);
+        Assert.Equal("ProjectOverrides.Alpha.DeadCode.ApiSurface", issue.FieldPath);
+        Assert.Equal("unknown", issue.Value);
+    }
+
+    [Fact]
+    public void ConfigLoader_DefaultsApiSurfaceAndPreservesInvalidPolicies()
     {
         using var directory = TestTempDirectory.Create("dead-code-api-config-");
         var path = directory.CreateFile("ainetlinter-rules.json", "{\"Global\":{},\"Metrics\":{}}");
@@ -115,18 +138,20 @@ public sealed class DeadCodeApiSurfacePolicyTests
         var serialized = ConfigSyncer.Serialize(missing);
         Assert.Contains("\"DeadCode\"", serialized);
 
-        var legacyPath = directory.CreateFile("legacy.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"unknown\"},\"ProjectOverrides\":{\"Sdk*\":{\"DeadCode\":{\"ApiSurface\":\"unknown\"}}}}");
-        var legacy = ConfigLoader.TryLoadConfig(legacyPath, isRequired: false);
-
-        Assert.Equal("closed_solution", legacy!.DeadCode.DefaultApiSurface);
-        Assert.Equal("closed_solution", ProjectConfigResolver.ResolveForProject("SdkClient", legacy).DeadCode.DefaultApiSurface);
-        Assert.True(DeadCodeApiSurfacePolicy.IsKnown(legacy.DeadCode.DefaultApiSurface));
-
-        var invalidPath = directory.CreateFile("invalid.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"Closed_Solution\"}}");
+        var invalidPath = directory.CreateFile("invalid.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"unknown\"},\"ProjectOverrides\":{\"Sdk*\":{\"DeadCode\":{\"ApiSurface\":\"unknown\"}}},\"PathOverrides\":{\"src/**\":{\"DeadCode\":{\"ApiSurface\":\"unknown\"}}}}");
         var invalid = ConfigLoader.TryLoadConfig(invalidPath, isRequired: false);
 
-        Assert.Equal("Closed_Solution", invalid!.DeadCode.DefaultApiSurface);
+        Assert.Equal("unknown", invalid!.DeadCode.DefaultApiSurface);
         Assert.False(DeadCodeApiSurfacePolicy.IsKnown(invalid.DeadCode.DefaultApiSurface));
+        Assert.Equal("unknown", ProjectConfigResolver.ResolveForProject("SdkClient", invalid).DeadCode.DefaultApiSurface);
+        Assert.Equal("unknown", invalid.ProjectOverrides["Sdk*"].DeadCode!.ApiSurface);
+        Assert.Equal("unknown", invalid.PathOverrides!["src/**"].DeadCode!.ApiSurface);
+
+        var typoPath = directory.CreateFile("typo.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"Closed_Solution\"}}");
+        var typo = ConfigLoader.TryLoadConfig(typoPath, isRequired: false);
+
+        Assert.Equal("Closed_Solution", typo!.DeadCode.DefaultApiSurface);
+        Assert.False(DeadCodeApiSurfacePolicy.IsKnown(typo.DeadCode.DefaultApiSurface));
     }
 
     [Fact]
@@ -142,7 +167,7 @@ public sealed class DeadCodeApiSurfacePolicyTests
                 null,
                 Config: TestHelper.CreateDefaultConfig() with
                 {
-                    DeadCode = new DeadCodeConfig { DefaultApiSurface = "closed_Soluton" },
+                    DeadCode = new DeadCodeConfig { DefaultApiSurface = "unknown" },
                 },
                 ReadOnlySolutionSnapshot: solution.Solution)));
 
