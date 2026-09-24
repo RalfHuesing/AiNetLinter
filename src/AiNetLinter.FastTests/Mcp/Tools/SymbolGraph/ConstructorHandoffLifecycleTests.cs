@@ -21,13 +21,14 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 public sealed class ConstructorHandoffLifecycleTests
 {
     [Theory]
-    [InlineData("Overloaded", "Overloaded.Overloaded()", 20)]
-    [InlineData("Overloaded", "Overloaded.Overloaded(string label)", 21)]
-    [InlineData("Parameterless", "Parameterless.Parameterless()", 22)]
-    [InlineData("Positional", "Positional.Positional(string Name)", 23)]
+    [InlineData("Overloaded", "Overloaded.Overloaded()", "Overloaded.Overloaded()", 20)]
+    [InlineData("Overloaded", "Overloaded.Overloaded(string label)", "Overloaded.Overloaded(string)", 21)]
+    [InlineData("Parameterless", "Parameterless.Parameterless()", "Parameterless.Parameterless()", 22)]
+    [InlineData("Positional", "Positional.Positional(string Name)", "Positional.Positional(string)", 23)]
     public async Task GetClassStructureConstructorHandoffs_AreReusableByCommonFollowUpTools(
         string typeName,
-        string signature,
+        string classStructureSignature,
+        string resolvedSignature,
         int callSiteLine)
     {
         using var scenario = RoslynTestSolutionFactory.CreateSolution(
@@ -64,20 +65,21 @@ public sealed class ConstructorHandoffLifecycleTests
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
 
-        await AssertConstructorHandoffWorksAsync(state, typeName, signature, callSiteLine);
+        await AssertConstructorHandoffWorksAsync(state, typeName, classStructureSignature, resolvedSignature, callSiteLine);
     }
 
     private static async Task AssertConstructorHandoffWorksAsync(
         McpCodeGraphServer state,
         string typeName,
-        string signature,
+        string classStructureSignature,
+        string resolvedSignature,
         int callSiteLine)
     {
         var structure = await GetClassStructureTool.ExecuteAsync(state, $"TestNs.{typeName}", "name", CancellationToken.None);
         var structureText = TextOf(structure);
         var row = structureText.Split('\n').SingleOrDefault(line =>
             line.StartsWith("| Constructor | .ctor |", StringComparison.Ordinal)
-            && line.Contains(signature, StringComparison.Ordinal));
+            && line.Contains(classStructureSignature, StringComparison.Ordinal));
         Assert.True(row is not null, structureText);
 
         var handoffId = Regex.Match(row!, @"handoffId: `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant)
@@ -93,9 +95,9 @@ public sealed class ConstructorHandoffLifecycleTests
         var expectedCallSite = $"Constructors.cs:{callSiteLine}";
         var failures = new[]
         {
-            FollowUpFailure(references, handoffId, "find_references", expectedCallSite, "Consumer.Use"),
-            FollowUpFailure(body, handoffId, "get_symbol_body", signature),
-            FollowUpFailure(context, handoffId, "get_feature_context", signature, expectedCallSite, "Consumer.Use")
+            FollowUpFailure(references, handoffId, "find_references", expectedCallSite, "..ctor"),
+            FollowUpFailure(body, handoffId, "get_symbol_body", resolvedSignature),
+            FollowUpFailure(context, handoffId, "get_feature_context", resolvedSignature, expectedCallSite, "Consumer.Use")
         }.Where(failure => failure is not null).ToArray();
         Assert.True(failures.Length == 0, string.Join(Environment.NewLine, failures));
     }

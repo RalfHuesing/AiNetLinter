@@ -10,7 +10,6 @@ using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
 
@@ -199,7 +198,7 @@ internal static class SymbolIdentifierResolver
         {
             if (selectedProjectId is { } projectId && project.Id.Id != projectId) continue;
             matches.AddRange(await FindProjectExactStableIdsAsync(
-                project, stableId, normalizedStableId, assemblyCandidates, ct).ConfigureAwait(false));
+                project, normalizedStableId, ct).ConfigureAwait(false));
             if (assemblyCandidates is not null)
             {
                 await CollectProjectAssemblyCandidatesAsync(project, assemblyCandidates, ct).ConfigureAwait(false);
@@ -211,28 +210,16 @@ internal static class SymbolIdentifierResolver
 
     private static async Task<IReadOnlyList<ISymbol>> FindProjectExactStableIdsAsync(
         Project project,
-        string stableId,
         string normalizedStableId,
-        ICollection<ISymbol>? assemblyCandidates,
         CancellationToken ct)
     {
-        var declared = await SymbolFinder.FindSourceDeclarationsAsync(
-            project, name => true, SymbolFilter.TypeAndMember, ct).ConfigureAwait(false);
-        var matches = new List<ISymbol>();
-        foreach (var symbol in declared)
-        {
-            var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
-            if (declarationId == stableId || NormalizeDocCommentId(declarationId ?? string.Empty) == normalizedStableId)
-            {
-                matches.Add(symbol);
-            }
-            else if (assemblyCandidates is not null)
-            {
-                assemblyCandidates.Add(symbol);
-            }
-        }
+        var compilation = await project.GetCompilationAsync(ct).ConfigureAwait(false);
+        if (compilation is null) return Array.Empty<ISymbol>();
 
-        return matches;
+        return DocumentationCommentId.GetSymbolsForDeclarationId(normalizedStableId, compilation)
+            .Where(symbol => symbol.Locations.Any(location => location.IsInSource))
+            .Distinct(SymbolEqualityComparer.Default)
+            .ToArray();
     }
 
     private static async Task CollectProjectAssemblyCandidatesAsync(
