@@ -167,9 +167,10 @@ Die API-Policy für Dead-Code-Prüfungen verwendet standardmäßig
 `DeadCode.DefaultApiSurface: "closed_solution"`. Damit werden auch öffentlich
 sichtbare Symbole geprüft und entsprechende Kandidaten mit niedriger Confidence
 ausgegeben. Für Projekte mit externen API-Nutzern kann der Wert auf
-`external_library` gesetzt werden. Das frühere Literal `unknown` wird beim
-Laden als `closed_solution` migriert; neue Konfigurationen verwenden nur
-`closed_solution` oder `external_library`. Andere ungültige Werte führen für
+`external_library` gesetzt werden. Gültig sind ausschließlich
+`closed_solution` und `external_library`; ein fehlender Wert verwendet den
+Default `closed_solution`. Ein explizites `unknown` wird nicht migriert und ist
+wie jeder andere ungültige Wert. Ungültige Werte führen für
 betroffene produktive Kandidatenprojekte zu
 `DEAD_CODE_API_SURFACE_NOT_CONFIGURED`.
 

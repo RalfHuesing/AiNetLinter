@@ -1,11 +1,10 @@
 # Audit: Dead Code nach produktiver Nutzung beurteilen
 
-> **Nachtrag nach Commit `396e6795`:** Die hier geprüfte API-Policy wurde
-> anschließend angepasst. `closed_solution` ist jetzt der Produktdefault und
-> das Legacy-Literal `unknown` wird beim Laden dorthin normalisiert. Die
-> ursprüngliche Audit-Evidenz unten bezieht sich auf den damals geprüften
-> Implementierungsstand; sie wird durch diesen Nachtrag nicht rückwirkend
-> umgedeutet.
+> **Aktueller Implementierungsstand:** Das damalige Audit bezog sich auf die
+> Policy mit Pflichtwert `unknown`; diese Evidenz bleibt historisch. Aktuell
+> verwendet ein fehlender Wert `closed_solution`. Gültig sind ausschließlich
+> `closed_solution` und `external_library`; explizites `unknown` ist ungültig
+> und wird nicht migriert.
 
 ## Ergebnis
 

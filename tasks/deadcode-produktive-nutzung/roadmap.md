@@ -1,9 +1,10 @@
 # Roadmap: Dead Code nach produktiver Nutzung beurteilen
 
-> **Nachtrag nach Commit `396e6795`:** Punkt 2 dokumentiert die ursprüngliche
-> Umsetzung mit `unknown` als Pflichtentscheidung. Der aktuelle Produktdefault
-> ist `closed_solution`; `unknown` wird als Legacy-Wert beim Laden dorthin
-> migriert. Der damalige Umsetzungsumfang bleibt als Verlauf erhalten.
+> **Aktueller Implementierungsstand:** Punkt 2 hält den damaligen Entwurf mit
+> `unknown` als Pflichtentscheidung fest. Im aktuellen Code ist `unknown`
+> keine gültige Dead-Code-API-Policy und wird nicht migriert. Ein fehlender
+> Wert verwendet `closed_solution`; gültig sind `closed_solution` und
+> `external_library`.
 
 Ursprünglicher fachlicher Vertrag: [Konzept.md](Konzept.md). Für das aktuell
 implementierte Verhalten gilt [Docs/linter/configuration.md](../../Docs/linter/configuration.md).

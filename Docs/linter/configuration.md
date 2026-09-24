@@ -850,8 +850,8 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 
 - `external_library` schützt semantisch extern sichtbare Typen und Member vor Dead-Code-Kandidaten. Sichtbarkeit berücksichtigt auch die enthaltende Typkette.
 - `closed_solution` prüft auch öffentliche APIs. Kandidaten auf extern sichtbaren Symbolen erhalten `low` confidence.
-- `unknown` wird beim Laden der Konfiguration als Legacy-Wert zu `closed_solution` normalisiert. Neue Konfigurationen verwenden ausschließlich `closed_solution` oder `external_library`.
-- Andere ungültige Schreibweisen brechen `verify` für betroffene produktive Kandidatenprojekte mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab. Fehlende globale Werte erhalten den Produktdefault. Ein fehlendes oder `null`-Projekt-Override erbt den globalen Wert.
+- Gültige Werte sind ausschließlich `closed_solution` und `external_library`. Ein explizit gesetzter anderer Wert, einschließlich `unknown`, ist ungültig und bricht `verify` für betroffene produktive Kandidatenprojekte mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab.
+- Fehlt die globale Property, gilt der Produktdefault `closed_solution`. Ein fehlendes oder `null`-Projekt-Override erbt den globalen Wert.
 
 Ein Projekt-Override ersetzt den globalen Wert. Die erste passende `ProjectOverrides`-Zeile gewinnt; ein Override ohne `DeadCode.ApiSurface` erbt den Default. `PathOverrides` haben keinen Einfluss auf diese Projektentscheidung.
 
