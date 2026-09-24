@@ -14,6 +14,8 @@ Die [Task-Evidenz](01-Konstruktor-Handoffs.md) zeigt `SYMBOL_NOT_FOUND` für meh
 
 Die produktive Referenz auf den Typ `DashboardQuery` in `DashboardService.cs` belegt für sich genommen keinen Aufruf seines Konstruktors. Ob das zugehörige `test_only`-Advisory falsch ist, bleibt eine eigenständige Symbolprüfung; der Handoff-Fehler darf nicht als Beleg dafür dienen.
 
+Die [Rot-Tests](../../src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/ConstructorHandoffLifecycleTests.cs) erzeugen Handoffs für vier Konstruktorfälle aus `get_class_structure` und reichen sie unverändert an alle drei Folgetools weiter. Der Build ist grün; der gezielte Testlauf ist in allen vier Fällen erwartungsgemäß rot, weil jedes Folgetool `SYMBOL_NOT_FOUND` meldet. Die Tests bleiben für die spätere Korrektur im Code.
+
 ## Muss
 
 - Von MCP ausgegebene Handoffs für explizite Konstruktoren mit und ohne Parameter sowie für den primären Konstruktor eines positional Records unverändert in `find_references`, `get_symbol_body` und `get_feature_context` verwenden können. Alle drei lösen dieselbe Konstruktor-Identität auf.
@@ -28,7 +30,7 @@ Die produktive Referenz auf den Typ `DashboardQuery` in `DashboardService.cs` be
 
 ## Verifikation
 
-Die Regressionstests verwenden die tatsächlich ausgegebene Handoff-ID als Eingabe, nicht eine aus Namen nachgebaute ID. Sie prüfen Treffer und Konstruktor-Signatur getrennt von Typreferenzen sowie den Fehlerfall eines nicht vorhandenen Symbols. Die verbindlichen Build-, Verify- und FastTests-Gates folgen `.agents/rules/AiNetLinter-Richtlinien.mdc`; für den Konzeptschritt selbst sind keine Code-Gates vorgesehen.
+Die Regressionstests verwenden die tatsächlich ausgegebene Handoff-ID als Eingabe, nicht eine aus Namen nachgebaute ID. Die vorhandenen Rot-Tests prüfen Konstruktor-Signatur und passende Aufrufstelle; bei einer späteren Korrektur sind außerdem die Fehlerfälle für nicht vorhandene und veraltete Handoffs sowie die bestehenden Build-, Verify- und FastTests-Gates zu prüfen. Der aktuelle rote Teststand ist der vom Nutzer beauftragte Reproduktionsschritt, kein abgeschlossenes Quality-Gate.
 
 ## Arbeitsgedächtnis (nur Draft)
 
