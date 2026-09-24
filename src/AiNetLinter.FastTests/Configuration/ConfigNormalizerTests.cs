@@ -30,11 +30,11 @@ public sealed class ConfigNormalizerTests
     }
 
     [Fact]
-    public void Normalize_RestoresUnknownDeadCodePolicy_WhenSectionIsNull()
+    public void Normalize_RestoresClosedSolutionDeadCodePolicy_WhenSectionIsNull()
     {
         var normalized = ConfigNormalizer.Normalize(CreateBaseConfig() with { DeadCode = null! });
 
-        Assert.Equal("unknown", normalized.DeadCode.DefaultApiSurface);
+        Assert.Equal("closed_solution", normalized.DeadCode.DefaultApiSurface);
     }
 
     [Fact]

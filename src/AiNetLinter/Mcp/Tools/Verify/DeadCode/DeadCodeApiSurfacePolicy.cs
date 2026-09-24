@@ -10,7 +10,7 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 internal static class DeadCodeApiSurfacePolicy
 {
-    internal static bool IsKnown(string? value) => value is "unknown" or "closed_solution" or "external_library";
+    internal static bool IsKnown(string? value) => value is "closed_solution" or "external_library";
 
     internal static bool IsExternallyVisible(ISymbol symbol)
     {

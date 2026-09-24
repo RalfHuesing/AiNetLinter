@@ -81,7 +81,7 @@ public sealed class DeadCodeApiSurfacePolicyTests
     }
 
     [Fact]
-    public void ValidateApiSurface_ReportsAllCandidateProjectsInStableOrderAndExcludesTests()
+    public void ValidateApiSurface_ReportsInvalidPolicyForAllCandidateProjectsInStableOrder()
     {
         using var solution = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\Preflight.slnx",
@@ -92,25 +92,35 @@ public sealed class DeadCodeApiSurfacePolicyTests
         var issues = DeadCodeAdvisoryScanner.ValidateApiSurface(
             solution.Solution,
             scopeFiles: null,
-            TestHelper.CreateDefaultConfig());
+            TestHelper.CreateDefaultConfig() with
+            {
+                DeadCode = new DeadCodeConfig { DefaultApiSurface = "Closed_Solution" },
+            });
 
         Assert.Collection(issues,
             issue => Assert.Equal("Alpha", issue.ProjectName),
             issue => Assert.Equal("Zeta", issue.ProjectName));
-        Assert.All(issues, issue => Assert.Equal("unknown", issue.Value));
+        Assert.All(issues, issue => Assert.Equal("Closed_Solution", issue.Value));
     }
 
     [Fact]
-    public void ConfigLoader_MissingAndInvalidApiSurfaceRemainDistinguishableForPreflight()
+    public void ConfigLoader_DefaultsApiSurfaceAndMapsLegacyUnknownWhilePreservingInvalidValues()
     {
         using var directory = TestTempDirectory.Create("dead-code-api-config-");
         var path = directory.CreateFile("ainetlinter-rules.json", "{\"Global\":{},\"Metrics\":{}}");
 
         var missing = ConfigLoader.TryLoadConfig(path, isRequired: false);
 
-        Assert.Equal("unknown", missing!.DeadCode.DefaultApiSurface);
+        Assert.Equal("closed_solution", missing!.DeadCode.DefaultApiSurface);
         var serialized = ConfigSyncer.Serialize(missing);
         Assert.Contains("\"DeadCode\"", serialized);
+
+        var legacyPath = directory.CreateFile("legacy.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"unknown\"},\"ProjectOverrides\":{\"Sdk*\":{\"DeadCode\":{\"ApiSurface\":\"unknown\"}}}}");
+        var legacy = ConfigLoader.TryLoadConfig(legacyPath, isRequired: false);
+
+        Assert.Equal("closed_solution", legacy!.DeadCode.DefaultApiSurface);
+        Assert.Equal("closed_solution", ProjectConfigResolver.ResolveForProject("SdkClient", legacy).DeadCode.DefaultApiSurface);
+        Assert.True(DeadCodeApiSurfacePolicy.IsKnown(legacy.DeadCode.DefaultApiSurface));
 
         var invalidPath = directory.CreateFile("invalid.json", "{\"Global\":{},\"Metrics\":{},\"DeadCode\":{\"DefaultApiSurface\":\"Closed_Solution\"}}");
         var invalid = ConfigLoader.TryLoadConfig(invalidPath, isRequired: false);
@@ -130,7 +140,10 @@ public sealed class DeadCodeApiSurfacePolicyTests
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
                 null,
-                Config: TestHelper.CreateDefaultConfig(),
+                Config: TestHelper.CreateDefaultConfig() with
+                {
+                    DeadCode = new DeadCodeConfig { DefaultApiSurface = "closed_Soluton" },
+                },
                 ReadOnlySolutionSnapshot: solution.Solution)));
 
         var result = await VerifyTool.ExecuteAsync(server, VerifyScope.Solution, CancellationToken.None);

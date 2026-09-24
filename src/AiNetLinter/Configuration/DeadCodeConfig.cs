@@ -5,8 +5,8 @@ namespace AiNetLinter.Configuration;
 /// <summary>Konfiguration der projektbezogenen Dead-Code-Analyse.</summary>
 public sealed record DeadCodeConfig
 {
-    /// <summary>Externe API-Oberflaeche; fehlende Angaben bleiben bewusst unentschieden.</summary>
-    public string? DefaultApiSurface { get; init; } = "unknown";
+    /// <summary>API-Oberflaeche fuer Projekte ohne passendes Override.</summary>
+    public string? DefaultApiSurface { get; init; } = "closed_solution";
 }
 
 /// <summary>Projektbezogene Ueberschreibung der Dead-Code-Policy.</summary>
