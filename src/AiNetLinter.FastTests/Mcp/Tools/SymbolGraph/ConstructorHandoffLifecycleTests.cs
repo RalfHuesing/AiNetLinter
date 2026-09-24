@@ -21,13 +21,14 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 public sealed class ConstructorHandoffLifecycleTests
 {
     [Theory]
-    [InlineData("Overloaded", "Overloaded.Overloaded()")]
-    [InlineData("Overloaded", "Overloaded.Overloaded(string label)")]
-    [InlineData("Parameterless", "Parameterless.Parameterless()")]
-    [InlineData("Positional", "Positional.Positional(string Name)")]
+    [InlineData("Overloaded", "Overloaded.Overloaded()", 20)]
+    [InlineData("Overloaded", "Overloaded.Overloaded(string label)", 21)]
+    [InlineData("Parameterless", "Parameterless.Parameterless()", 22)]
+    [InlineData("Positional", "Positional.Positional(string Name)", 23)]
     public async Task GetClassStructureConstructorHandoffs_AreReusableByCommonFollowUpTools(
         string typeName,
-        string signature)
+        string signature,
+        int callSiteLine)
     {
         using var scenario = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\ConstructorHandoffLifecycle.slnx",
@@ -63,13 +64,14 @@ public sealed class ConstructorHandoffLifecycleTests
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
 
-        await AssertConstructorHandoffWorksAsync(state, typeName, signature);
+        await AssertConstructorHandoffWorksAsync(state, typeName, signature, callSiteLine);
     }
 
     private static async Task AssertConstructorHandoffWorksAsync(
         McpCodeGraphServer state,
         string typeName,
-        string signature)
+        string signature,
+        int callSiteLine)
     {
         var structure = await GetClassStructureTool.ExecuteAsync(state, $"TestNs.{typeName}", "name", CancellationToken.None);
         var structureText = TextOf(structure);
@@ -88,21 +90,32 @@ public sealed class ConstructorHandoffLifecycleTests
         var context = await GetFeatureContextTool.ExecuteAsync(
             state, new FeatureContextOptions(handoffId), CancellationToken.None);
 
+        var expectedCallSite = $"Constructors.cs:{callSiteLine}";
         var failures = new[]
         {
-            FollowUpFailure(references, handoffId, "find_references"),
-            FollowUpFailure(body, handoffId, "get_symbol_body"),
-            FollowUpFailure(context, handoffId, "get_feature_context")
+            FollowUpFailure(references, handoffId, "find_references", expectedCallSite, "Consumer.Use"),
+            FollowUpFailure(body, handoffId, "get_symbol_body", signature),
+            FollowUpFailure(context, handoffId, "get_feature_context", signature, expectedCallSite, "Consumer.Use")
         }.Where(failure => failure is not null).ToArray();
         Assert.True(failures.Length == 0, string.Join(Environment.NewLine, failures));
     }
 
-    private static string? FollowUpFailure(CallToolResult result, string handoffId, string toolName)
+    private static string? FollowUpFailure(
+        CallToolResult result,
+        string handoffId,
+        string toolName,
+        params string[] expectedContent)
     {
         var text = TextOf(result);
-        return result.IsError is true || text.Contains("SYMBOL_NOT_FOUND", StringComparison.Ordinal)
-            ? $"{toolName} could not resolve emitted constructor handoff {handoffId}: {text}"
-            : null;
+        if (result.IsError is true || text.Contains("SYMBOL_NOT_FOUND", StringComparison.Ordinal))
+        {
+            return $"{toolName} could not resolve emitted constructor handoff {handoffId}: {text}";
+        }
+
+        var missing = expectedContent.Where(content => !text.Contains(content, StringComparison.Ordinal)).ToArray();
+        return missing.Length == 0
+            ? null
+            : $"{toolName} resolved {handoffId} but omitted [{string.Join(", ", missing)}]: {text}";
     }
 
     private static string TextOf(CallToolResult result) =>
