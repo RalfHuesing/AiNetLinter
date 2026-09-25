@@ -138,7 +138,8 @@ internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null,
     [property: JsonPropertyName("usage")] string Usage = "unreferenced",
     [property: JsonPropertyName("testReferences")] int TestReferences = 0,
-    [property: JsonPropertyName("internalSymbolIdentifier")] string? InternalSymbolIdentifier = null);
+    [property: JsonPropertyName("internalSymbolIdentifier")] string? InternalSymbolIdentifier = null,
+    [property: JsonIgnore] string? ProjectName = null);
 
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.

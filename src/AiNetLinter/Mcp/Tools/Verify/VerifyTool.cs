@@ -396,6 +396,7 @@ internal static partial class VerifyResponseFormatter
         int? truncatedBy = summary.Candidates is int candidates ? Math.Max(0, candidates - shown) : null;
         lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; testOnly={ToCount(summary.TestOnly)}; unreferenced={ToCount(summary.Unreferenced)}; apiProtected={ToCount(summary.ApiProtected)}; undecidable={ToCount(summary.Undecidable)}; shown={shown}; truncatedBy={ToCount(truncatedBy)}; next={(summary.Candidates is > 0 ? "review_now" : "none")}");
         if (summary.Candidates is > 0) lines.Add("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.");
+        if (truncatedBy is > 0) lines.Add("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)");
         if (summary.Cause is not null) lines.Add($"deadCodeCause: {summary.Cause}");
     }
 

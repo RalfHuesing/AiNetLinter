@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify;
@@ -16,6 +17,7 @@ using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
@@ -23,6 +25,25 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 [Trait("Category", "Component")]
 public sealed class VerifyAdvisoryProjectorTests
 {
+    [Fact]
+    public void GetVerifyAdvisories_EmptyScanReturnsContentOnlyWithoutClaimingClean()
+    {
+        var scan = new DeadCodeScanResult(
+            [],
+            new DeadCodeSummary(0, 0, 0, 0, 0, new Dictionary<string, int>()),
+            [],
+            new DeadCodeRecommendedNextAction("countercheck", "statische Grenzen prüfen"),
+            IsTruncated: false);
+
+        var result = GetVerifyAdvisoriesTool.Render(scan);
+
+        Assert.False(result.IsError == true);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("status=complete; candidates=0", text, StringComparison.Ordinal);
+        Assert.Contains("shown=0; truncatedBy=0", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("clean", text, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task CollectAsync_MultipleScopeFiles_AggregatesBothAdvisoryKinds()
     {
@@ -223,6 +244,34 @@ public sealed class VerifyAdvisoryProjectorTests
         Assert.Equal(
             DocumentationCommentId.CreateDeclarationId(projectSymbols[0]),
             DocumentationCommentId.CreateDeclarationId(projectSymbols[1]));
+
+        var scan = await DeadCodeAdvisoryScanner.ScanAsync(
+            testSolution.Solution,
+            new DeadCodeAdvisoryOptions(
+                Accessibility: DeadCodeAccessibilityFilter.All,
+                Confidence: DeadCodeConfidenceFilter.Both,
+                Kind: DeadCodeKindFilter.All,
+                IncludeTests: false,
+                Mode: DeadCodeMode.Members,
+                MaxResults: int.MaxValue,
+                HandoffIdentity: identity),
+            CancellationToken.None);
+        var compact = GetVerifyAdvisoriesTool.Render(scan);
+        var compactText = Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text;
+        Assert.Contains("project: First", compactText, StringComparison.Ordinal);
+        Assert.Contains("project: Second", compactText, StringComparison.Ordinal);
+        var compactIds = Regex.Matches(compactText, @"\bh:[A-Za-z0-9_-]+\b", RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(match => match.Value)
+            .ToArray();
+        Assert.Equal(4, compactIds.Length);
+        Assert.Equal(compactIds.Length, compactIds.Distinct(StringComparer.Ordinal).Count());
+
+        var partialScan = scan with { Summary = scan.Summary with { Undecidable = 1 } };
+        var partial = GetVerifyAdvisoriesTool.Render(partialScan);
+        var partialText = Assert.IsType<TextContentBlock>(Assert.Single(partial.Content)).Text;
+        Assert.True(partialText.StartsWith("status=partial;", StringComparison.Ordinal));
+        Assert.DoesNotContain("clean", partialText, StringComparison.OrdinalIgnoreCase);
 
         var result = await VerifyAdvisoryProjector.CollectAsync(
             testSolution.Solution,

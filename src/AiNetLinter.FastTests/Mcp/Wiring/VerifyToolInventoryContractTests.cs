@@ -36,6 +36,11 @@ public sealed class VerifyToolInventoryContractTests
         Assert.DoesNotContain("minScore", verify.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("maxResults", verify.InputSchema.ToString(), StringComparison.Ordinal);
 
+        var advisories = Assert.Single(tools.Where(pair => pair.Key == "get_verify_advisories")).Value.ProtocolTool;
+        Assert.Contains("category", advisories.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("dead_code", advisories.Description, StringComparison.Ordinal);
+        Assert.Contains("64 KiB", advisories.Description, StringComparison.Ordinal);
+
         var retiredNames = new[] { "safeguard", "get_violations", "find_magic_values", "find_dead_code" };
         foreach (var retiredName in retiredNames)
         {

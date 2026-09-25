@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using System;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Scope;
@@ -36,12 +37,36 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute = null)
     {
         AddVerify(tools, registry);
+        AddGetVerifyAdvisories(tools, registry);
         AddSearchPattern(tools, registry);
         AddMetricsTree(tools, registry, targetRoute);
         AddMetricsLookup(tools, registry, targetRoute);
         AddPatternDetect(tools, registry);
         AddGetFeatureContext(tools, registry);
         AddGetTestContext(tools, registry);
+    }
+
+    private static void AddGetVerifyAdvisories(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry)
+    {
+        tools.Add(McpServerTool.Create(
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string category, CancellationToken ct = default) =>
+            {
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
+                if (!string.Equals(category, GetVerifyAdvisoriesTool.DeadCodeCategory, StringComparison.Ordinal))
+                {
+                    return GetVerifyAdvisoriesTool.InvalidCategory(category);
+                }
+                if (!VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var targetError)) return VerifyResponseFormatter.Error(
+                    targetError!.Code, targetError.Message, targetError.Recovery, "$.targetPath");
+                return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
+                    GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, ct));
+            },
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool(
+                GetVerifyAdvisoriesTool.ToolName,
+                "Listet Dead-Code-Advisories einer Solution bis 64 KiB mit direkt nutzbaren Symbol-IDs und nennt ausgelassene Treffer. category: dead_code. Kandidaten vor Änderungen gegenprüfen.")));
     }
 
     private static void AddVerify(

@@ -90,7 +90,8 @@ internal static class DeadCodeAdvisoryDiagnosticsScanner
             Confidence: assessment.Confidence,
             Reason: assessment.Reason,
             LimitsApplies: [],
-            Countercheck: assessment.Countercheck);
+            Countercheck: assessment.Countercheck,
+            ProjectName: document.Project.Name);
 
         context.DeadSymbols.Add(entry);
         context.ScannedCount++;

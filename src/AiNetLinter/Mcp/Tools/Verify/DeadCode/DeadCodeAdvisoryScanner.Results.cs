@@ -57,7 +57,8 @@ internal static partial class DeadCodeAdvisoryScanner
             Countercheck: assessment.Countercheck,
             Usage: referenceAnalysis.TestReferenceCount > 0 ? "test_only" : "unreferenced",
             TestReferences: referenceAnalysis.TestReferenceCount,
-            InternalSymbolIdentifier: context.Args.HandoffIdentity?.FormatHandoff(symbol, document.Project.Id));
+            InternalSymbolIdentifier: context.Args.HandoffIdentity?.FormatHandoff(symbol, document.Project.Id),
+            ProjectName: document.Project.Name);
 
         context.DeadSymbols.Add(entry);
         if (context.ByKind.TryGetValue(kindStr, out var count)) context.ByKind[kindStr] = count + 1;

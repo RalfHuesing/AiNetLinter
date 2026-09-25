@@ -55,7 +55,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(29, tools.Count);
+        Assert.Equal(30, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -68,7 +68,13 @@ public sealed class WiringToolCollectionContractTests
                 Assert.DoesNotContain("targetPath", required);
                 Assert.Contains("targetPath", properties);
             }
-            else
+            if (tool.Name == "get_verify_advisories")
+            {
+                Assert.Contains("targetPath", required);
+                Assert.Contains("category", required);
+                Assert.Contains("targetPath", properties);
+            }
+            else if (tool.Name is not ("get_server_health" or "verify"))
             {
                 Assert.Contains("targetPath", required);
                 Assert.Contains("targetPath", properties);
@@ -255,6 +261,7 @@ public sealed class WiringToolCollectionContractTests
             ["resolve_type_origin"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_implementations"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["verify"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_verify_advisories"] = ToolAnnotationExpectation.ReadOnlyProfile,
         };
 
     private readonly record struct ToolAnnotationExpectation(

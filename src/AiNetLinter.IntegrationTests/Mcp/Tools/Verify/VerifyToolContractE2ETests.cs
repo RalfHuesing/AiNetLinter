@@ -17,7 +17,7 @@ using Xunit;
 namespace AiNetLinter.IntegrationTests.Mcp.Tools.Verify;
 
 [Trait("Category", "Integration")]
-public sealed class VerifyToolContractE2ETests
+public sealed partial class VerifyToolContractE2ETests
 {
     [Fact]
     public async Task Verify_ChangedCleanSource_ReturnsPassWithFixedGateSummary()
@@ -278,25 +278,28 @@ public sealed class VerifyToolContractE2ETests
         AssertVerifyResult(verify, expectedError: false, "verdict: pass", "deadCode: status=complete");
         var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
         var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
-        var candidates = ExtractSummaryCount(deadCodeSummary, "candidates");
-        Assert.Equal(candidateCount + 1, candidates);
+        var verifyCandidates = ExtractSummaryCount(deadCodeSummary, "candidates");
+        Assert.Equal(candidateCount + 1, verifyCandidates);
         var verifyShown = ExtractSummaryCount(deadCodeSummary, "shown");
         var verifyTruncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
         Assert.Equal(ExtractSymbolIdentifiers(verifyText).Count, verifyShown);
-        Assert.Equal(candidates - verifyShown, verifyTruncatedBy);
-        Assert.InRange(verifyShown, 1, candidates - 1);
+        Assert.Equal(verifyCandidates - verifyShown, verifyTruncatedBy);
+        Assert.InRange(verifyShown, 1, verifyCandidates - 1);
         Assert.Contains("next=review_now", deadCodeSummary, StringComparison.Ordinal);
+        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)", verifyText, StringComparison.Ordinal);
 
         Assert.Null(advisoryAttempt.Error);
+        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
+        var advisoryCandidates = ExtractSummaryCount(advisoryText.Split('\n')[0], "candidates");
+        Assert.True(advisoryCandidates >= verifyCandidates);
         AssertVerifyResult(advisoryAttempt.Result!, expectedError: false,
             "status=complete",
-            $"candidates={candidates}",
-            $"shown={candidates}",
+            $"candidates={advisoryCandidates}",
+            $"shown={advisoryCandidates}",
             "truncatedBy=0");
-        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
         Assert.True(Encoding.UTF8.GetByteCount(advisoryText) <= 65_536);
         var identifiers = ExtractHandoffIds(advisoryText);
-        Assert.Equal(candidates, identifiers.Count);
+        Assert.Equal(advisoryCandidates, identifiers.Count);
         Assert.Equal(identifiers.Count, identifiers.Distinct(StringComparer.Ordinal).Count());
 
         var candidateBodies = await host.CallToolAsync(
@@ -327,21 +330,23 @@ public sealed class VerifyToolContractE2ETests
         var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
         Assert.Contains("deadCode: status=complete", verifyText, StringComparison.Ordinal);
         var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
-        var candidates = ExtractSummaryCount(deadCodeSummary, "candidates");
-        Assert.InRange(candidates, 714, int.MaxValue);
+        var verifyCandidates = ExtractSummaryCount(deadCodeSummary, "candidates");
+        Assert.InRange(verifyCandidates, 714, int.MaxValue);
         Assert.True(verifyText.StartsWith("verdict: pass", StringComparison.Ordinal), verifyText);
 
         Assert.Null(advisoryAttempt.Error);
+        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
+        var advisoryCandidates = ExtractSummaryCount(advisoryText.Split('\n')[0], "candidates");
+        Assert.InRange(advisoryCandidates, verifyCandidates, int.MaxValue);
         AssertVerifyResult(advisoryAttempt.Result!, expectedError: false,
             "status=complete",
-            $"candidates={candidates}",
+            $"candidates={advisoryCandidates}",
             "truncatedBy=");
-        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
         Assert.InRange(Encoding.UTF8.GetByteCount(advisoryText), 1, 65_536);
         var shown = ExtractSummaryCount(advisoryText, "shown");
-        var truncatedBy = ExtractSummaryCount(advisoryText, "truncatedBy");
-        Assert.Equal(candidates, shown + truncatedBy);
-        Assert.InRange(shown, 1, candidates - 1);
+        var truncatedBy = ExtractSummaryCount(advisoryText.Split('\n')[0], "truncatedBy");
+        Assert.Equal(advisoryCandidates, shown + truncatedBy);
+        Assert.InRange(shown, 1, advisoryCandidates - 1);
         Assert.True(
             advisoryText.Contains("truncat", StringComparison.OrdinalIgnoreCase)
             || advisoryText.Contains("ausgelassen", StringComparison.OrdinalIgnoreCase)
@@ -379,6 +384,7 @@ public sealed class VerifyToolContractE2ETests
         var names = new HashSet<string>(tools.Select(tool => tool.Name), StringComparer.Ordinal);
 
         Assert.Contains("verify", names);
+        Assert.Contains("get_verify_advisories", names);
         foreach (var retiredName in new[] { "safeguard", "get_violations", "find_magic_values", "find_dead_code" })
         {
             Assert.DoesNotContain(retiredName, names);

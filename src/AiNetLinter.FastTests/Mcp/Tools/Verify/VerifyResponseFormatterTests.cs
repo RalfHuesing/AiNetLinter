@@ -113,6 +113,7 @@ public sealed class VerifyResponseFormatterTests
         Assert.Contains("verdict: pass\ncompleteness: complete\nscore: 10.0\nviolationCount: 0", text, StringComparison.Ordinal);
         Assert.Contains("deadCode: status=complete; candidates=1; testOnly=1; unreferenced=0; apiProtected=0; undecidable=0; shown=1; truncatedBy=0; next=review_now", text, StringComparison.Ordinal);
         Assert.Contains("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("deadCodeAdvisoryHint:", text, StringComparison.Ordinal);
         Assert.Contains("- category=dead_code; symbolIdentifier=h:abc; ref=src/Probe.cs:42; usage=test_only; confidence=low; reason=no_production_static_reference; testReferences=2; countercheck=reflection,DI,generators,dynamic,markup/config,external_consumers", text, StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
         Assert.DoesNotContain("source:", text, StringComparison.Ordinal);
@@ -179,6 +180,7 @@ public sealed class VerifyResponseFormatterTests
         Assert.Equal(25, shown + truncatedBy);
         Assert.True(shown < entries.Count);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
+        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)", text, StringComparison.Ordinal);
     }
 
     [Fact]
