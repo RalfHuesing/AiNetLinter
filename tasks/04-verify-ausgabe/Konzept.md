@@ -59,14 +59,17 @@ keinen vollständigen Verify-Gate-Lauf aus.
    damit lange Pfade nicht in jeder Zeile wiederkehren. Jeder Eintrag
    enthält nur `line`, einen kurzen Symbolnamen mit enthaltendem Typ,
    `symbolIdentifier`, `usage=test_only|unreferenced` und
-   `confidence=high|low`. Die `symbolIdentifier`-Werte gehen unverändert
-   an `find_references`, `get_symbol_body` und `get_feature_context`.
+   `confidence=high|low`. Eine einmalige Spaltenlegende ersetzt
+   wiederholte Feldnamen pro Eintrag. Die `symbolIdentifier`-Werte gehen
+   unverändert an `find_references`, `get_symbol_body` und
+   `get_feature_context`.
    Ausführliche Gründe, Testreferenzen und Gegenprüfungsdetails werden
    erst über diese Folgetools abgerufen.
-6. Die Antwort ist Content-only. Sie wird niemals still gekürzt und
-   meldet bei einem Ausgabe-/Transportlimit einen expliziten Fehler
-   **ohne Teilliste**, mit benötigter und erlaubter Bytezahl. Ein
-   Scanner- oder Policy-Fehler wird ebenso deutlich gemeldet; null
+6. Die Antwort ist Content-only und auf **64 KiB (65.536 UTF-8-Bytes
+   Content-Text)** begrenzt. Sie wird niemals still gekürzt und meldet
+   bei Überschreitung einen expliziten Fehler **ohne Teilliste**, mit
+   benötigter und erlaubter Bytezahl. Ein Scanner- oder Policy-Fehler
+   wird ebenso deutlich gemeldet; null
    Kandidaten werden nur nach erfolgreichem Scan behauptet.
 7. `verify` behält Verdict, Zähler, Ranking und Antwortbudget. Nur wenn
    `deadCode.truncatedBy > 0`, ergänzt es einen knappen, kopierbaren
@@ -122,6 +125,10 @@ werden. Ein Agent darf `test_only` nicht als „ohne Referenzen“ lesen.
   `partial`/Fehlerstatus und explizites Scheitern bei zu großem Output
   ohne scheinbar vollständige Teilliste. Der Verify-Hinweis erscheint
   nur bei tatsächlicher Dead-Code-Trunkierung; Gate-Semantik bleibt gleich.
+- Ein synthetischer Größenfall mit mindestens 714 Kandidaten und
+  realistisch langen Projekt-, Pfad- und Symbolnamen prüft, ob die
+  vollständige Liste tatsächlich innerhalb von 64 KiB bleibt. Er
+  hängt von keinem der vier untersuchten Produkt-Repositories ab.
 - Prüfzeitpunkt, Gate-Reihenfolge und Testauswahl richten sich
   ausschließlich nach `.agents/rules/AiNetLinter-Richtlinien.mdc` und
   `.agents/rules/AiNetLinter-TestRichtlinien.mdc`. Die für den
@@ -130,10 +137,11 @@ werden. Ein Agent darf `test_only` nicht als „ohne Referenzen“ lesen.
 
 ## Arbeitsgedächtnis (nur Draft)
 
-- **Ausgabelimit:** Die Vollständigkeit kann bei endlichem Transportlimit
-  nicht für beliebig große Solutions garantiert werden. Empfehlung:
-  vollständige Liste oder expliziter Fehler, niemals stilles Kürzen.
-  Offen ist die konkret erlaubte maximale Antwortgröße in UTF-8-Bytes.
+- **Ausgabelimit:** Der Nutzer hat 256 KiB als zu groß verworfen. Die
+  Empfehlung von 64 KiB begrenzt den Kontextverbrauch deutlich, kann aber
+  für sehr große Solutions eine vollständige Liste verhindern. Ohne
+  Paging/Filter ist dieser Fall nur als expliziter Fehler lösbar. Die
+  konkrete 64-KiB-Grenze wartet auf Nutzerentscheidung.
 - **Historischer Konzeptkonflikt:**
   `tasks/deadcode-produktive-nutzung/Konzept.md` schloss damals ein zweites
   Dead-Code-Tool aus. Die dortige Erkennungssemantik bleibt maßgeblich;
