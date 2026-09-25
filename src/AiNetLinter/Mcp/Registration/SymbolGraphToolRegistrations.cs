@@ -169,7 +169,8 @@ internal static class SymbolGraphToolRegistrations
         "depth: Traversierungstiefe (Default 1, Cap 3, max. 200 Knoten). " +
         "maxResults: Trefferbegrenzung (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
-        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen; Assembly-Scope nennt den effektiven Suchmodus.";
+        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen; Assembly-Scope nennt den effektiven Suchmodus. " +
+        "Bei 0 Call-Sites und .razor-Dokumenten: coverage=razor_markup_not_indexed; next=search_pattern(pattern=\"<Symbolname>\", includePatterns=[\"**/*.razor\"]).";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

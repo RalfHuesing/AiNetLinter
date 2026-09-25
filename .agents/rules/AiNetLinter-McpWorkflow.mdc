@@ -12,7 +12,7 @@ Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) und Ass
   - **Source-Modus** (`.sln`/`.slnx`): Statische Roslyn-Codeanalyse, Linter-Prüfung, Metriken und Symbolgraph.
   - **Dekompilierungs- & Assembly-Modus** (`.dll`/`.exe`): Dekompiliert Binaries on-the-fly (`WholeProjectDecompiler`) in ein virtuelles Roslyn-Projekt. Erlaubt vollständige Quellcode-Einsicht (`get_symbol_body`), Mustersuche im Dekompilat (`search_assembly`) sowie Aufruf- und Symbolgraphen auf kompilierten Assemblies.
 - **Brücke Source ➔ Assembly**: `resolve_type_origin` ermittelt den DLL-Pfad externer Typen; diesen als `targetPath` setzen, um Third-Party-/NuGet-Code direkt zu dekompilieren und zu analysieren.
-- **Text- & Nicht-C#-Suche**: `search_pattern` (mit `enrichCSharp: true` für C#-AST-Evidenz in `.razor`, XAML, JSON, XML) nutzen; `rg` als Fallback für reine Texttreffer und Kommentare.
+- **Text- & Nicht-C#-Suche**: `search_pattern` (mit `enrichCSharp: true` für C#-AST-Evidenz in `.razor`, XAML, JSON, XML) nutzen; `rg` als Fallback für reine Texttreffer und Kommentare. Meldet `find_references` `coverage: razor_markup_not_indexed`, die konkrete `search_pattern`-Folgeabfrage ausführen.
 - Folgeaufrufe: Für einzelne Symbole `symbolIdentifier` exakt aus vorherigen MCP-Ausgaben übernehmen; `get_symbol_body` verwendet `symbolIdentifiers` für Batchabfragen. Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
 - Bei `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 

@@ -104,9 +104,17 @@ internal static partial class FindReferencesTool
         var suggestGeneratedRazorReferences = !request.IncludeGenerated
             && traversal.Completeness.TotalCallSiteCount == 0
             && IsDeclaredInRazorCodeBehind(symbol);
-        var responseText = suggestGeneratedRazorReferences
-            ? $"{formatted.Text}\nnext: includeGenerated=true"
-            : formatted.Text;
+        var suggestRazorMarkupSearch = traversal.Completeness.TotalCallSiteCount == 0
+            && HasRazorMarkup(solution);
+        var responseText = formatted.Text;
+        if (suggestGeneratedRazorReferences)
+        {
+            responseText += "\nnext: includeGenerated=true";
+        }
+        if (suggestRazorMarkupSearch)
+        {
+            responseText += $"\ncoverage: razor_markup_not_indexed; next: search_pattern(pattern=\"{symbol!.Name}\", includePatterns=[\"**/*.razor\"])";
+        }
         var minimumResponseBytes = Encoding.UTF8.GetByteCount(responseText);
         return minimumResponseBytes > request.MaxResponseBytes
             ? BudgetTooSmall(request.MaxResponseBytes, minimumResponseBytes)
@@ -116,6 +124,11 @@ internal static partial class FindReferencesTool
     private static bool IsDeclaredInRazorCodeBehind(ISymbol symbol) =>
         symbol.DeclaringSyntaxReferences.Any(reference =>
             reference.SyntaxTree.FilePath.EndsWith(".razor.cs", StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasRazorMarkup(Solution solution) =>
+        solution.Projects.Any(project =>
+            project.Documents.Any(document => document.FilePath?.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) == true)
+            || project.AdditionalDocuments.Any(document => document.FilePath?.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) == true));
 
     private static TransitiveCallGraphFormatResult ProjectResponseBudget(
         ReferenceTraversalResult traversal,

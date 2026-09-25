@@ -426,6 +426,11 @@ im geladenen generierten C# zu prüfen. Bei Treffern und bei
 `includeGenerated=true` entfällt sie; ein bloßer Razor-Markup-Name zählt nicht
 als Referenz.
 
+Bei 0 Call-Sites und mindestens einem `.razor`-Dokument in der Solution ergänzt
+`find_references` `coverage: razor_markup_not_indexed` samt konkretem
+`search_pattern(pattern="<Symbolname>", includePatterns=["**/*.razor"])`-Folgeschritt.
+Der Hinweis markiert die Indexgrenze; er behauptet keine Markup-Referenz.
+
 Eine kanonische Referenz-Handoff-ID behält ihren belegten Owner über Eviction und
 Serverneustart. Mit `includeReferences=false` wird nur diese Owner-Assembly
 (`symbol_owner_only`) geöffnet; Root, Geschwister und transitive Referenzen bleiben
