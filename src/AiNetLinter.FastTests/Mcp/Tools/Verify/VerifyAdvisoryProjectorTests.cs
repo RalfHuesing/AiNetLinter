@@ -45,6 +45,36 @@ public sealed class VerifyAdvisoryProjectorTests
     }
 
     [Fact]
+    public void GetVerifyAdvisories_TruncatedScanIsPartialEvenWithoutUndecidableSymbols()
+    {
+        var candidate = new DeadCodeEntry(
+            Id: "unused",
+            Kind: "method",
+            ContainerType: "Service",
+            SymbolName: "Unused",
+            File: "Service.cs",
+            Line: 3,
+            Column: 1,
+            Accessibility: "private",
+            Confidence: "high",
+            Reason: "static scan",
+            LimitsApplies: [],
+            ProjectName: "TestApp");
+        var scan = new DeadCodeScanResult(
+            [candidate],
+            new DeadCodeSummary(1, 2, 2, 2, 0, new Dictionary<string, int> { ["method"] = 2 }),
+            [],
+            new DeadCodeRecommendedNextAction("continue", "weitere Kandidaten prüfen"),
+            IsTruncated: true);
+
+        var result = GetVerifyAdvisoriesTool.Render(scan);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.StartsWith("status=partial; candidates=2", text, StringComparison.Ordinal);
+        Assert.Contains("shown=1; truncatedBy=1", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GetVerifyAdvisories_RenderSortsConfidenceGloballyAcrossCompactGroups()
     {
         static DeadCodeEntry Candidate(

@@ -108,7 +108,7 @@ internal static class GetVerifyAdvisoriesTool
     private static string RenderText(DeadCodeScanResult scan, IReadOnlyList<DeadCodeEntry> entries, int truncatedBy)
     {
         var summary = scan.Summary;
-        var status = summary.Undecidable > 0 ? "partial" : "complete";
+        var status = summary.Undecidable > 0 || scan.IsTruncated ? "partial" : "complete";
         var lines = new List<string>
         {
             $"status={status}; candidates={summary.TotalDead}; testOnly={scan.DeadSymbols.Count(entry => entry.Usage == "test_only")}; unreferenced={scan.DeadSymbols.Count(entry => entry.Usage == "unreferenced")}; apiProtected={summary.ApiProtected}; undecidable={summary.Undecidable}; shown={entries.Count}; truncatedBy={truncatedBy}",

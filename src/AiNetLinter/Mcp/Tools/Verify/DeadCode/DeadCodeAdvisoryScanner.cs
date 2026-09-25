@@ -53,6 +53,7 @@ internal static partial class DeadCodeAdvisoryScanner
             await ScanProjectAsync(projectGroup.Key, projectGroup, context, ct);
         }
 
+        ct.ThrowIfCancellationRequested();
         return BuildScanResult(context);
     }
 

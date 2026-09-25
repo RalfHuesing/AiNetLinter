@@ -13,6 +13,20 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class DeadCodeAdvisoryScannerTests
 {
     [Fact]
+    public async Task ScanAsync_CanceledBeforeScanning_ThrowsInsteadOfReturningPartialResult()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", "public class Service { private void UnusedHelper() { } }"));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => DeadCodeAdvisoryScanner.ScanAsync(
+            testSolution.Solution,
+            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            cancellation.Token));
+    }
+
+    [Fact]
     public async Task ScanAsync_PrivateUnusedMethod_ReturnsHighConfidenceDeadCode()
     {
         using var testSolution = CreateSolution(

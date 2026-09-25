@@ -60,7 +60,7 @@ ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
     nutzbaren Symbol-Folgeaufrufe; keine widersprüchliche aktuelle
     Anleitung bleibt stehen.
 
-- [ ] **4. Abschlussaudit**
+- [x] **4. Abschlussaudit**
   - Intention: Unabhängig prüfen, ob der freigegebene Vertrag vollständig
     und ohne unnötige Ausgabe- oder Gate-Änderungen umgesetzt ist.
   - Scope: Read-only-Diff- und Vertragsaudit gegen [Konzept.md](Konzept.md),
@@ -72,3 +72,16 @@ ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
   - Abnahme: Konzept-Muss und -Nicht sind belegt; Build, Solution-Verify
     und FastTests sind grün, die ausdrücklich beauftragten gezielten
     Integrationstests ebenfalls. Offene Grenzen sind benannt.
+  - Nachweis: Cancellation-Rot-Test zuerst reproduziert, dass ein bereits
+    abgebrochener Scan ohne Ausnahme ein leeres Ergebnis lieferte. Der
+    Scanner propagiert Cancellation jetzt vor Ergebnisbildung; abgeschnittene
+    Scanergebnisse rendern unabhängig von `undecidable` als `partial`.
+    Regressionstests für beide Fälle bestanden. Abschlussgate:
+    `dotnet build AiNetLinter.slnx` ohne Warnungen/Fehler,
+    `verify(scope: solution)` mit `pass`, Score 10.0 und 0 Verstößen,
+    `pwsh scripts/test-fast.ps1` mit 2.756 Tests sowie die gezielten
+    `GetVerifyAdvisories_*`-Integrationstests mit 3/3 bestanden.
+    Die Integrationstests belegen vollständige Ausgabe unter 64 KiB und
+    Kürzung an vollständigen Einträgen; darüber hinaus ausgelassene Einträge
+    bleiben durch das festgelegte 65.536-Byte-Limit unabrufbar und werden
+    über `truncatedBy` ausgewiesen.
