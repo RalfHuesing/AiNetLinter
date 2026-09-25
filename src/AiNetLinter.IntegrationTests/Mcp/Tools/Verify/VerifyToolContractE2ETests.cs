@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp.Tools.Verify;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -262,42 +263,97 @@ public sealed class VerifyToolContractE2ETests
     }
 
     [Fact]
-    public async Task Verify_DeadCodeAdvisoryTruncationHasNoDiscoverableReviewTool()
+    public async Task GetVerifyAdvisories_WithoutPriorVerify_ReturnsAllSmallNavigableCandidates()
     {
         const int candidateCount = 30;
         using var fixture = CreateGitFixture();
         File.WriteAllText(
             Path.Combine(fixture.RootPath, "src", "BaselineMini", "ManyUnusedMembers.cs"),
-            ManyUnusedMembersSource(candidateCount));
+            VerifyAdvisoryTestData.ManyUnusedMembersSource(candidateCount));
         await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
 
+        var advisoryAttempt = await TryGetVerifyAdvisoriesAsync(host);
         var verify = await host.CallToolAsync("verify");
         AssertVerifyResult(verify, expectedError: false, "verdict: pass", "deadCode: status=complete");
         var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
-        var initiallyShown = ExtractSymbolIdentifiers(verifyText);
         var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
         var candidates = ExtractSummaryCount(deadCodeSummary, "candidates");
-        var shown = ExtractSummaryCount(deadCodeSummary, "shown");
-        var truncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
         Assert.Equal(candidateCount + 1, candidates);
-        Assert.Equal(initiallyShown.Count, shown);
-        Assert.Equal(candidates - shown, truncatedBy);
-        Assert.InRange(shown, 1, candidates - 1);
+        var verifyShown = ExtractSummaryCount(deadCodeSummary, "shown");
+        var verifyTruncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
+        Assert.Equal(ExtractSymbolIdentifiers(verifyText).Count, verifyShown);
+        Assert.Equal(candidates - verifyShown, verifyTruncatedBy);
+        Assert.InRange(verifyShown, 1, candidates - 1);
         Assert.Contains("next=review_now", deadCodeSummary, StringComparison.Ordinal);
 
-        var initiallyShownBodies = await host.CallToolAsync(
+        Assert.Null(advisoryAttempt.Error);
+        AssertVerifyResult(advisoryAttempt.Result!, expectedError: false,
+            "status=complete",
+            $"candidates={candidates}",
+            $"shown={candidates}",
+            "truncatedBy=0");
+        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
+        Assert.True(Encoding.UTF8.GetByteCount(advisoryText) <= 65_536);
+        var identifiers = ExtractSymbolIdentifiers(advisoryText);
+        Assert.Equal(candidates, identifiers.Count);
+        Assert.Equal(identifiers.Count, identifiers.Distinct(StringComparer.Ordinal).Count());
+
+        var candidateBodies = await host.CallToolAsync(
             "get_symbol_body",
-            new Dictionary<string, object?> { ["symbolIdentifiers"] = initiallyShown.ToArray() });
-        AssertVerifyResult(initiallyShownBodies, expectedError: false);
-        var initiallyShownBodyHeaders = Assert.IsType<TextContentBlock>(Assert.Single(initiallyShownBodies.Content)).Text
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = identifiers.ToArray() });
+        AssertVerifyResult(candidateBodies, expectedError: false);
+        var candidateBodyHeaders = Assert.IsType<TextContentBlock>(Assert.Single(candidateBodies.Content)).Text
             .Split('\n')
             .Count(line => line.StartsWith("### ", StringComparison.Ordinal));
-        Assert.Equal(initiallyShown.Count, initiallyShownBodyHeaders);
+        Assert.Equal(identifiers.Count, candidateBodyHeaders);
+    }
 
-        var tools = await host.ListToolsAsync();
-        Assert.Contains(tools, tool =>
-            !string.Equals(tool.Name, "verify", StringComparison.Ordinal)
-            && HasDeadCodeReviewLanguage($"{tool.Name} {tool.Description}"));
+    [Fact]
+    public async Task GetVerifyAdvisories_LargePopulation_ReportsWholeEntriesWithinUtf8Budget()
+    {
+        using var fixture = CreateGitFixture();
+        foreach (var source in VerifyAdvisoryTestData.ManyUnusedMemberFiles())
+        {
+            var path = Path.Combine(fixture.RootPath, source.RelativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, source.Content);
+        }
+
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+        var advisoryAttempt = await TryGetVerifyAdvisoriesAsync(host);
+        var verify = await host.CallToolAsync("verify");
+
+        var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
+        Assert.Contains("deadCode: status=complete", verifyText, StringComparison.Ordinal);
+        var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
+        var candidates = ExtractSummaryCount(deadCodeSummary, "candidates");
+        Assert.InRange(candidates, 714, int.MaxValue);
+        Assert.True(verifyText.StartsWith("verdict: pass", StringComparison.Ordinal), verifyText);
+
+        Assert.Null(advisoryAttempt.Error);
+        AssertVerifyResult(advisoryAttempt.Result!, expectedError: false,
+            "status=complete",
+            $"candidates={candidates}",
+            "truncatedBy=");
+        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
+        Assert.InRange(Encoding.UTF8.GetByteCount(advisoryText), 1, 65_536);
+        var shown = ExtractSummaryCount(advisoryText, "shown");
+        var truncatedBy = ExtractSummaryCount(advisoryText, "truncatedBy");
+        Assert.Equal(candidates, shown + truncatedBy);
+        Assert.InRange(shown, 1, candidates - 1);
+        Assert.True(
+            advisoryText.Contains("truncat", StringComparison.OrdinalIgnoreCase)
+            || advisoryText.Contains("ausgelassen", StringComparison.OrdinalIgnoreCase)
+            || advisoryText.Contains("gekürzt", StringComparison.OrdinalIgnoreCase));
+
+        var entryLines = advisoryText.Split('\n').Where(line => line.Contains("symbolIdentifier=", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(shown, entryLines.Length);
+        Assert.All(entryLines, line =>
+        {
+            Assert.Contains("line=", line, StringComparison.Ordinal);
+            Assert.Contains("usage=", line, StringComparison.Ordinal);
+            Assert.Contains("confidence=", line, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -332,6 +388,19 @@ public sealed class VerifyToolContractE2ETests
         return fixture;
     }
 
+    private static async Task<(CallToolResult? Result, McpProtocolException? Error)> TryGetVerifyAdvisoriesAsync(McpProcessHost host)
+    {
+        try
+        {
+            return (await host.CallToolAsync(
+                "get_verify_advisories",
+                new Dictionary<string, object?> { ["category"] = "dead_code" }), null);
+        }
+        catch (McpProtocolException exception)
+        {
+            return (null, exception);
+        }
+    }
     private static string AdvisoryProbeSource(string typeName, string route) => $$"""
         namespace BaselineMini;
 
@@ -344,21 +413,6 @@ public sealed class VerifyToolContractE2ETests
             public string Secondary => "https://example.invalid/{{route}}";
         }
         """;
-
-    private static string ManyUnusedMembersSource(int count)
-    {
-        var members = string.Join(
-            Environment.NewLine,
-            Enumerable.Range(0, count).Select(index => $"    private static void UnusedCandidate{index:D2}() {{ }}"));
-        return $$"""
-            namespace BaselineMini;
-
-            public sealed class ManyUnusedMembers
-            {
-            {{members}}
-            }
-            """;
-    }
 
     private static List<string> ExtractSymbolIdentifiers(string text)
     {
@@ -389,22 +443,6 @@ public sealed class VerifyToolContractE2ETests
         var field = summary.Split(';').Single(value => value.TrimStart().StartsWith($"{key}=", StringComparison.Ordinal));
         var value = field[(field.IndexOf('=') + 1)..].Trim();
         return int.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    private static bool HasDeadCodeReviewLanguage(string description)
-    {
-        var normalized = description.Replace('_', ' ').Replace('-', ' ');
-        var describesDeadCodeAdvisories = normalized.Contains("advisory", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("dead code candidate", StringComparison.OrdinalIgnoreCase);
-        var describesRetrieval = normalized.Contains("get ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("list ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("query ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("filter ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("page ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("paginate ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("review ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Contains("retrieve ", StringComparison.OrdinalIgnoreCase);
-        return describesDeadCodeAdvisories && describesRetrieval;
     }
 
     private static string ExtractReference(CallToolResult result, string entryPrefix)

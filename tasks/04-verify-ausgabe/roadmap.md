@@ -5,7 +5,7 @@ Prüfzeitpunkt, Gate-Reihenfolge, Testauswahl und Commits folgen den
 Projektregeln; ein erwartungsgemäß roter Regressionstest ist der
 ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
 
-- [ ] **1. Produktunabhängigen Rot-Vertrag nachweisen**
+- [x] **1. Produktunabhängigen Rot-Vertrag nachweisen**
   - Intention: Der neue MCP-Abruf und seine Ausgabegrenzen sind durch
     synthetische xUnit-v3-Tests beschrieben, bevor Produktcode geändert wird.
   - Scope: Den bestehenden Rot-Test in
@@ -22,6 +22,7 @@ ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
   - Abnahme: Tests kompilieren; mindestens der neue Tool-Vertrag läuft
     gezielt rot, nachdem seine Fixture-/Vorbedingungen bestanden haben.
     Keine bestehenden Tests werden abgeschwächt.
+  - Nachweis: `dotnet build AiNetLinter.slnx` kompiliert beide Tests erfolgreich. `dotnet test src/AiNetLinter.IntegrationTests/AiNetLinter.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~GetVerifyAdvisories_"` führt beide gezielt rot mit `Unknown tool: 'get_verify_advisories'` aus. Vor der Vertragsassertion bestätigt `verify` jeweils den bestandenen synthetischen Scan: 31 Kandidaten im kleinen Fall und mindestens 714 im Größenfall; beide Aufrufe des Advisory-Tools erfolgen davor.
 
 - [ ] **2. MCP-Abruf und kompakte Darstellung implementieren**
   - Intention: Ein eigener Aufruf liefert bei Bedarf die Dead-Code-Liste
