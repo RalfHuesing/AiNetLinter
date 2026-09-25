@@ -58,7 +58,8 @@ internal static class DuplicateDetectionEngine
                 fingerprint.LineNumber,
                 fingerprint.SignatureName,
                 fingerprint.TokenCount,
-                SymbolId: fingerprint.Symbol.TryGetDocCommentId()));
+                SymbolId: fingerprint.Symbol.TryGetDocCommentId(),
+                ProjectId: fingerprint.ProjectId));
         return new DuplicateDetectionScanResult(clusters, fingerprints.Count);
     }
 
@@ -84,7 +85,8 @@ internal static class DuplicateDetectionEngine
         if (ngramHashes.Count == 0) return null;
 
         return new MethodFingerprint(
-            method.FilePath, method.LineNumber, method.SignatureName, method.TokenCount, ngramHashes, method.Symbol);
+            method.FilePath, method.LineNumber, method.SignatureName, method.TokenCount,
+            ngramHashes, method.Symbol, method.ProjectId);
     }
 
     // ── 2) N-Gram-Shingling ───────────────────────────────────────────────────────────────────

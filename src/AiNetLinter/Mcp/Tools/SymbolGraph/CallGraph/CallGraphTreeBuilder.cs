@@ -214,7 +214,7 @@ internal static partial class CallGraphTreeBuilder
             var node = new CallGraphNode(
                 $"n{_nodes.Count + 1}",
                 symbol,
-                CallGraphTraversal.GetStableSymbolId(symbol, HandoffIdentity),
+                CallGraphTraversal.GetStableSymbolId(symbol, HandoffIdentity, Solution),
                 CallGraphTraversal.FormatSymbolName(symbol, CallTreeDirection.Outgoing),
                 FormatSymbolDisplayLine(symbol, Solution, AbsolutePaths));
             _nodesBySymbol[symbol] = node;
@@ -279,7 +279,7 @@ internal static partial class CallGraphTreeBuilder
                 .Where(method => method.MethodKind == MethodKind.Ordinary)
                 .Select(method => new CallGraphMethodHint(
                     CallGraphTraversal.FormatSymbolName(method, CallTreeDirection.Outgoing),
-                    CallGraphTraversal.GetStableSymbolId(method, HandoffIdentity),
+                    CallGraphTraversal.GetStableSymbolId(method, HandoffIdentity, Solution),
                     FormatSymbolDisplayLine(method, Solution, AbsolutePaths)))
                 .OrderBy(hint => hint.Name, StringComparer.Ordinal)
                 .ThenBy(hint => hint.SymbolId, StringComparer.Ordinal)

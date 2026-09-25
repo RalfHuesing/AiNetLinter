@@ -34,7 +34,7 @@ internal static partial class CallGraphTreeBuilder
         var state = new TreeBuildState(request, depth);
         state.SetPathDisplayMode(request.AbsolutePaths);
         await RunTreeBfsAsync(state, ct);
-        return (ToMetricsTreeNode(state.Root, state.HandoffIdentity), state.Truncated);
+        return (ToMetricsTreeNode(state.Root, state.HandoffIdentity, state.Solution), state.Truncated);
     }
 
     private static async Task RunTreeBfsAsync(TreeBuildState state, CancellationToken ct)
@@ -261,11 +261,14 @@ internal static partial class CallGraphTreeBuilder
         return absolutePaths ? Path.GetFullPath(location.SourceTree!.FilePath) : PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
     }
 
-    private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node, AnalysisSymbolIdentity? identity = null)
+    private static MetricsTreeNode ToMetricsTreeNode(
+        CallTreeBuilderNode node,
+        AnalysisSymbolIdentity? identity,
+        Solution solution)
     {
-        var id = node.Symbol is null || identity is null ? null : identity.FormatHandoff(node.Symbol);
+        var id = node.Symbol is null || identity is null ? null : identity.FormatHandoff(node.Symbol, solution);
         var handoff = id is not null;
-        return new(node.Name, "", 0, 0, node.DisplayLine, node.Children.Select(child => ToMetricsTreeNode(child, identity)).ToList(),
+        return new(node.Name, "", 0, 0, node.DisplayLine, node.Children.Select(child => ToMetricsTreeNode(child, identity, solution)).ToList(),
             Handoff: handoff, Id: handoff ? id : null, TargetPath: handoff ? identity!.CanonicalPath : null,
             Snapshot: handoff ? identity!.ContentHash : null, SymbolKind: node.Symbol?.Kind.ToString().ToLowerInvariant(),
             AllowedFollowUpTools: handoff ? HandoffFollowUpTools.For(node.Symbol!) : []);

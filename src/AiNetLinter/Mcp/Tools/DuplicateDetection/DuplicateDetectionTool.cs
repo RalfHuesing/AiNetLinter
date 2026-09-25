@@ -254,7 +254,9 @@ internal static class DuplicateDetectionTool
         DuplicateClusterMember member,
         AnalysisSymbolIdentity? handoffSymbolIdentity)
     {
-        var internalId = handoffSymbolIdentity?.Format(member.SymbolId);
+        var internalId = member.ProjectId is null
+            ? null
+            : handoffSymbolIdentity?.Format(member.SymbolId, member.ProjectId);
         sb.Append(string.IsNullOrWhiteSpace(internalId)
             ? "; handoff: not_applicable"
             : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`");

@@ -76,7 +76,7 @@ internal static partial class GetNamespaceTreeScanner
         if (!hasExactRoot) return;
         var directTypes = CollectMatchingSourceTypes(startNs, parameters, projectTrees);
         var typeEntries = parameters.IncludeTypes
-            ? directTypes.Select(type => ToTypeEntry(type, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity)).ToList()
+            ? directTypes.Select(type => ToTypeEntry(type, parameters.Project.Id, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity)).ToList()
             : null;
         flatOutput.Add((startNs.ToDisplayString(), directTypes.Count, 0, typeEntries));
     }
@@ -88,7 +88,7 @@ internal static partial class GetNamespaceTreeScanner
         if (!hasExactRoot) return rootNodes;
         var directTypes = CollectMatchingSourceTypes(startNs, parameters, projectTrees);
         return [new NamespaceTreeNode(startNs.ToDisplayString(), directTypes.Count,
-            parameters.IncludeTypes ? directTypes.Select(type => ToTypeEntry(type, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity)).ToList() : null,
+            parameters.IncludeTypes ? directTypes.Select(type => ToTypeEntry(type, parameters.Project.Id, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity)).ToList() : null,
             rootNodes.Count > 0 ? rootNodes : null)];
     }
 
@@ -181,7 +181,7 @@ internal static partial class GetNamespaceTreeScanner
 
             var subTreeNodes = new List<NamespaceTreeNode>();
             var typeEntries = context.Parameters.IncludeTypes
-                ? directTypes.Select(t => ToTypeEntry(t, context.Parameters.SolutionDir, context.ProjectTrees, context.Parameters.HandoffIdentity)).ToList()
+                ? directTypes.Select(t => ToTypeEntry(t, context.Parameters.Project.Id, context.Parameters.SolutionDir, context.ProjectTrees, context.Parameters.HandoffIdentity)).ToList()
                 : null;
 
             context.FlatOutput.Add((subNs.ToDisplayString(), directTypes.Count, currentIndent, typeEntries));
@@ -224,6 +224,7 @@ internal static partial class GetNamespaceTreeScanner
 
     private static TypeNodeEntry ToTypeEntry(
         INamedTypeSymbol t,
+        ProjectId projectId,
         string solutionDir,
         HashSet<SyntaxTree> projectTrees,
         AnalysisSymbolIdentity? handoffIdentity)
@@ -240,7 +241,11 @@ internal static partial class GetNamespaceTreeScanner
             filePath,
             line,
             SymbolVisibilityResolver.ResolveVisibility(t),
-            handoffIdentity?.FormatHandoff(t));
+            handoffIdentity is null
+                ? null
+                : handoffIdentity.IsAssembly
+                    ? handoffIdentity.FormatHandoff(t)
+                    : handoffIdentity.FormatHandoff(t, projectId));
     }
 
     private static string FormatHandoffSuffix(string? internalHandoffId) =>

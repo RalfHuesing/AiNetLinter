@@ -232,7 +232,7 @@ internal static class FindImplementationsTool
         var (typeName, memberName, kind) = DescribeSymbol(symbol);
         var status = DetermineStatus(symbol);
         var displayLoc = FormatLocation(symbol, solution, absolutePaths, out var filePath, out var line, out var column);
-        var id = handoffIdentity is null ? null : CallGraphTraversal.GetStableSymbolId(symbol, handoffIdentity);
+        var id = handoffIdentity is null ? null : CallGraphTraversal.GetStableSymbolId(symbol, handoffIdentity, solution);
         var handoffKind = id is null ? null : symbol is INamedTypeSymbol ? "type" : "member";
 
         return new ImplementationItemDto(

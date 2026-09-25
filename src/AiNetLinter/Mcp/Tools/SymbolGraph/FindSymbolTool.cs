@@ -36,6 +36,12 @@ internal sealed record FindSymbolRequest(
         new(NamePatterns, Pattern);
 }
 
+internal sealed record SymbolLocationFormatContext(
+    string OutputRoot,
+    AnalysisSymbolIdentity? HandoffIdentity,
+    bool AbsolutePaths = false,
+    Solution? Solution = null);
+
 /// <summary>
 /// MCP-Tool <c>find_symbol</c>: durchsucht die resident gehaltene Solution per Substring auf
 /// Symbolnamen (optionaler Kind-Filter) und liefert Fundstellen (Datei:Zeile, Kind, Signatur).
@@ -233,9 +239,14 @@ internal static class FindSymbolTool
         ISymbol symbol,
         string outputRoot,
         AnalysisSymbolIdentity? assemblyIdentity = null,
-        bool absolutePaths = false)
+        bool absolutePaths = false) =>
+        FormatSymbolLocations(symbol, new SymbolLocationFormatContext(outputRoot, assemblyIdentity, absolutePaths));
+
+    internal static IEnumerable<string> FormatSymbolLocations(
+        ISymbol symbol,
+        SymbolLocationFormatContext context)
     {
-        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity, absolutePaths))
+        foreach (var entry in FormatSymbolLocationEntries(symbol, context))
         {
             yield return FormatEntry(entry);
         }
@@ -252,16 +263,25 @@ internal static class FindSymbolTool
         ISymbol symbol,
         string outputRoot,
         AnalysisSymbolIdentity? assemblyIdentity = null,
-        bool absolutePaths = false)
+        bool absolutePaths = false) =>
+        FormatSymbolLocationEntries(symbol, new SymbolLocationFormatContext(outputRoot, assemblyIdentity, absolutePaths));
+
+    internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(
+        ISymbol symbol,
+        SymbolLocationFormatContext context)
     {
         var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
-        var qualifiedId = assemblyIdentity?.FormatHandoff(symbol);
+        var qualifiedId = context.HandoffIdentity is null
+            ? null
+            : context.Solution is null
+                ? context.HandoffIdentity.FormatHandoff(symbol)
+                : context.HandoffIdentity.FormatHandoff(symbol, context.Solution);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
             var sourcePath = location.SourceTree!.FilePath;
-            var displayPath = !absolutePaths && !string.IsNullOrWhiteSpace(outputRoot)
-                ? PathNormalizer.ToRelative(outputRoot, sourcePath)
+            var displayPath = !context.AbsolutePaths && !string.IsNullOrWhiteSpace(context.OutputRoot)
+                ? PathNormalizer.ToRelative(context.OutputRoot, sourcePath)
                 : Path.GetFullPath(sourcePath);
             var line = lineSpan.StartLinePosition.Line + 1;
             yield return new SymbolLocationEntry(

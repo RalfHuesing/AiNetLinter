@@ -53,7 +53,8 @@ public sealed class StructureProfileExtractorTests
             Declaration: methodSyntax,
             Body: bodyNode,
             Symbol: (IMethodSymbol)symbol,
-            SemanticModel: semanticModel);
+            SemanticModel: semanticModel,
+            ProjectId: project.Id);
     }
 
     [Fact]

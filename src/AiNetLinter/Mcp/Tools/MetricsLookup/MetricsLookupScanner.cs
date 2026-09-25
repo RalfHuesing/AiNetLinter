@@ -21,17 +21,18 @@ namespace AiNetLinter.Mcp.Tools.MetricsLookup;
 internal static class MetricsLookupScanner
 {
     internal static MetricsLookupResultDto ScanSymbol(
-        ISymbol symbol,
-        ILinterEngineConfig config,
-        string solutionRoot,
-        CancellationToken ct,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        MetricsLookupScanRequest request)
     {
+        var symbol = request.Symbol;
+        var solution = request.Solution;
+        var config = request.Config;
+        var solutionRoot = request.SolutionRoot;
+        var ct = request.CancellationToken;
+        var assemblyIdentity = request.HandoffIdentity;
         var symbolName = symbol.Name;
         var symbolKind = symbol.Kind.ToString();
         var qualifiedName = symbol.ToDisplayString();
-        var docCommentId = assemblyIdentity?.Format(
-            symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+        var docCommentId = assemblyIdentity?.FormatHandoff(symbol, solution)
             ?? symbol.TryGetDocCommentId();
         var location = ExtractLocation(symbol, solutionRoot);
 
@@ -312,3 +313,11 @@ internal static class MetricsLookupScanner
     }
 
 }
+
+internal sealed record MetricsLookupScanRequest(
+    ISymbol Symbol,
+    Solution Solution,
+    ILinterEngineConfig Config,
+    string SolutionRoot,
+    CancellationToken CancellationToken,
+    AnalysisSymbolIdentity? HandoffIdentity);

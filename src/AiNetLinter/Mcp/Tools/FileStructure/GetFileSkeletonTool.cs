@@ -170,8 +170,9 @@ internal static class GetFileSkeletonTool
                 ? null
                 : symbolId =>
                 {
-                    var formatted = assemblyIdentity.Format(symbolId);
-                    return formatted;
+                    return assemblyIdentity.IsAssembly
+                        ? assemblyIdentity.Format(symbolId)
+                        : assemblyIdentity.Format(symbolId, document.Project.Id);
                 });
 
         if (types.Count == 0)

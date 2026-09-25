@@ -155,14 +155,14 @@ internal static class CallGraphTraversal
             .ConfigureAwait(false);
         var handoffId = caller is null
             ? null
-            : GetStableSymbolId(caller, request.AssemblyIdentity);
+            : request.AssemblyIdentity?.FormatHandoff(caller, request.Solution);
         return new TransitiveCallSiteEntry(
             filePath,
             line,
             FormatSymbolName(request.Reference.Definition),
             request.ReferenceLocation.Document.Project.Name,
             request.Depth,
-            FormatReachedFromSymbolId(request.ReachedFromSymbol, request.AssemblyIdentity),
+            FormatReachedFromSymbolId(request.ReachedFromSymbol, request.AssemblyIdentity, request.Solution),
             Id: handoffId,
             HandoffKind: handoffId is null ? null : caller is INamedTypeSymbol ? "type" : "member",
             ScopeType: request.DocumentScope is { } scope ? McpScopeValues.ToWireValue(scope.ProjectKind) : null,
@@ -180,13 +180,19 @@ internal static class CallGraphTraversal
     /// </summary>
     internal static string GetStableSymbolId(
         ISymbol symbol,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        AnalysisSymbolIdentity? assemblyIdentity = null,
+        Solution? solution = null)
     {
         var stableId = symbol is IMethodSymbol { MethodKind: MethodKind.LocalFunction } localFunction
             ? FormatLocalFunctionId(localFunction)
             : DocumentationCommentId.CreateDeclarationId(symbol) ??
               symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        return assemblyIdentity?.Format(stableId) ?? stableId;
+        if (assemblyIdentity is null) return stableId;
+        if (assemblyIdentity.IsAssembly) return assemblyIdentity.Format(stableId) ?? stableId;
+
+        var sourceTree = symbol.Locations.FirstOrDefault(location => location.IsInSource)?.SourceTree;
+        var projectId = sourceTree is null ? null : solution?.GetDocument(sourceTree)?.Project.Id;
+        return projectId is null ? stableId : assemblyIdentity.Format(stableId, projectId) ?? stableId;
     }
 
     // Verschachtelte lokale Funktionen steigen ueber ContainingSymbol bis zum naechsten
@@ -288,11 +294,12 @@ internal static class CallGraphTraversal
 
     private static string FormatReachedFromSymbolId(
         ISymbol symbol,
-        AnalysisSymbolIdentity? assemblyIdentity)
+        AnalysisSymbolIdentity? assemblyIdentity,
+        Solution solution)
     {
         if (assemblyIdentity is not null)
         {
-            return assemblyIdentity.FormatHandoff(symbol) ?? string.Empty;
+            return assemblyIdentity.FormatHandoff(symbol, solution) ?? string.Empty;
         }
 
         return DocumentationCommentId.CreateDeclarationId(symbol)

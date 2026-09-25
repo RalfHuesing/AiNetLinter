@@ -127,7 +127,8 @@ internal static class MetricsLookupTool
             return (null, null);
         }
 
-        var dto = MetricsLookupScanner.ScanSymbol(symbol, config, solutionRoot, ct, assemblyIdentity);
+        var dto = MetricsLookupScanner.ScanSymbol(new MetricsLookupScanRequest(
+            symbol, solution, config, solutionRoot, ct, assemblyIdentity));
         if (!string.IsNullOrWhiteSpace(dto.DocCommentId)
             && SymbolHandoffIdentifier.IsInternalIdentifier(dto.DocCommentId))
         {

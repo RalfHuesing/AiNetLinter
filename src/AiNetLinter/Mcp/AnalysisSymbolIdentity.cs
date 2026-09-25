@@ -29,8 +29,14 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
             ? identifier.Format()
             : null;
 
+    internal string? Format(string? symbolId, ProjectId projectId) =>
+        symbolId is null
+            ? null
+            : Format($"{symbolId}~p:{projectId.Id:N}");
+
     internal string? FormatHandoff(ISymbol symbol)
     {
+        if (!IsAssembly) return null;
         var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
         return IsCanonicalHandoffSymbol(symbol, declarationId)
             ? Format(declarationId)
@@ -41,7 +47,25 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
     {
         var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
         return IsCanonicalHandoffSymbol(symbol, declarationId)
-            ? Format($"{declarationId}~p:{projectId.Id:N}")
+            ? Format(declarationId, projectId)
+            : null;
+    }
+
+    internal string? FormatHandoff(ISymbol symbol, Solution solution)
+    {
+        if (IsAssembly) return FormatHandoff(symbol);
+
+        var projectIds = symbol.Locations
+            .Where(location => location.IsInSource && location.SourceTree is not null)
+            .Select(location => solution.GetDocument(location.SourceTree!)?.Project.Id)
+            .Where(projectId => projectId is not null)
+            .Select(projectId => projectId!)
+            .Distinct()
+            .Take(2)
+            .ToArray();
+
+        return projectIds.Length == 1
+            ? FormatHandoff(symbol, projectIds[0])
             : null;
     }
 

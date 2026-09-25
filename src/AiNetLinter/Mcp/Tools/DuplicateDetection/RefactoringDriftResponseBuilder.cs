@@ -67,7 +67,9 @@ internal static class RefactoringDriftResponseBuilder
         RefactoringDriftCandidate candidate,
         AnalysisSymbolIdentity? handoffSymbolIdentity)
     {
-        var internalId = handoffSymbolIdentity?.Format(candidate.SymbolId);
+        var internalId = candidate.ProjectId is null
+            ? null
+            : handoffSymbolIdentity?.Format(candidate.SymbolId, candidate.ProjectId);
         sb.Append(string.IsNullOrWhiteSpace(internalId)
             ? "; handoff: not_applicable"
             : $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`");

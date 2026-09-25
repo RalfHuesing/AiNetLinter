@@ -54,8 +54,8 @@ internal static class GetTypeHierarchyFormatter
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
         var classifier = options.ScopeClassifier ?? new McpScopeClassifier();
 
-        var baseTypes = FormatBaseTypes(type, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
-        var interfaces = FormatInterfaces(type, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
+        var baseTypes = FormatBaseTypes(type, solution, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
+        var interfaces = FormatInterfaces(type, solution, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
         var subtypeProjection = await ProjectSubtypesAsync(
             type,
             solution,
@@ -113,6 +113,7 @@ internal static class GetTypeHierarchyFormatter
 
     private static IEnumerable<TypeHierarchyEntryDto> FormatBaseTypes(
         INamedTypeSymbol type,
+        Solution solution,
         string outputRoot,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
@@ -120,7 +121,7 @@ internal static class GetTypeHierarchyFormatter
         var current = type.BaseType;
         while (current is not null)
         {
-            foreach (var entry in FormatHierarchyTypeReference(current, outputRoot, absolutePaths, handoffIdentity))
+            foreach (var entry in FormatHierarchyTypeReference(current, solution, outputRoot, absolutePaths, handoffIdentity))
             {
                 yield return entry;
             }
@@ -131,11 +132,12 @@ internal static class GetTypeHierarchyFormatter
 
     private static IEnumerable<TypeHierarchyEntryDto> FormatInterfaces(
         INamedTypeSymbol type,
+        Solution solution,
         string outputRoot,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
     {
-        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot, absolutePaths, handoffIdentity));
+        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, solution, outputRoot, absolutePaths, handoffIdentity));
     }
 
     /// <summary>
@@ -148,15 +150,14 @@ internal static class GetTypeHierarchyFormatter
     /// </summary>
     private static IEnumerable<TypeHierarchyEntryDto> FormatHierarchyTypeReference(
         INamedTypeSymbol symbol,
+        Solution solution,
         string outputRoot,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
     {
         var sourceEntries = FindSymbolTool.FormatSymbolLocationEntries(
             symbol,
-            outputRoot,
-            handoffIdentity,
-            absolutePaths: absolutePaths)
+            new SymbolLocationFormatContext(outputRoot, handoffIdentity, absolutePaths, solution))
             .Select(entry => new TypeHierarchyEntryDto(
                 entry.Name,
                 entry.Kind,
@@ -243,19 +244,20 @@ internal static class GetTypeHierarchyFormatter
             .ToList();
         var isTruncated = ordered.Count > maxResults;
         var shown = isTruncated ? ordered.Take(maxResults).ToList() : ordered;
-        var entries = shown.SelectMany(item => FormatSubtype(item.Symbol, item.Scope, outputRoot, absolutePaths, handoffIdentity));
+        var entries = shown.SelectMany(item => FormatSubtype(item.Symbol, item.Scope, solution, outputRoot, absolutePaths, handoffIdentity));
         return new(ordered.Count, shown.Count, isTruncated, entries.ToList());
     }
 
     private static IEnumerable<TypeHierarchyEntryDto> FormatSubtype(
         ISymbol symbol,
         McpSymbolScope scope,
+        Solution solution,
         string outputRoot,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
     {
         var entry = FindSymbolTool.FormatSymbolLocationEntries(
-                symbol, outputRoot, handoffIdentity, absolutePaths)
+                symbol, new SymbolLocationFormatContext(outputRoot, handoffIdentity, absolutePaths, solution))
             .FirstOrDefault();
         if (entry is null)
         {

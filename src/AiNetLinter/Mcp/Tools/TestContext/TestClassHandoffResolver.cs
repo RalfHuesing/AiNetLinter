@@ -42,7 +42,7 @@ internal static class TestClassHandoffResolver
             .OfType<INamedTypeSymbol>()
             .Select(symbol => new TestClassHandoff(
                 symbol.Name,
-                CallGraphTraversal.GetStableSymbolId(symbol, assemblyIdentity)))
+                CallGraphTraversal.GetStableSymbolId(symbol, assemblyIdentity, solution)))
             .OrderBy(testClass => testClass.Name, StringComparer.Ordinal)
             .ToList();
     }

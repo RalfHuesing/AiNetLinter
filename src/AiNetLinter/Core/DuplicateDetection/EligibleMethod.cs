@@ -18,4 +18,5 @@ internal sealed record EligibleMethod(
     SyntaxNode Declaration,
     SyntaxNode Body,
     IMethodSymbol Symbol,
-    SemanticModel SemanticModel);
+    SemanticModel SemanticModel,
+    ProjectId ProjectId);

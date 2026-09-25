@@ -207,7 +207,8 @@ internal sealed record SearchPatternMatchRange(int Column, int Length);
 internal sealed record SearchPatternSemantic(
     string Kind,
     string Resolution,
-    string? SymbolId);
+    string? SymbolId,
+    ProjectId? ProjectId = null);
 
 internal sealed record SearchPatternCompleteness(
     bool ScanCompleted,

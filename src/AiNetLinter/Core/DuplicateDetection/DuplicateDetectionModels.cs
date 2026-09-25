@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Core.DuplicateDetection;
 
@@ -96,7 +97,8 @@ internal sealed record DuplicateClusterMember(
     string SignatureName,
     int TokenCount,
     string? StructureProfile = null,
-    string? SymbolId = null);
+    string? SymbolId = null,
+    ProjectId? ProjectId = null);
 
 /// <summary>
 /// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare).
@@ -134,7 +136,8 @@ internal sealed record RefactoringDriftCandidate(
     string SignatureName,
     int TokenCount,
     double Score,
-    string? SymbolId = null);
+    string? SymbolId = null,
+    ProjectId? ProjectId = null);
 
 /// <summary>Gesamtergebnis von <see cref="RefactoringDriftDetector.FindSimilarToAsync"/>.
 /// <see cref="Candidates"/> ist unbegrenzt und absteigend nach <see cref="RefactoringDriftCandidate.Score"/>
@@ -153,4 +156,5 @@ internal sealed record MethodFingerprint(
     string SignatureName,
     int TokenCount,
     HashSet<ulong> NgramHashes,
-    Microsoft.CodeAnalysis.IMethodSymbol Symbol);
+    Microsoft.CodeAnalysis.IMethodSymbol Symbol,
+    ProjectId ProjectId);

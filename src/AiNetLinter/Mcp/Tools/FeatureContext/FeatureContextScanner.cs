@@ -66,7 +66,8 @@ internal static partial class FeatureContextScanner
         string solutionDir,
         CancellationToken ct) =>
         context.Options.IncludeMetrics && context.Config is not null
-            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct, context.AssemblySymbolIdentity)
+            ? MetricsLookupScanner.ScanSymbol(new MetricsLookupScanRequest(
+                symbol, context.Solution, context.Config, solutionDir, ct, context.AssemblySymbolIdentity))
             : null;
 
     private static FeatureContextPayload BuildPayload(
@@ -285,8 +286,7 @@ internal static partial class FeatureContextScanner
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
         var (returnType, parameters, baseTypes, members) = await ExtractTypeAndParametersAsync(
             symbol, solution, classifier, scopeInput, ct).ConfigureAwait(false);
-        var docCommentId = assemblyIdentity?.Format(
-            symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+        var docCommentId = assemblyIdentity?.FormatHandoff(symbol, solution)
             ?? symbol.TryGetDocCommentId();
 
         var location = symbol.Locations.FirstOrDefault(value => value.IsInSource);

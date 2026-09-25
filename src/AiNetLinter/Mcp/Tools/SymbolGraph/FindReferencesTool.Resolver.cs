@@ -160,7 +160,9 @@ internal static partial class FindReferencesTool
         }
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
+        var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(
+            s,
+            new SymbolLocationFormatContext(outputRoot, assemblyIdentity, Solution: solution)));
         return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
     }
 
@@ -199,7 +201,9 @@ internal static partial class FindReferencesTool
         if (candidates.Count > 1)
         {
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
+            var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(
+                s,
+                new SymbolLocationFormatContext(outputRoot, assemblyIdentity, Solution: solution)));
             return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
         }
 

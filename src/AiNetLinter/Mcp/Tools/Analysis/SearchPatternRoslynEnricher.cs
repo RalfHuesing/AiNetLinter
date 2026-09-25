@@ -59,14 +59,18 @@ internal static class SearchPatternRoslynEnricher
         var selected = SelectDocument(candidates, match.ProjectName);
         if (selected is null) return candidates.Count > 1 ? Ambiguous() : Unavailable();
 
-        if (!snapshots.TryGetValue(canonicalPath, out var snapshotTask))
+        var snapshotKey = $"{canonicalPath}\0{selected.Document.Id}";
+        if (!snapshots.TryGetValue(snapshotKey, out var snapshotTask))
         {
             snapshotTask = LoadSnapshotAsync(selected.Document, ct);
-            snapshots.Add(canonicalPath, snapshotTask);
+            snapshots.Add(snapshotKey, snapshotTask);
         }
 
         var snapshot = await snapshotTask.ConfigureAwait(false);
-        return AnalyzeSnapshot(snapshot, match, ct);
+        var semantic = AnalyzeSnapshot(snapshot, match, ct);
+        return semantic.Resolution == "resolved"
+            ? semantic with { ProjectId = snapshot.ProjectId }
+            : semantic;
     }
 
     private static Dictionary<string, IReadOnlyList<SearchPatternRoslynDocument>> BuildDocumentIndex(
@@ -118,7 +122,7 @@ internal static class SearchPatternRoslynEnricher
             var root = await document.GetSyntaxRootAsync(ct).ConfigureAwait(false);
             var semanticModel = await document.GetSemanticModelAsync(ct).ConfigureAwait(false);
             if (root is null || semanticModel is null) return SearchPatternRoslynSnapshot.Unavailable;
-            return new(root, semanticModel, root.SyntaxTree.GetText(ct));
+            return new(root, semanticModel, root.SyntaxTree.GetText(ct), document.Project.Id);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -291,8 +295,9 @@ internal static class SearchPatternRoslynEnricher
     private sealed record SearchPatternRoslynSnapshot(
         SyntaxNode? Root,
         SemanticModel? SemanticModel,
-        SourceText? Text)
+        SourceText? Text,
+        ProjectId? ProjectId)
     {
-        internal static SearchPatternRoslynSnapshot Unavailable { get; } = new(null, null, null);
+        internal static SearchPatternRoslynSnapshot Unavailable { get; } = new(null, null, null, null);
     }
 }

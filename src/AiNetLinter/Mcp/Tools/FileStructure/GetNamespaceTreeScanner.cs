@@ -145,7 +145,7 @@ internal static partial class GetNamespaceTreeScanner
         var truncated = totalCount > parameters.MaxResults;
 
         var typeEntries = shownTypes
-            .Select(t => ToTypeEntry(t, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity))
+            .Select(t => ToTypeEntry(t, parameters.Project.Id, parameters.SolutionDir, projectTrees, parameters.HandoffIdentity))
             .ToList();
 
         var sb = new StringBuilder();

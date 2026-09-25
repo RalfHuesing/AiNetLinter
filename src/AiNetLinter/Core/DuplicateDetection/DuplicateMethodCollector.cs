@@ -111,7 +111,7 @@ internal static class DuplicateMethodCollector
         foreach (var candidate in FindCandidateMethods(root))
         {
             ct.ThrowIfCancellationRequested();
-            var method = TryBuildEligible(candidate, document.FilePath!, semanticModel, options);
+            var method = TryBuildEligible(candidate, document.FilePath!, document.Project.Id, semanticModel, options);
             if (method is not null) result.Add(method);
         }
     }
@@ -126,7 +126,7 @@ internal static class DuplicateMethodCollector
     }
 
     private static EligibleMethod? TryBuildEligible(
-        (SyntaxNode Declaration, SyntaxNode Body) candidate, string filePath, SemanticModel semanticModel,
+        (SyntaxNode Declaration, SyntaxNode Body) candidate, string filePath, ProjectId projectId, SemanticModel semanticModel,
         DuplicateDetectionOptions options)
     {
         var symbol = semanticModel.GetDeclaredSymbol(candidate.Declaration) as IMethodSymbol;
@@ -140,7 +140,7 @@ internal static class DuplicateMethodCollector
             ?? candidate.Declaration.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
         return new EligibleMethod(
             filePath, lineNumber, symbol.ToDisplayString(), tokens.Count,
-            candidate.Declaration, candidate.Body, symbol, semanticModel);
+            candidate.Declaration, candidate.Body, symbol, semanticModel, projectId);
     }
 
     private static bool IsGenerated(IMethodSymbol symbol) =>

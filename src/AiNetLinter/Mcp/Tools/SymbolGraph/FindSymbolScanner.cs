@@ -127,7 +127,7 @@ internal static class FindSymbolScanner
                 cancellationToken).ConfigureAwait(false);
             if (locations.Count == 0) continue;
             locations.Sort(CompareLocations);
-            entries.Add(CreateEntry(symbol, locations, request.AssemblyIdentity));
+            entries.Add(CreateEntry(symbol, locations, request.AssemblyIdentity, request.Solution));
         }
 
         return entries;
@@ -219,9 +219,10 @@ internal static class FindSymbolScanner
     private static SymbolLocationEntry CreateEntry(
         ISymbol symbol,
         IReadOnlyList<SymbolSourceLocation> locations,
-        AnalysisSymbolIdentity? assemblyIdentity)
+        AnalysisSymbolIdentity? assemblyIdentity,
+        Solution solution)
     {
-        var handoffId = assemblyIdentity?.FormatHandoff(symbol);
+        var handoffId = assemblyIdentity?.FormatHandoff(symbol, solution);
         var first = locations[0];
         return new SymbolLocationEntry(
             first.FilePath,

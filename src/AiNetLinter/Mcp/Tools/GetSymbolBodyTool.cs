@@ -275,8 +275,9 @@ internal static partial class GetSymbolBodyTool
         RenderSingleSymbolRequest request,
         ISymbol symbol)
     {
-        var idSuffix = request.AssemblyIdentity?.FormatHandoff(symbol)
-            ?? symbol.TryGetDocCommentId();
+        var idSuffix = request.AssemblyIdentity is { IsAssembly: false } sourceIdentity
+            ? sourceIdentity.FormatHandoff(symbol, request.Solution)
+            : request.AssemblyIdentity?.FormatHandoff(symbol) ?? symbol.TryGetDocCommentId();
         var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin, request.StartLine);
 
         var markdown = new MarkdownBuilder();

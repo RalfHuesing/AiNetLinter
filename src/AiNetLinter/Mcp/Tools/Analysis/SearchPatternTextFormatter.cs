@@ -63,7 +63,9 @@ internal static class SearchPatternTextFormatter
             return prefix + $"; handoff: {semantic.Resolution}";
         }
 
-        var internalId = handoffSymbolIdentity?.Format(semantic.SymbolId);
+        var internalId = semantic.ProjectId is null
+            ? null
+            : handoffSymbolIdentity?.Format(semantic.SymbolId, semantic.ProjectId);
         if (string.IsNullOrWhiteSpace(internalId)) return prefix + "; handoff: unavailable";
 
         return prefix + $"; handoffId: `{HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalId)}`";
