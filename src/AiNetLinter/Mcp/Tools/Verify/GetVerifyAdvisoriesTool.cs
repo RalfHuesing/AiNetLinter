@@ -73,19 +73,13 @@ internal static class GetVerifyAdvisoriesTool
 
     internal static CallToolResult Render(DeadCodeScanResult scan)
     {
-        var orderedGroups = scan.DeadSymbols
-            .GroupBy(entry => (Project: entry.ProjectName ?? "?", entry.File))
-            .OrderBy(group => group.Min(entry => entry.Confidence == "high" ? 0 : 1))
-            .ThenBy(group => group.Key.Project, StringComparer.Ordinal)
-            .ThenBy(group => group.Key.File, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(group => group.Key.File, StringComparer.Ordinal)
-            .Select(group => group
-                .OrderBy(entry => entry.Confidence == "high" ? 0 : 1)
-                .ThenBy(entry => entry.Line)
-                .ThenBy(entry => entry.InternalSymbolIdentifier, StringComparer.Ordinal))
-            .ToArray();
-        var candidates = orderedGroups
-            .SelectMany(group => group)
+        var candidates = scan.DeadSymbols
+            .OrderBy(entry => entry.Confidence == "high" ? 0 : 1)
+            .ThenBy(entry => entry.ProjectName, StringComparer.Ordinal)
+            .ThenBy(entry => entry.File, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.File, StringComparer.Ordinal)
+            .ThenBy(entry => entry.Line)
+            .ThenBy(entry => entry.InternalSymbolIdentifier, StringComparer.Ordinal)
             .ToArray();
         var candidateCount = scan.Summary.TotalDead;
         var selected = new List<DeadCodeEntry>();
@@ -122,20 +116,31 @@ internal static class GetVerifyAdvisoriesTool
         };
         if (truncatedBy > 0) lines.Add("truncated: weitere Kandidaten werden wegen des 65.536-Byte-Limits nicht angezeigt.");
 
-        foreach (var group in entries.GroupBy(entry => (entry.ProjectName ?? "?", entry.File)))
+        string? currentProject = null;
+        string? currentFile = null;
+        foreach (var entry in entries)
         {
-            lines.Add($"project: {Clean(group.Key.Item1)}");
-            lines.Add($"file: {Clean(group.Key.File)}");
-            foreach (var entry in group)
+            var project = entry.ProjectName ?? "?";
+            if (!string.Equals(currentProject, project, StringComparison.Ordinal))
             {
-                var symbol = string.IsNullOrEmpty(entry.ContainerType)
-                    ? entry.SymbolName
-                    : $"{ShortTypeName(entry.ContainerType)}.{entry.SymbolName}";
-                var identifier = entry.InternalSymbolIdentifier is { Length: > 0 } internalIdentifier
-                    ? HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalIdentifier)
-                    : string.Empty;
-                lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {entry.Usage} | {entry.Confidence}");
+                lines.Add($"project: {Clean(project)}");
+                currentProject = project;
+                currentFile = null;
             }
+
+            if (!string.Equals(currentFile, entry.File, StringComparison.Ordinal))
+            {
+                lines.Add($"file: {Clean(entry.File)}");
+                currentFile = entry.File;
+            }
+
+            var symbol = string.IsNullOrEmpty(entry.ContainerType)
+                ? entry.SymbolName
+                : $"{ShortTypeName(entry.ContainerType)}.{entry.SymbolName}";
+            var identifier = entry.InternalSymbolIdentifier is { Length: > 0 } internalIdentifier
+                ? HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalIdentifier)
+                : string.Empty;
+            lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {entry.Usage} | {entry.Confidence}");
         }
 
         return string.Join('\n', lines);

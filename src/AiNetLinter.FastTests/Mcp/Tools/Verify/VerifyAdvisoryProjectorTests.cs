@@ -45,6 +45,58 @@ public sealed class VerifyAdvisoryProjectorTests
     }
 
     [Fact]
+    public void GetVerifyAdvisories_RenderSortsConfidenceGloballyAcrossCompactGroups()
+    {
+        static DeadCodeEntry Candidate(
+            string project,
+            string file,
+            int line,
+            string name,
+            string confidence) => new(
+                Id: name,
+                Kind: "method",
+                ContainerType: "Namespace.Type",
+                SymbolName: name,
+                File: file,
+                Line: line,
+                Column: 1,
+                Accessibility: "private",
+                Confidence: confidence,
+                Reason: "static scan",
+                LimitsApplies: [],
+                ProjectName: project);
+
+        var entries = new[]
+        {
+            Candidate("A", "src/a.cs", 1, "LowA", "low"),
+            Candidate("Z", "src/z.cs", 10, "HighZ", "high"),
+            Candidate("A", "src/a.cs", 2, "HighA", "high"),
+            Candidate("A", "src/b.cs", 3, "LowB", "low"),
+        };
+        var scan = new DeadCodeScanResult(
+            entries,
+            new DeadCodeSummary(4, 4, 0, 4, 0, new Dictionary<string, int> { ["method"] = 4 }),
+            [],
+            new DeadCodeRecommendedNextAction("countercheck", "statische Grenzen prüfen"),
+            IsTruncated: false);
+
+        var result = GetVerifyAdvisoriesTool.Render(scan);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var rows = text.Split('\n').Where(line => Regex.IsMatch(line, @"^\d+ \|", RegexOptions.CultureInvariant)).ToArray();
+        Assert.Equal(
+            [
+                "2 | Type.HighA |  | unreferenced | high",
+                "10 | Type.HighZ |  | unreferenced | high",
+                "1 | Type.LowA |  | unreferenced | low",
+                "3 | Type.LowB |  | unreferenced | low",
+            ],
+            rows);
+        Assert.Equal(1, text.Split('\n').Count(line => line == "columns: line | symbol | symbolIdentifier | usage | confidence"));
+        Assert.Equal(2, text.Split('\n').Count(line => line == "project: A"));
+    }
+
+    [Fact]
     public async Task CollectAsync_MultipleScopeFiles_AggregatesBothAdvisoryKinds()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
