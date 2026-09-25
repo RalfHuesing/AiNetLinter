@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
@@ -294,7 +295,7 @@ public sealed class VerifyToolContractE2ETests
             "truncatedBy=0");
         var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
         Assert.True(Encoding.UTF8.GetByteCount(advisoryText) <= 65_536);
-        var identifiers = ExtractSymbolIdentifiers(advisoryText);
+        var identifiers = ExtractHandoffIds(advisoryText);
         Assert.Equal(candidates, identifiers.Count);
         Assert.Equal(identifiers.Count, identifiers.Distinct(StringComparer.Ordinal).Count());
 
@@ -346,13 +347,25 @@ public sealed class VerifyToolContractE2ETests
             || advisoryText.Contains("ausgelassen", StringComparison.OrdinalIgnoreCase)
             || advisoryText.Contains("gekürzt", StringComparison.OrdinalIgnoreCase));
 
-        var entryLines = advisoryText.Split('\n').Where(line => line.Contains("symbolIdentifier=", StringComparison.Ordinal)).ToArray();
+        foreach (var column in new[] { "line", "symbol", "symbolIdentifier", "usage", "confidence" })
+        {
+            Assert.Equal(1, CountWordOccurrences(advisoryText, column));
+        }
+
+        var identifiers = ExtractHandoffIds(advisoryText);
+        Assert.Equal(shown, identifiers.Count);
+        Assert.Equal(identifiers.Count, identifiers.Distinct(StringComparer.Ordinal).Count());
+        var entryLines = advisoryText.Split('\n')
+            .Where(line => Regex.IsMatch(line, @"\bh:[A-Za-z0-9_-]+\b", RegexOptions.CultureInvariant))
+            .ToArray();
         Assert.Equal(shown, entryLines.Length);
         Assert.All(entryLines, line =>
         {
-            Assert.Contains("line=", line, StringComparison.Ordinal);
-            Assert.Contains("usage=", line, StringComparison.Ordinal);
-            Assert.Contains("confidence=", line, StringComparison.Ordinal);
+            Assert.Matches(@"\b\d+\b", line);
+            Assert.True(line.Contains("test_only", StringComparison.Ordinal) || line.Contains("unreferenced", StringComparison.Ordinal));
+            Assert.True(line.Contains("high", StringComparison.Ordinal) || line.Contains("low", StringComparison.Ordinal));
+            var nonIdentifierWords = Regex.Replace(line, @"\bh:[A-Za-z0-9_-]+\b", string.Empty, RegexOptions.CultureInvariant);
+            Assert.True(Regex.Matches(nonIdentifierWords, @"\b[A-Za-z][A-Za-z0-9_]*\b").Count >= 3);
         });
     }
 
@@ -437,6 +450,15 @@ public sealed class VerifyToolContractE2ETests
 
         return identifiers;
     }
+
+    private static List<string> ExtractHandoffIds(string text) =>
+        Regex.Matches(text, @"\bh:[A-Za-z0-9_-]+\b", RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(match => match.Value)
+            .ToList();
+
+    private static int CountWordOccurrences(string text, string word) =>
+        Regex.Matches(text, $@"\b{Regex.Escape(word)}\b", RegexOptions.CultureInvariant).Count;
 
     private static int ExtractSummaryCount(string summary, string key)
     {

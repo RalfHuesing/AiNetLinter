@@ -22,7 +22,7 @@ ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
   - Abnahme: Tests kompilieren; mindestens der neue Tool-Vertrag läuft
     gezielt rot, nachdem seine Fixture-/Vorbedingungen bestanden haben.
     Keine bestehenden Tests werden abgeschwächt.
-  - Nachweis: `dotnet build AiNetLinter.slnx` kompiliert beide Tests erfolgreich. `dotnet test src/AiNetLinter.IntegrationTests/AiNetLinter.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~GetVerifyAdvisories_"` führt beide gezielt rot mit `Unknown tool: 'get_verify_advisories'` aus. Vor der Vertragsassertion bestätigt `verify` jeweils den bestandenen synthetischen Scan: 31 Kandidaten im kleinen Fall und mindestens 714 im Größenfall; beide Aufrufe des Advisory-Tools erfolgen davor.
+  - Nachweis: `dotnet build AiNetLinter.slnx` kompiliert beide Tests erfolgreich. `dotnet test src/AiNetLinter.IntegrationTests/AiNetLinter.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~GetVerifyAdvisories_"` führt beide gezielt rot mit `Unknown tool: 'get_verify_advisories'` aus. Vor der Vertragsassertion bestätigt `verify` jeweils den bestandenen synthetischen Scan: 31 Kandidaten im kleinen Fall und mindestens 714 im Größenfall; beide Aufrufe des Advisory-Tools erfolgen davor. Der Größenfall prüft einmalige Spaltenbezeichnungen, kompakte vollständige Einträge, eindeutige IDs sowie Budget und Kürzungszähler.
 
 - [ ] **2. MCP-Abruf und kompakte Darstellung implementieren**
   - Intention: Ein eigener Aufruf liefert bei Bedarf die Dead-Code-Liste
