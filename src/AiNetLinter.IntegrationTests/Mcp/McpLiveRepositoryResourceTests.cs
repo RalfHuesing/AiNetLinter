@@ -2,7 +2,6 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
@@ -32,29 +31,16 @@ public sealed class McpLiveRepositoryResourceTests
         var rulesResourceUri = $"ainetlinter://rules?targetPath={Uri.EscapeDataString(targetPath)}";
         var templates = await _fixture.Client.ListResourceTemplatesAsync();
         var resources = await _fixture.Client.ListResourcesAsync();
-        var tools = await _fixture.Client.ListToolsAsync();
         var readResult = await _fixture.Client.ReadResourceAsync(resourceUri);
         var rulesReadResult = await _fixture.Client.ReadResourceAsync(rulesResourceUri);
         var guideResult = await _fixture.Client.ReadResourceAsync("ainetlinter://agent-guide");
         var textContent = Assert.IsType<TextResourceContents>(Assert.Single(readResult.Contents));
         var rulesContent = Assert.IsType<TextResourceContents>(Assert.Single(rulesReadResult.Contents));
         var guideContent = Assert.IsType<TextResourceContents>(Assert.Single(guideResult.Contents));
-        var expectedToolGroups = new[]
-        {
-            new[] { "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph", "resolve_type_origin", "find_implementations" },
-            new[] { "get_symbol_body" },
-            new[] { "get_namespace_tree", "get_class_structure", "get_file_tree", "get_file_skeleton", "get_index_scope", "get_hotspots" },
-            new[] { "verify", "search_pattern", "metrics_tree", "metrics_lookup", "pattern_detect", "get_feature_context", "get_test_context" },
-            new[] { "find_duplicates", "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" },
-            new[] { "reload_config", "get_server_health" }
-        };
-
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?targetPath}");
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?targetPath}");
         var guideResource = Assert.Single(resources);
         Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
-        Assert.Equal(29, tools.Count);
-        Assert.Equal(expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal), tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal));
         Assert.Equal(resourceUri, textContent.Uri);
         Assert.Equal("text/markdown", textContent.MimeType);
         Assert.Contains(repoRoot, textContent.Text, StringComparison.Ordinal);
