@@ -47,7 +47,7 @@ ausdrücklich beauftragte Zwischennachweis vor Produktionscode.
     projektseitige Gates bestehen, abgesehen vom ausdrücklich roten
     Zwischenstand aus Punkt 1.
 
-- [ ] **3. Agentenvertrag und Dokumentation synchronisieren**
+- [x] **3. Agentenvertrag und Dokumentation synchronisieren**
   - Intention: Ein Agent entdeckt das Tool und versteht den sparsamen
     Aufruf, die Kürzungsgrenze und die Pflicht zur Einzelprüfung.
   - Scope: Kurze, prägnante MCP-Toolbeschreibung; `Docs/mcp/tools.md`

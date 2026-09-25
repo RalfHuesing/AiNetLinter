@@ -66,7 +66,7 @@ internal static class AnalysisToolRegistrations
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 GetVerifyAdvisoriesTool.ToolName,
-                "Listet Dead-Code-Advisories einer Solution bis 64 KiB mit direkt nutzbaren Symbol-IDs und nennt ausgelassene Treffer. category: dead_code. Kandidaten vor Änderungen gegenprüfen.")));
+                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge; truncatedBy nennt Auslassungen. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
     }
 
     private static void AddVerify(
