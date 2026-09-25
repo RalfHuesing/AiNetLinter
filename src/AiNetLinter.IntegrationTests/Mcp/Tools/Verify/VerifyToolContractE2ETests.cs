@@ -262,6 +262,45 @@ public sealed class VerifyToolContractE2ETests
     }
 
     [Fact]
+    public async Task Verify_DeadCodeAdvisoryTruncationHasNoDiscoverableReviewTool()
+    {
+        const int candidateCount = 30;
+        using var fixture = CreateGitFixture();
+        File.WriteAllText(
+            Path.Combine(fixture.RootPath, "src", "BaselineMini", "ManyUnusedMembers.cs"),
+            ManyUnusedMembersSource(candidateCount));
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var verify = await host.CallToolAsync("verify");
+        AssertVerifyResult(verify, expectedError: false, "verdict: pass", "deadCode: status=complete");
+        var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
+        var initiallyShown = ExtractSymbolIdentifiers(verifyText);
+        var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
+        var candidates = ExtractSummaryCount(deadCodeSummary, "candidates");
+        var shown = ExtractSummaryCount(deadCodeSummary, "shown");
+        var truncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
+        Assert.Equal(candidateCount + 1, candidates);
+        Assert.Equal(initiallyShown.Count, shown);
+        Assert.Equal(candidates - shown, truncatedBy);
+        Assert.InRange(shown, 1, candidates - 1);
+        Assert.Contains("next=review_now", deadCodeSummary, StringComparison.Ordinal);
+
+        var initiallyShownBodies = await host.CallToolAsync(
+            "get_symbol_body",
+            new Dictionary<string, object?> { ["symbolIdentifiers"] = initiallyShown.ToArray() });
+        AssertVerifyResult(initiallyShownBodies, expectedError: false);
+        var initiallyShownBodyHeaders = Assert.IsType<TextContentBlock>(Assert.Single(initiallyShownBodies.Content)).Text
+            .Split('\n')
+            .Count(line => line.StartsWith("### ", StringComparison.Ordinal));
+        Assert.Equal(initiallyShown.Count, initiallyShownBodyHeaders);
+
+        var tools = await host.ListToolsAsync();
+        Assert.Contains(tools, tool =>
+            !string.Equals(tool.Name, "verify", StringComparison.Ordinal)
+            && HasDeadCodeReviewLanguage($"{tool.Name} {tool.Description}"));
+    }
+
+    [Fact]
     public async Task ToolsList_ContainsVerifyAndRetainsOnlyUnaffectedInspectionTools()
     {
         using var fixture = CreateGitFixture();
@@ -305,6 +344,68 @@ public sealed class VerifyToolContractE2ETests
             public string Secondary => "https://example.invalid/{{route}}";
         }
         """;
+
+    private static string ManyUnusedMembersSource(int count)
+    {
+        var members = string.Join(
+            Environment.NewLine,
+            Enumerable.Range(0, count).Select(index => $"    private static void UnusedCandidate{index:D2}() {{ }}"));
+        return $$"""
+            namespace BaselineMini;
+
+            public sealed class ManyUnusedMembers
+            {
+            {{members}}
+            }
+            """;
+    }
+
+    private static List<string> ExtractSymbolIdentifiers(string text)
+    {
+        var identifiers = new List<string>();
+        foreach (var line in text.Split('\n'))
+        {
+            const string marker = "symbolIdentifier=";
+            var start = line.IndexOf(marker, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                continue;
+            }
+
+            start += marker.Length;
+            var end = line.IndexOf(';', start);
+            var identifier = line[start..(end < 0 ? line.Length : end)].Trim();
+            if (identifier.Length > 0)
+            {
+                identifiers.Add(identifier);
+            }
+        }
+
+        return identifiers;
+    }
+
+    private static int ExtractSummaryCount(string summary, string key)
+    {
+        var field = summary.Split(';').Single(value => value.TrimStart().StartsWith($"{key}=", StringComparison.Ordinal));
+        var value = field[(field.IndexOf('=') + 1)..].Trim();
+        return int.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static bool HasDeadCodeReviewLanguage(string description)
+    {
+        var normalized = description.Replace('_', ' ').Replace('-', ' ');
+        var describesDeadCodeAdvisories = normalized.Contains("advisory", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("dead code candidate", StringComparison.OrdinalIgnoreCase);
+        var describesRetrieval = normalized.Contains("get ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("list ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("query ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("filter ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("page ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("paginate ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("review ", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("retrieve ", StringComparison.OrdinalIgnoreCase);
+        return describesDeadCodeAdvisories && describesRetrieval;
+    }
 
     private static string ExtractReference(CallToolResult result, string entryPrefix)
     {
