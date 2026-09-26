@@ -1,16 +1,14 @@
-# 08 – Quick-Win-Kandidaten
+# 08 – Verbleibende Befunde
 
-Diese Liste ist eine **Aufwandshypothese**, keine Zusage. Die v3-Runde hat Nutzung, nicht Implementierungskosten auditiert. Vor der Umsetzung sind Ursache und Testgrenze je Punkt kurz zu prüfen.
+Stand: 2026-09-26. Erledigte Punkte wurden aus diesem Task-Ordner entfernt; Umsetzung und Entscheidungen stehen in [Umsetzung-und-Feedback.md](Umsetzung-und-Feedback.md). Die fünf ursprünglichen Nutzungsberichte sind historische Messprotokolle und beschreiben nicht durchgehend den aktuellen Serverstand.
 
-| Kandidat | Erwarteter Nutzen | Geschätzter Aufwand | Vorbehalt |
-|---|---|---|---|
-| `SYMBOL_NOT_FOUND` mit `isError=true` ausgeben | Clients erkennen Fehler ohne Textparsing | Eher klein | Content-only-Vertrag und bestehende Client-Erwartungen prüfen; [05](05-Fehlerstatus.md) |
-| Bei `find_references` in Blazor die Markup-Grenze explizit nennen | Verhindert „0 Referenzen = unbenutzt“ | Eher klein | Erkennung von Razor-Scope/Tool-Antwort prüfen; [03](03-Razor-Referenzgrenze.md) |
-| Verify-Zähler mit klaren Bezeichnern erläutern | Weniger Verwechslung von `evidence`, Kandidaten und Sichtbaren | Eher klein | Antwortbudget und Parser-Vertrag prüfen; [04](04-Verify-Ausgabe.md) |
-| Doppelte Treffer/Hinweise in `search_pattern`/`get_file_tree` reduzieren | Weniger Leseaufwand und Bytes | Eher klein | Nur reproduzierte Doppelzeilen entfernen; [03](03-Razor-Referenzgrenze.md), [07](07-Laufzeit-und-Bytes.md) |
+| Punkt | Entscheidung | Nächster Schritt |
+|---|---|---|
+| [Cursor-Timeout bei kalten Assembly-Zielen](09-Cursor-Timeout-Rest.md) | Offen, relevant für einen Teil der gerouteten Tools. | Nach dem Release den zentralen Assembly-Session-Einstieg so anpassen, dass auch generische Tools binnen der Idle-Grenze antworten; danach mit neuem Server in Cursor prüfen. |
+| Verify-Zähler `evidence: returned=X/Y` | Kleine Verständlichkeitslücke bleibt: Der Zähler umfasst mehr als sichtbare Dead-Code-Kandidaten. `deadCode.candidates`, `shown`, `truncatedBy` und der paginierte Abruf sind inzwischen getrennt vorhanden. | Bei einer späteren MCP-Vertragsrunde die Legende oder Feldnamen präzisieren und Parser-/Bytebudget prüfen. Für den Release kein Blocker. |
 
-**Nicht als Quick Win einstufen, bevor die Ursache klar ist:** Konstruktor-Handoff-Auflösung ([01](01-Konstruktor-Handoffs.md)), paginierter Advisory-Zugriff ([04](04-Verify-Ausgabe.md)), semantische Razor-Referenzen ([03](03-Razor-Referenzgrenze.md)) und SAN-Verify-Performance ([07](07-Laufzeit-und-Bytes.md)). Diese können kleine Fixes sein, können aber auch Identitäts-, Index- oder API-Arbeit erfordern.
+## Ohne aktuelle Umsetzung
 
-## Vorschlag für die nächste Runde
-
-Zuerst den Konstruktor-Handoff als klaren Nutzungsbruch reproduzieren und eingrenzen. Danach den Fehlerstatus und die Markup-Grenzkennzeichnung als kleine, getrennte Änderungen schätzen. Die Advisory-Genauigkeit erst auf identischer Symbol-Ebene neu bewerten; der bisherige `DashboardQuery`-Fehlalarm ist nicht bestätigt.
+- Die 138,9 Sekunden für einen SAN-Verify und 81,57 Sekunden für einen einzelnen `get_index_scope`-Aufruf sind historische Stichproben ohne isolierte Ursache. Der neue abrufbare Auftrag begrenzt die Stille bei angebundenen langen Tools; er optimiert ihre Rechenzeit nicht. Eine Performance-Änderung braucht reproduzierte Messungen nach Laden und Cache-Aufbau.
+- Wiederholte Status-/Count-Hinweise in `get_feature_context` und `get_file_tree` waren geringfügig. Für `search_pattern` ist kein konkreter doppelter Treffer im aktuellen Stand belegt. Ohne reproduzierbaren Befund werden keine Nutzdaten oder Vollständigkeitsmarker gekürzt.
+- Semantische Razor-Referenzen bleiben außerhalb des C#-Symbolgraphen. `find_references` kennzeichnet bei null Call-Sites und vorhandenem Razor-Markup die Grenze und nennt eine konkrete `search_pattern`-Folgeabfrage. Eine semantische Razor-Integration wäre ein eigenes Vorhaben, kein Quick Win.

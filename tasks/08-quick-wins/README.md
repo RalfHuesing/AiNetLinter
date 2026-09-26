@@ -1,5 +1,7 @@
-# 08 – Quick-Win-Kandidaten
+# 08 – Quick-Wins: aktueller Stand
 
-Startpunkt: [priorisierte Kandidaten und Vorbehalte](08-Quick-Wins.md).
+- [Verbleibende Befunde und Entscheidungen](08-Quick-Wins.md)
+- [Umsetzung und Nutzerfeedback](Umsetzung-und-Feedback.md)
+- [Cursor-Timeout: offener Assembly-Pfad und Live-Nachweis](09-Cursor-Timeout-Rest.md)
 
-Die fünf berührten Themen-Notizen und alle fünf Originalberichte liegen hier als lokale Kopien. Die Einstufung „eher klein“ ist eine Aufwandshypothese; insbesondere Konstruktor-Handoffs, Paginierung und semantische Razor-Abdeckung sind vor einer Umsetzung gesondert zu schätzen.
+`AiNetLinter.md`, `SqlToAi.md`, `KnowHowToAI.md`, `SAN.md` und `TokenEffizienz.md` sind die ursprünglichen, unveränderten Nutzungsprotokolle. Ihre damaligen Findings sind historische Evidenz; der aktuelle Status steht in den drei Dateien oben.
