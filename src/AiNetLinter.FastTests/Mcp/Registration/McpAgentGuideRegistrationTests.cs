@@ -21,7 +21,7 @@ public sealed class McpAgentGuideRegistrationTests
 
         Assert.Equal(McpAgentGuideRegistration.Uri, content.Uri);
         Assert.Equal("text/markdown", content.MimeType);
-        Assert.Contains("AiNetLinter MCP-Bootstrap", content.Text, StringComparison.Ordinal);
+        Assert.Contains("MCP-Bootstrap", content.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter-rules.json", content.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter --docs mcp-rule", content.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", content.Text, StringComparison.Ordinal);
@@ -30,9 +30,9 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("--mcp-server", content.Text, StringComparison.Ordinal);
         Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
         Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
-        Assert.Contains("MUSS zuerst das passende", content.Text, StringComparison.Ordinal);
-        Assert.Contains("## MCP-Zielvertrag", content.Text, StringComparison.Ordinal);
-        Assert.Contains("Ein Handoff-Handle hat das Format `h:…`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", content.Text, StringComparison.Ordinal);
+        Assert.Contains("## Antwort- und Folgeaufrufvertrag", content.Text, StringComparison.Ordinal);
+        Assert.Contains("`h:…`", content.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("report_observability_feedback", content.Text, StringComparison.Ordinal);
 
         const string workflowMarker = "## Dauerhafte Agentenregel\n\n";
