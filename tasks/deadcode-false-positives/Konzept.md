@@ -1,5 +1,5 @@
 ---
-status: decided
+status: ready
 ---
 
 # Dead-Code-Advisory: verbindliche Konzeptentscheidung
@@ -22,6 +22,11 @@ Funktionen. Die Entscheidungen sind verbindlich. Keine Produktausnahmen,
 kein Löschen im Zielrepository, keine Erweiterung auf lokale Variablen oder
 `CS0162`. Der umsetzende Agent soll die Regeln anwenden, nicht die
 Grundsatzentscheidung erneut öffnen.
+
+**Ready:** Es sind keine fachlichen Nutzerentscheidungen offen. Die
+Umsetzung kann nach Beauftragung beginnen. Interne Datenstrukturen und
+konkrete Optionsnamen wählt der umsetzende Agent konsistent zum Bestand.
+`ready` bezeichnet ausschließlich das Konzept, nicht eine fertige Umsetzung.
 
 ## 2. Evidenz und Aussagekraft
 
@@ -94,6 +99,10 @@ Die Nutzungsangaben bedeuten:
   Schreibstellen und Testleser getrennt angeben; „nur geschrieben“ nicht
   als „keine Referenzen“ beschreiben.
 
+Referenzlage und fehlende Lesung sind getrennte Merkmale: Ein Feld kann
+`test_only` und zugleich `no_production_read` sein. Im Ausgabegrund beide
+Informationen erhalten, aber weiterhin nur eine Kandidatenzeile ausgeben.
+
 Kommentare und gleiche Literalwerte sind keine Symbolnutzung. Namenbasierte
 Verweise benötigen passenden Kontext; ein beliebiger gleichlautender String
 schützt nicht alle gleichnamigen Symbole.
@@ -104,6 +113,10 @@ schützt nicht alle gleichnamigen Symbole.
 Enums und Delegates; gewöhnliche Methoden einschließlich Wrapper,
 Überladungen und Extension-Methoden; Konstanten, Felder und Properties.
 Sichtbarkeit ist in `closed_solution` kein Ausschlussgrund.
+
+Kandidatendeklarationen stammen aus produktiven Projekten. Echte Testprojekte
+liefern Nutzungsbelege, aber keine zu bereinigenden Testmethoden-Kandidaten.
+Produktionscode mit ausschließlich Testnutzung bleibt ausdrücklich im Scope.
 
 **Keine eigenständigen Kandidaten in diesem Umfang:** Konstruktoren,
 Accessoren, Operatoren, Finalizer, einzelne Enum-Werte, Events, Indexer und
@@ -240,7 +253,9 @@ der oben aufgeführten positiven Fälle.
   Verify**, **60 Sekunden beim ausdrücklich angeforderten Solution-Advisory**.
   Notwendige Advisory-Vorbereitung zählt mit; bereits geladene Daten
   wiederverwenden. Explizites `verify(scope: solution)` verwendet das
-  Solution-Budget. Budgets zentral konfigurierbar machen; sie begrenzen
+  Solution-Budget, ebenso ein eigenständig angeforderter vollständiger
+  Advisory-Scan über `get_verify_advisories`. Folgeseiten lesen ausschließlich
+  den vorhandenen Snapshot. Budgets zentral konfigurierbar machen; sie begrenzen
   nicht die übrige Gate-Laufzeit.
 - Budgetablauf beendet die Advisory-Arbeit und liefert einen partiellen
   Stand; kein unbegrenzter Hintergrundscan. Pagination ist keine
@@ -297,7 +312,59 @@ Auch erklären: `test_only` ist ein nützlicher Prüfkandidat, `private` kein
 Löschbeweis, Reflection sperrt nicht automatisch die ganze Solution und
 eine Ausgabelimitierung spart keine Scanzeit.
 
-## 10. Abschlusskriterien
+## 10. Produktunabhängige Verhaltensnachweise
+
+Diese Anforderungen gelten für die spätere Umsetzung; in der Konzeptphase
+werden keine Tests implementiert oder ausgeführt.
+
+- Für jede zu behebende False-Positive-Ursache zuerst einen isolierten
+  xUnit-v3-Reproduktionstest mit erwarteter korrekter Einstufung schreiben
+  und sein Scheitern am bisherigen Verhalten nachweisen. Bereits vorhandene
+  passende Reproduktionstests wiederverwenden. Erst danach den Fehler beheben.
+  Ist ein Fall bereits korrekt, als grünen Schutztest behalten; keinen
+  künstlichen Rot-Nachweis erzeugen.
+- Zusätzlich positive Erkennung absichern: tatsächlich verwaiste Symbole
+  müssen weiterhin Prüfkandidaten sein. Ein Test darf nicht bereits deshalb
+  bestehen, weil gar keine Kandidaten mehr ausgegeben werden.
+- Kleine eigenständige Beispiel-/Dummy-Solutions beziehungsweise
+  Roslyn-Fixtures in der vorhandenen Testinfrastruktur erzeugen. Keine
+  Planner-/SAN-Projekte, Produktnamen, absoluten Entwicklerpfade oder
+  externe Dienste als Testabhängigkeit. Temporäre Dateien ausschließlich
+  über `AiNetLinter.TestKit.TestTempDirectory` anlegen.
+- Bei frameworkabhängigen Regeln neutrale Beispieltypen gegen die passende
+  tatsächliche Framework-API testen. Bei Metadaten-Dispatch muss die Basis
+  tatsächlich aus einer Metadatenreferenz kommen. Ein selbst erfundenes
+  gleichnamiges Attribut darf eine semantische Frameworkbindung nicht ersetzen.
+- Konkrete Ergebnisse prüfen: Kandidat, Nutzungsunterdrückung, API-Schutz,
+  `undecidable` oder offene Scanarbeit. Ein leerer Output allein belegt weder
+  korrekte Unterdrückung noch korrekte Unsicherheitsbehandlung.
+
+Die Fallgruppen aus Abschnitt 7 werden in folgende neutrale Szenarien
+übersetzt. Je Regel die passende Gegenprobe im gleichen Nutzungskontext
+prüfen, damit eine pauschale Ausschlussregel den Test nicht erfüllen kann:
+
+| Zu verhindernder Fehlalarm / Grenze | Positive Erkennung beziehungsweise Gegenprobe |
+| --- | --- |
+| Host-Aufruf aus Ordner `Features/Test` | Aufruf nur aus echtem Testprojekt bleibt `test_only`; Testdeklaration selbst ist kein Kandidat. |
+| Typnutzung über Extension-Methode oder Compiler-Einstieg | Verwaister Hilfstyp bleibt Kandidat; testbenutzter Extension-Typ erhält korrekte Rolle; Typ/Member nicht doppelt ausgeben. |
+| Framework-Hook, Metadaten-Override, DI- oder Middlewarebindung | Gewöhnliche unbenutzte Methode auf demselben Typ bleibt Kandidat; eigener unbenutzter Interface-Vertrag bleibt prüfbar. |
+| Gefilterter Assembly-Scan mit Registrierung/Aktivierung | Nicht passender verwaister Typ bleibt Kandidat; nicht auflösbarer konkreter Filter ergibt begrenztes `undecidable`. |
+| Produktiver Zugriff per `GetField` oder `GetProperties` | Nicht betroffener nur geschriebener Member bleibt Kandidat; Reflection nur aus Tests schützt nicht als Produktionsnutzung. |
+| Serializer-/Mapper-/Binder-Vertrag | Ungebundene ungelesene Property bleibt Kandidat; gleichnamiges fremdes Attribut schützt nicht pauschal. |
+| Markup-/Generatorbindung, einschließlich Attached Property | Öffentliche Methode ohne Bindung bleibt Kandidat; konkretes unauflösbares Binding ist unentscheidbar. |
+| Implizite Record-Lesung über benutzte Gleichheit/Hashing | Nur geschriebene Komponente ohne solchen Nutzungskanal bleibt Kandidat; Konstruktorargument zählt nicht als Leser. |
+| Externe API und zugängliche Erweiterungspunkte | Dasselbe öffentliche Symbol in `closed_solution` bleibt prüfbar; nicht zugängliches Implementierungsdetail ist nicht pauschal geschützt. |
+| Lebendes Delegationsziel oder gleicher Literalwert | Unaufgerufener Wrapper, ungenutzte Überladung und Konstante bleiben Kandidaten. |
+| Entfernte letzte Nutzung bei unveränderter Deklarationsdatei | `changes` findet das bisherige Ziel; fehlende Vergleichsbasis wird als Abdeckungslücke sichtbar. |
+| Budgetablauf, Ausgabelimit und Snapshot-Fortsetzung | Partielle Analyse bleibt partiell, ungeprüfte Symbole sind keine Kandidaten, letzte Ausgabeseite erzeugt keine vollständige Scanbehauptung. |
+
+Budget-/Abbruchverhalten deterministisch prüfen, ohne fragile Tests auf
+zufällige reale Maschinenlaufzeit. Die tatsächliche Laufzeitmessung bleibt
+ein separater Nachweis. Testebenen, Ausführung und Gates richten sich
+ausschließlich nach den unten genannten Projektregeln; die Matrix verlangt
+keinen separaten Serverstart für jede fachliche Variante.
+
+## 11. Abschlusskriterien
 
 Die Umsetzung erfüllt dieses Konzept nur, wenn positive Gegenbeispiele als
 Kandidaten beziehungsweise Gruppen auffindbar bleiben, belegte Bindungen
@@ -306,6 +373,11 @@ sichtbar werden. Die Entfern-Liste bleibt eine Gegenprobe, keine Löschfreigabe.
 Laufzeit und Abdeckung sind gegen den bisherigen Zustand nachvollziehbar
 auszuweisen. Präzisionsangaben benötigen eine belegte Stichprobe; es gibt
 keine vorgegebene Zielquote.
+
+Die Verhaltensnachweise aus Abschnitt 10 und die erklärende
+Dokumentationssynchronisation aus Abschnitt 9 gehören zur vollständigen
+Umsetzung. Reine Listenverkürzung, pauschale Unterdrückung oder ausschließlich
+am Produktrepository geprüfte Sonderfälle erfüllen das Konzept nicht.
 
 Für Entwicklungs- und Prüfabläufe gelten ausschließlich
 `.agents/rules/AiNetLinter-Richtlinien.mdc` und
