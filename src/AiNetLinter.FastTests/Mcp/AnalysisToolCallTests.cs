@@ -106,7 +106,7 @@ public sealed class AnalysisToolCallTests
             })).ProjectCall!);
 
         Assert.False(projectCalled);
-        Assert.False(result.IsError ?? false);
+        Assert.True(result.IsError);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", TextOf(result), StringComparison.Ordinal);
         Assert.Empty(registry.Snapshots());
     }
@@ -205,7 +205,7 @@ public sealed class AnalysisToolCallTests
                 MaxResponseBytes: 512,
                 PostNavigationResponseBudget: TestContextResponseBudget.ApplyFinal));
 
-        Assert.False(result.IsError ?? false);
+        Assert.True(result.IsError);
         var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains(LinterErrorCodes.ResponseBudgetTooSmall, text, StringComparison.Ordinal);
         Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);

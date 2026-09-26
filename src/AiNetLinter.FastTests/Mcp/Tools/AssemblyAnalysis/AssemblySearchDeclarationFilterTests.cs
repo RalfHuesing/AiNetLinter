@@ -225,7 +225,7 @@ public sealed class AssemblySearchDeclarationFilterTests
             new AssemblySearchArguments(qualifiedTypeName, false, "text", 10, DeclarationOnly: true, Kind: "type"),
             CancellationToken.None);
 
-        Assert.False(unsupported.IsError ?? false);
+        Assert.True(unsupported.IsError);
         Assert.Contains("UNSUPPORTED_IDENTIFIER", AssemblyAnalysisTestSupport.TextOf(unsupported), StringComparison.Ordinal);
         Assert.Contains("get_symbol_body", AssemblyAnalysisTestSupport.TextOf(unsupported), StringComparison.Ordinal);
         Assert.Contains("handoffId: `h:", AssemblyAnalysisTestSupport.TextOf(search), StringComparison.Ordinal);

@@ -45,7 +45,7 @@ public sealed class MetricsLookupToolTests
 
         var result = await MetricsLookupTool.ExecuteAsync(state, symbolIdentifiers, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.", textContent.Text);
@@ -59,7 +59,7 @@ public sealed class MetricsLookupToolTests
 
         var result = await MetricsLookupTool.ExecuteAsync(state, ["NonExistentClass.NonExistentMethod"], CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }

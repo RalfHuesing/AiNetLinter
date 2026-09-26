@@ -84,7 +84,7 @@ public sealed class AssemblyAnalysisRegistryTests
 
         Assert.Null(result.Lease);
         Assert.NotNull(result.Error);
-        Assert.False(result.Error!.IsError);
+        Assert.True(result.Error!.IsError);
         Assert.Contains(LinterErrorCodes.TargetUnreadable, TextOf(result.Error), StringComparison.Ordinal);
     }
 

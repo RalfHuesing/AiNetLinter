@@ -28,7 +28,7 @@ public sealed class WiringFilesystemContractTests
                 registry,
                 new AnalysisTargetRequest(root),
                 ThrowingFilesystemCallback);
-            Assert.NotEqual(true, result.IsError);
+            Assert.True(result.IsError);
             Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
 
@@ -49,7 +49,7 @@ public sealed class WiringFilesystemContractTests
             new AnalysisTargetRequest(assemblyPath),
             ThrowingFilesystemCallback);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = TextOf(result);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", text, StringComparison.Ordinal);
         Assert.Contains(canonicalPath, text, StringComparison.OrdinalIgnoreCase);

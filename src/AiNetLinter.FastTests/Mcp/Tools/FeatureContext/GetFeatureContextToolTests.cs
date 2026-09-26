@@ -100,7 +100,7 @@ public sealed partial class GetFeatureContextToolTests
 
         var result = await GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions(""), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -112,7 +112,7 @@ public sealed partial class GetFeatureContextToolTests
 
         var result = await GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions("NonExistentClass.NonExistentMethod"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }

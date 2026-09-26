@@ -50,7 +50,7 @@ public sealed class GetFileSkeletonToolTests
 
         var result = await GetFileSkeletonTool.ExecuteAsync(state, filePaths, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("Pflichtparameter 'filePaths' fehlt oder ist leer.", textContent.Text);
@@ -65,7 +65,7 @@ public sealed class GetFileSkeletonToolTests
         var result = await GetFileSkeletonTool.ExecuteAsync(
             state, ["src/SymbolGraphMini/DoesNotExist.cs"], CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text);
     }

@@ -42,7 +42,7 @@ public sealed class MetricsTreeToolTests
         var result = await MetricsTreeTool.ExecuteAsync(
             state, new MetricsTreeToolArgs(null, "unknown_mode", 1, 10, null), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text);
     }
@@ -57,7 +57,7 @@ public sealed class MetricsTreeToolTests
         var result = await MetricsTreeTool.ExecuteAsync(
             state, new MetricsTreeToolArgs(null, "code_size", depth, 10, null), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text);
         Assert.Contains("depth", text, StringComparison.Ordinal);
@@ -71,7 +71,7 @@ public sealed class MetricsTreeToolTests
         var result = await MetricsTreeTool.ExecuteAsync(
             state, new MetricsTreeToolArgs(null, "code_size", 1, 0, null), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text);
         Assert.Contains("top_n", text, StringComparison.Ordinal);
@@ -85,7 +85,7 @@ public sealed class MetricsTreeToolTests
         var result = await MetricsTreeTool.ExecuteAsync(
             state, new MetricsTreeToolArgs(null, "code_size", 1, 10, "["), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text);
         Assert.Contains("file_filter", text, StringComparison.Ordinal);

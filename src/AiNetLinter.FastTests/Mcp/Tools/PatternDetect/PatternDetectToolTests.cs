@@ -79,15 +79,14 @@ public sealed class PatternDetectToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownPatternId_ReturnsRecoverableInvalidArgumentNotIsError()
+    public async Task ExecuteAsync_UnknownPatternId_ReturnsInvalidArgumentErrorWithHint()
     {
         var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, ["definitely-not-a-pattern"], null, PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
-        // Recoverable (IsErrorPolicy.md): ein Tippfehler in der pattern-ID ist ein erwartbarer
-        // Nutzerfehler mit Handlungsanleitung im Text, kein Tool-Ausfall.
-        Assert.NotEqual(true, result.IsError);
+        // Der korrigierbare Eingabefehler bleibt ein Protokollfehler mit Handlungsanleitung.
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("definitely-not-a-pattern", textContent.Text, StringComparison.Ordinal);

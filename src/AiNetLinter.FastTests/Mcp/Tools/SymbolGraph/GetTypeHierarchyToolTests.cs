@@ -85,7 +85,7 @@ public sealed class GetTypeHierarchyToolTests
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "DoesNotExistXyz", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
@@ -97,7 +97,7 @@ public sealed class GetTypeHierarchyToolTests
 
         var result = await GetTypeHierarchyTool.ExecuteAsync(state, "BaseGreeting.Greet", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }

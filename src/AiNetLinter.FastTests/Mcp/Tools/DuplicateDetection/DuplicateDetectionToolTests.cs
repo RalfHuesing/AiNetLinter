@@ -52,7 +52,7 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, "sideways", null, null, null), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("exact", textContent.Text, StringComparison.Ordinal);
@@ -69,7 +69,7 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(MinTokens: 0, null, null, null, null), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -83,7 +83,7 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, MaxResults: 0), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -248,7 +248,7 @@ public sealed class DuplicateDetectionToolTests
         var result = await DuplicateDetectionTool.ExecuteAsync(
             state, new DuplicateDetectionInput(null, null, null, null, null, ScopeType: "invalid-scope"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("scopeType", textContent.Text, StringComparison.Ordinal);

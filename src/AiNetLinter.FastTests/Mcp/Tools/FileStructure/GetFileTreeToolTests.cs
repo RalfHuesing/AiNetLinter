@@ -82,7 +82,7 @@ public sealed class GetFileTreeToolTests
 
         var result = await GetFileTreeTool.ExecuteAsync(targetPath, input, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("RESOURCE_NOT_FOUND", TextOf(result), StringComparison.Ordinal);
     }
 
@@ -98,7 +98,7 @@ public sealed class GetFileTreeToolTests
                 GetFileTreeTestData.Input() with { Root = root },
                 CancellationToken.None);
 
-            Assert.NotEqual(true, result.IsError);
+            Assert.True(result.IsError);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
     }
@@ -120,7 +120,7 @@ public sealed class GetFileTreeToolTests
         foreach (var input in cases)
         {
             var result = await GetFileTreeTool.ExecuteAsync(targetPath, input, CancellationToken.None);
-            Assert.NotEqual(true, result.IsError);
+            Assert.True(result.IsError);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
     }
@@ -174,7 +174,7 @@ public sealed class GetFileTreeToolTests
             GetFileTreeTestData.Input(),
             CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
     }
 

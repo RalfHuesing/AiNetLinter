@@ -16,7 +16,7 @@ public sealed class GetServerHealthValidationTests
         var result = GetServerHealthTool.ValidateOptions(new GetServerHealthOptions(MaxDiagnostics: maxDiagnostics));
 
         Assert.NotNull(result);
-        Assert.False(result!.IsError);
+        Assert.True(result!.IsError);
         var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
         Assert.Contains("fieldPath: $.maxDiagnostics", text, StringComparison.Ordinal);

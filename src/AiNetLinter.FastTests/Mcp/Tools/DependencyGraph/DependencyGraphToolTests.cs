@@ -46,7 +46,7 @@ public sealed class DependencyGraphToolTests
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Greeter.cs", "Greeter", null, 1, 50), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("filePath ODER symbolIdentifier", textContent.Text);
@@ -61,7 +61,7 @@ public sealed class DependencyGraphToolTests
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput(null, null, null, 1, 50), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("filePath ODER symbolIdentifier", textContent.Text);
@@ -76,7 +76,7 @@ public sealed class DependencyGraphToolTests
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/DoesNotExist.cs", null, null, 1, 50), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text);
     }
@@ -89,7 +89,7 @@ public sealed class DependencyGraphToolTests
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput(null, "DoesNotExistXyz", null, 1, 50), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
@@ -102,7 +102,7 @@ public sealed class DependencyGraphToolTests
         var result = await DependencyGraphTool.ExecuteAsync(
             state, new DependencyGraphInput("src/SymbolGraphMini/Greeter.cs", null, "sideways", 1, 50), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("incoming", textContent.Text, StringComparison.Ordinal);

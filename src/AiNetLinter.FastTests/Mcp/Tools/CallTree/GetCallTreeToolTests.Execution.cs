@@ -63,7 +63,7 @@ public sealed partial class GetCallTreeToolTests
     {
         var result = await GetCallTreeTool.ExecuteAsync(
             _fixture.CreateServer(), new GetCallTreeInput("Greeter.Greet", 1, null, 10, "sideways"), CancellationToken.None);
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
         Assert.Contains("direction", text, StringComparison.Ordinal);

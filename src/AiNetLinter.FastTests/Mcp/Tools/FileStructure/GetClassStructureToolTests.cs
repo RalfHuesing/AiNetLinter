@@ -45,7 +45,7 @@ public sealed partial class GetClassStructureToolTests
 
         var result = await GetClassStructureTool.ExecuteAsync(state, "", "lines", CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -57,7 +57,7 @@ public sealed partial class GetClassStructureToolTests
 
         var result = await GetClassStructureTool.ExecuteAsync(state, "DoesNotExistClass", "lines", CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }

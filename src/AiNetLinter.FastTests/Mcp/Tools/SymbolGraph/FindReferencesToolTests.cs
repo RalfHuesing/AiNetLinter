@@ -138,9 +138,7 @@ public sealed partial class FindReferencesToolTests
         Assert.NotNull(error);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
-        // isError-Policy: SYMBOL_NOT_FOUND ist recoverable (naechster Schritt: find_symbol) —
-        // IsError bleibt false, damit der Agent das Tool nicht aufgibt.
-        Assert.NotEqual(true, error.IsError);
+        Assert.True(error.IsError);
     }
 
     [Fact]
@@ -150,7 +148,7 @@ public sealed partial class FindReferencesToolTests
 
         var result = await FindReferencesTool.ExecuteAsync(state, "DoesNotExistXyz", maxResults: 50, depth: 1, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -258,7 +256,7 @@ public sealed partial class FindReferencesToolTests
 
         Assert.Null(symbol);
         Assert.NotNull(error);
-        Assert.NotEqual(true, error!.IsError);
+        Assert.True(error!.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", textContent.Text, StringComparison.Ordinal);
@@ -279,7 +277,7 @@ public sealed partial class FindReferencesToolTests
 
         Assert.Null(symbol);
         Assert.NotNull(error);
-        Assert.NotEqual(true, error!.IsError);
+        Assert.True(error!.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }

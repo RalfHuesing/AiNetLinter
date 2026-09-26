@@ -270,7 +270,7 @@ public sealed class McpArgumentValidationFilterTests
     private static void AssertFilterError(ModelContextProtocol.Protocol.CallToolResult? result, string fieldPath)
     {
         Assert.NotNull(result);
-        Assert.NotEqual(true, result!.IsError);
+        Assert.True(result!.IsError);
         Assert.Contains("INVALID_ARGUMENT", TextOf(result), System.StringComparison.Ordinal);
         Assert.Contains($"fieldPath: {fieldPath}", TextOf(result), System.StringComparison.Ordinal);
     }

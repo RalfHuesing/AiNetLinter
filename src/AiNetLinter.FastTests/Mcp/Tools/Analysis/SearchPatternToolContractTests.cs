@@ -84,7 +84,7 @@ public sealed class SearchPatternToolContractTests
         foreach (var arguments in cases)
         {
             var result = await SearchPatternTool.ExecuteAsync(state, arguments, CancellationToken.None);
-            Assert.NotEqual(true, result.IsError);
+            Assert.True(result.IsError);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
 

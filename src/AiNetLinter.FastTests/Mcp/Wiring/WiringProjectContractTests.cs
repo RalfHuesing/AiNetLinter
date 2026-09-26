@@ -38,13 +38,13 @@ public sealed class WiringProjectContractTests
             registry,
             new AnalysisTargetRequest(null),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
-        Assert.NotEqual(true, missing.IsError);
+        Assert.True(missing.IsError);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(missing), StringComparison.Ordinal);
         var blank = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("   "),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
-        Assert.NotEqual(true, blank.IsError);
+        Assert.True(blank.IsError);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(blank), StringComparison.Ordinal);
     }
 
@@ -56,7 +56,7 @@ public sealed class WiringProjectContractTests
             registry,
             new AnalysisTargetRequest("relativ/projekt"),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
     }
 
@@ -380,7 +380,7 @@ public sealed class WiringProjectContractTests
                 IncludeDiagnostics: true,
                 MaxDiagnostics: maxDiagnostics));
 
-        Assert.False(result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         Assert.Contains("$.maxDiagnostics", TextOf(result), StringComparison.Ordinal);
     }

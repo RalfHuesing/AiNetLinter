@@ -34,7 +34,7 @@ Der Server-Handshake (`initialize` bzw. `server/discover`) antwortet **sofort**.
 
 | Zustand | Bedeutung | Verhalten bei Tool-Calls |
 | :--- | :--- | :--- |
-| `Loading` | Solution wird im Hintergrund geladen | Liefert `[INFO]: Server laedt die Solution noch. ...` (kein Fehler, `isError=false`). Agent-Loops sollten kurz warten (z. B. 2–5 s) und erneut anfragen. |
+| `Loading` | Solution wird im Hintergrund geladen | Liefert `Status: operation=retry, completeness=not_applicable` und `[INFO]: Server laedt die Solution noch. ...` (`isError=false`, kein Trefferinhalt). Agent-Loops sollten kurz warten (z. B. 2–5 s) und erneut anfragen. |
 | `Loaded` | Solution erfolgreich geladen und indexiert | Alle zielgebundenen Tools liefern reguläre Ergebnisse. |
 | `LoadFailed` | Solution konnte nicht geladen werden (z. B. Syntaxfehler, fehlende Projekte) | Liefert strukturierte Diagnose mit Fehlerursache und Behebungshinweis. |
 

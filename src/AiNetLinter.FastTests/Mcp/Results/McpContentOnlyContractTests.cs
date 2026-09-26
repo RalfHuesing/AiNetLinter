@@ -29,6 +29,41 @@ public sealed class McpContentOnlyContractTests
         AssertContentOnly(results);
     }
 
+    [Fact]
+    public void SymbolNotFound_IsProtocolErrorWithMatchingContentStatus()
+    {
+        var result = McpToolResults.WithNavigation(McpToolResults.SymbolNotFound("Missing.Symbol"));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.True(result.IsError);
+        Assert.Contains("[ERROR]: SYMBOL_NOT_FOUND", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=error", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Loading_HasExplicitRetryStatusWithoutSemanticResult()
+    {
+        var result = McpToolResults.WithNavigation(McpToolResults.Loading());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("Status: operation=retry", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Status: operation=ok", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Navigation_AlignsProtocolFlagWithErrorContent()
+    {
+        var result = McpToolResults.WithNavigation(new CallToolResult
+        {
+            IsError = false,
+            Content = [new TextContentBlock { Text = "[ERROR]: INVALID_ARGUMENT: Eingabe fehlt." }],
+        });
+
+        Assert.True(result.IsError);
+        Assert.Contains("Status: operation=error", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+    }
+
     private static void AssertContentOnly(IEnumerable<NamedToolResult> results)
     {
         var violations = new List<string>();

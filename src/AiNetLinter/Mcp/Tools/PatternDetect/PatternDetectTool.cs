@@ -72,7 +72,7 @@ internal static class PatternDetectTool
 
     /// <summary>
     /// <c>null</c> oder leere Liste = alle Patterns (Default). Unbekannte pattern-IDs sind ein
-    /// recoverable Fehler (IsError=false, konkrete Handlungsanleitung mit den gueltigen IDs im
+    /// korrigierbarer Fehler (IsError=true, konkrete Handlungsanleitung mit den gueltigen IDs im
     /// Text) statt stillschweigendem Ignorieren — ein Tippfehler soll nicht kommentarlos 0
     /// Treffer fuer das gemeinte Pattern liefern.
     /// </summary>

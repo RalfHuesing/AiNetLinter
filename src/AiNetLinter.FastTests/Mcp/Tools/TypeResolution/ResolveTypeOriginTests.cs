@@ -249,7 +249,7 @@ public sealed class ResolveTypeOriginTests
         var result = await ResolveTypeOriginTool.ExecuteProjectAsync(server, handoffId, CancellationToken.None);
 
         var text = GetText(result);
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
         Assert.Contains("fieldPath: $.typeName", text, StringComparison.Ordinal);
     }

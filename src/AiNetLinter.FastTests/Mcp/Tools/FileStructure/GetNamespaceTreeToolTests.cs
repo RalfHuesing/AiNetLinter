@@ -46,7 +46,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(Project: "SymbolGraphMini", Kind: "unknown_kind"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("unknown_kind", textContent.Text);
@@ -60,7 +60,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(Project: "DoesNotExistProject"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("DoesNotExistProject", textContent.Text);
@@ -81,7 +81,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(Project: "Core"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("AMBIGUOUS_SYMBOL", textContent.Text);
         Assert.Contains("App.Core", textContent.Text);
@@ -199,7 +199,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(NamespacePrefix: "Shared.Common"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("AMBIGUOUS_SYMBOL", textContent.Text);
         Assert.Contains("App.Core", textContent.Text);
@@ -214,7 +214,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(NamespacePrefix: "NonExistent.Namespace"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("NonExistent.Namespace", textContent.Text);
@@ -236,7 +236,7 @@ public sealed class GetNamespaceTreeToolTests
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             state, new GetNamespaceTreeInput(NamespacePrefix: "Missing.Namespace"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Assembly-Snapshot", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Projekt der Solution", text, StringComparison.Ordinal);

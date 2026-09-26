@@ -48,7 +48,7 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(state, symbolIdentifiers, 80, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.", textContent.Text);
@@ -132,7 +132,7 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(state, ["DoesNotExistXyz"], 80, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }

@@ -211,7 +211,7 @@ public sealed class FindImplementationsTests
         var result = await FindImplementationsTool.ExecuteAsync(
             server, "NonExistentTypeXyz", maxResults: 50, ct: CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -235,7 +235,7 @@ public sealed class FindImplementationsTests
         var result = await FindImplementationsTool.ExecuteAsync(
             server, "Service.NonVirtualMethod", maxResults: 50, ct: CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
     }

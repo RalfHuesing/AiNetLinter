@@ -15,6 +15,7 @@ Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) und Ass
 - **Text- & Nicht-C#-Suche**: `search_pattern` (mit `enrichCSharp: true` für C#-AST-Evidenz in `.razor`, XAML, JSON, XML) nutzen; `rg` als Fallback für reine Texttreffer und Kommentare. Meldet `find_references` `coverage: razor_markup_not_indexed`, die konkrete `search_pattern`-Folgeabfrage ausführen.
 - Folgeaufrufe: Für einzelne Symbole `symbolIdentifier` exakt aus vorherigen MCP-Ausgaben übernehmen; `get_symbol_body` verwendet `symbolIdentifiers` für Batchabfragen. Kanonische Handoff-IDs sowie Status und Vollständigkeitsmarker nur aus dem Tool-Content übernehmen; keine IDs aus Anzeigenamen ableiten.
 - Bei `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
+- Antworten anhand von `isError` und dem Content-Status unterscheiden: Ergebnis (`isError=false`), Loading-Retry (`isError=false`, `Status: operation=retry, completeness=not_applicable`) und Fehler (`isError=true`, `[ERROR]`, bei zielgebundenen Antworten `operation=error`). Auch `SYMBOL_NOT_FOUND` ist ein Fehler; den Hint zur Korrektur verwenden.
 
 ## Werkzeugwahl
 

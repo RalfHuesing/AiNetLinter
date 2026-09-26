@@ -41,7 +41,7 @@ public sealed class GetImpactToolTests
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("HEAD~1", "Greeter.Greet", 50, 1), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -164,7 +164,7 @@ public sealed class GetImpactToolTests
 
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "DoesNotExistXyz", 50, 1), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }
@@ -277,7 +277,7 @@ public sealed class GetImpactToolTests
         var result = await GetImpactTool.ExecuteAsync(
             state, new GetImpactInput(null, "Greeter.Greet", 50, 1, DetailLevel: "change-context"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("get_feature_context", textContent.Text, StringComparison.Ordinal);
@@ -291,7 +291,7 @@ public sealed class GetImpactToolTests
         var result = await GetImpactTool.ExecuteAsync(
             state, new GetImpactInput(null, null, 50, 1, DetailLevel: "deep-dive"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("callers", textContent.Text, StringComparison.Ordinal);

@@ -179,7 +179,7 @@ public sealed class ConstructorHandoffLifecycleTests
         };
 
         var text = TextOf(result);
-        Assert.False(result.IsError is true, text);
+        Assert.True(result.IsError, text);
         Assert.Contains("HANDOFF_UNKNOWN", text, StringComparison.Ordinal);
     }
 

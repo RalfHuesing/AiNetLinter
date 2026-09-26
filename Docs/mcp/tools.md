@@ -133,9 +133,10 @@ deren adressierten Owner (`symbol_owner_only`), nicht Root, Geschwister oder ein
 transitive Closure; nur `true` wählt `bounded_reference_closure`. Die Antwort
 spiegelt `requestedIncludeReferences` und den effektiven Suchmodus.
 
-Jede Tool-Antwort enthält genau einen nichtleeren Text-Content-Block und optional
-`isError`; Zeilenenden sind unabhängig vom Serverbetriebssystem kanonisch `LF`
-(`\n`).
+Jede Tool-Antwort enthält genau einen nichtleeren Text-Content-Block. Fehlgeschlagene
+Aufrufe, einschließlich korrigierbarer Eingabefehler und `SYMBOL_NOT_FOUND`, tragen
+`isError=true`; Loading trägt `isError=false` und `Status: operation=retry` im Content.
+Zeilenenden sind unabhängig vom Serverbetriebssystem kanonisch `LF` (`\n`).
 
 | MCP-Familie | Projekt | dekompilierte Assembly | Grenze |
 | :--- | :---: | :---: | :--- |
@@ -320,7 +321,7 @@ Analysecall (siehe Handoff-Kern oben).
 
 Für alle zielgebundenen Tools erfolgt die Argumentprüfung vor der SDK-Bindung.
 Fehlende Pflichtfelder, `null` in Pflichtfeldern und falsche Array-Elementtypen
-werden als recoverable `INVALID_ARGUMENT` (`isError=false`) mit einem konkreten
+werden als korrigierbare `INVALID_ARGUMENT`-Fehler (`isError=true`) mit einem konkreten
 `fieldPath` gemeldet; bei Arrays enthält der Pfad den nullbasierten Index, etwa
 `$.symbolIdentifiers[1]`. Für die normale öffentliche Listen- und
 Traversierungsfamilie müssen die Limits (`maxResults`, `topN`, `maxMembers`,
@@ -966,7 +967,7 @@ Parameter auf SDK-Ebene als optional (Default `null`), damit ein fehlender oder 
 Parameter im JSON-RPC-Aufruf (z. B. `symbolIdentifier` statt des von `get_type_hierarchy`
 erwarteten `typeIdentifier`) nicht schon vor Erreichen des Tool-Codes an der Argument-Bindung
 scheitert. Der Tool-Code selbst prüft den Parameter danach explizit auf `null`/leer und liefert bei
-Verletzung ein reguläres `[ERROR]: INVALID_ARGUMENT`-Ergebnis (`isError = false`, siehe
+Verletzung ein reguläres `[ERROR]: INVALID_ARGUMENT`-Ergebnis (`isError = true`, siehe
 Error-Codes-Tabelle) mit einem Hint, der den korrekten Parameternamen und das erwartete Format
 nennt — kein Server-Crash und keine rohe SDK-Fehlermeldung. Die je Tool bewusst unterschiedlichen
 Parameternamen (semantisch passend zum jeweiligen Identifikator-Typ) bleiben davon unberührt.
@@ -986,11 +987,11 @@ Der Server-Start entkoppelt den MCP-Transport-Handshake vom Solution-Load: `init
 
 | Zustand | Erkennbar an | Reaktion für den Agent |
 | :--- | :--- | :--- |
-| **Loading** (transient) | `[INFO]: Server laedt die Solution noch. ...` (kein `isError`) | Kurz warten und erneut versuchen (Polling im Sekunden-Takt). Echte Tool-Ergebnisse erscheinen, sobald der Load abgeschlossen ist. |
+| **Loading** (transient) | `Status: operation=retry, completeness=not_applicable` und `[INFO]: Server laedt die Solution noch. ...` (`isError=false`, kein Trefferinhalt) | Kurz warten und erneut versuchen (Polling im Sekunden-Takt). Echte Tool-Ergebnisse erscheinen, sobald der Load abgeschlossen ist. |
 | **Loaded** (regulär) | Volle Tool-Antworten, `[ERROR]: ...` nur bei tatsächlichen Problemen | Normale Workflow-Schritte ausführen. |
 | **LoadFailed** (für diesen Key) | `[ERROR]: PROJECT_LOAD_FAILED: ...` | Solution-/Build-Ursache prüfen und denselben Projekt-Key erneut aufrufen. |
 
-Der `Loading`-Zustand ist bewusst **kein** Fehler (`isError == false`), weil der Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden für den ersten Solution-Load. MCP-Hosts (Claude Desktop, eigene Test-Harness) erkennen den Info-Text und können den Aufruf nach kurzer Pause wiederholen.
+Der `Loading`-Zustand ist bewusst **kein** Fehler (`isError == false`), weil der Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden für den ersten Solution-Load. Clients erkennen `operation=retry` ohne Textheuristik und können den Aufruf nach kurzer Pause wiederholen. Ein endgültiger Fehler trägt `isError=true` und `operation=error`.
 
 ---
 

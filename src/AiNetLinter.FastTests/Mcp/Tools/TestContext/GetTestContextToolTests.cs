@@ -130,7 +130,7 @@ public sealed partial class GetTestContextToolTests
 
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions(""), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
     }
@@ -143,7 +143,7 @@ public sealed partial class GetTestContextToolTests
 
         var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions("NonExistentClass"), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text);
     }

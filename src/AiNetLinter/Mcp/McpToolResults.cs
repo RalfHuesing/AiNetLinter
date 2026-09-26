@@ -17,14 +17,9 @@ namespace AiNetLinter.Mcp;
 /// Wiederverwendbare Hilfsmethoden zum Bauen von <see cref="CallToolResult"/>-Instanzen fuer
 /// MCP-Tools — buendelt sowohl die Protokoll-Ebene (<see cref="CallToolResult.IsError"/>) als auch
 /// das bestehende Text-Fehlerformat (<see cref="LinterErrorFormatter"/>), damit jedes Tool dasselbe
-/// Boilerplate nicht einzeln nachbaut. Die Wahl zwischen <see cref="Error"/> (IsError=true) und
-/// <see cref="Recoverable"/> (IsError=false) folgt der Policy in
-/// <c>src/AiNetLinter/Mcp/IsErrorPolicy.md</c>: IsError=true ist reserviert fuer
-/// SOLUTION_NOT_LOADED, Sicherheitsverweigerungen und echte Malfunctions (unerwartete
-/// Exceptions) — alle anderen erwartbaren/recoverable Bedingungen (Symbol nicht gefunden,
-/// mehrdeutiger Identifikator, ungueltiges Argument, Datei nicht gefunden) liefern
-/// IsError=false mit derselben strukturierten Anleitung im Text, damit ein Agent sie nicht als
-/// Tool-Ausfall interpretiert und das Tool vorzeitig aufgibt (CodeGraph-Lehre, siehe Policy-Doc).
+/// Boilerplate nicht einzeln nachbaut. Fehler tragen unabhaengig davon, ob der Aufrufer sie
+/// korrigieren kann, IsError=true; Recoverable ergaenzt dafuer einen konkreten Folgeschritt.
+/// Der transiente Loading-Zustand bleibt IsError=false und ist im Content als Retry markiert.
 /// </summary>
 internal static partial class McpToolResults
 {
@@ -59,9 +54,8 @@ internal static partial class McpToolResults
     /// <summary>
     /// Baut ein Fehlerergebnis: <see cref="CallToolResult.IsError"/> ist <see langword="true"/>, der
     /// Text folgt dem bestehenden <c>[ERROR]</c>-Format aus <see cref="LinterErrorFormatter"/>. Nur
-    /// fuer die drei in <c>IsErrorPolicy.md</c> definierten Faelle verwenden (SOLUTION_NOT_LOADED,
-    /// Sicherheitsverweigerung, echte Malfunction) — fuer erwartbare/recoverable Bedingungen
-    /// <see cref="Recoverable"/> nutzen.
+    /// fuer nicht durch Eingabekorrektur behebbare Fehler verwenden; fuer korrigierbare
+    /// Bedingungen <see cref="Recoverable"/> mit einer Handlungsanleitung nutzen.
     /// </summary>
     internal static CallToolResult Error(
         string code,
@@ -78,10 +72,8 @@ internal static partial class McpToolResults
     /// <summary>
     /// Baut ein Ergebnis fuer eine erwartbare/recoverable Bedingung (Symbol nicht gefunden,
     /// mehrdeutiger Identifikator, ungueltiges Argument, Datei nicht gefunden, ...):
-    /// <see cref="CallToolResult.IsError"/> bleibt <see langword="false"/>, obwohl derselbe
-    /// strukturierte <c>[ERROR]</c>-Text wie bei <see cref="Error"/> verwendet wird — der Agent
-    /// soll den Aufruf als erfolgreich verarbeitet betrachten (mit Handlungsanleitung im Text),
-    /// nicht als Tool-Ausfall. Siehe <c>IsErrorPolicy.md</c> fuer die vollstaendige Tabelle.
+    /// <see cref="CallToolResult.IsError"/> ist <see langword="true"/> wie bei jedem
+    /// <c>[ERROR]</c>-Text. Der Hinweis erklaert, wie der Aufruf korrigiert werden kann.
     /// </summary>
     internal static CallToolResult Recoverable(
         string code,
@@ -89,11 +81,11 @@ internal static partial class McpToolResults
         string? context = null,
         string? hint = null)
     {
-        return BuildResult(code, message, new McpErrorParameters(context, hint), isError: false);
+        return BuildResult(code, message, new McpErrorParameters(context, hint), isError: true);
     }
 
     internal static CallToolResult Recoverable(string code, string message, McpErrorParameters parameters) =>
-        BuildResult(code, message, parameters, isError: false);
+        BuildResult(code, message, parameters, isError: true);
 
     internal static CallToolResult RecoverableWorkspaceDiagnostic(
         string message,
@@ -170,7 +162,7 @@ internal static partial class McpToolResults
     /// <summary>
     /// Kurzform fuer den Fall, dass ein Symbol-Identifikator (Datei:Zeile:Spalte oder
     /// qualifizierter/teil-qualifizierter Name) auf kein Symbol aufloest (z. B. <c>find_references</c>).
-    /// IsError=false (recoverable) — der Hinweis nennt den naechsten Schritt (find_symbol).
+    /// IsError=true; der Hinweis nennt den naechsten Schritt (find_symbol).
     /// </summary>
     internal static CallToolResult SymbolNotFound(string identifier)
     {
@@ -193,7 +185,7 @@ internal static partial class McpToolResults
     /// Kurzform fuer den Fall, dass ein Symbol-Identifikator auf mehrere Symbole aufloest —
     /// <paramref name="candidateLines"/> listet die Fundstellen (z. B. via
     /// <see cref="Tools.FindSymbolTool.FormatSymbolLocations"/>) als Entscheidungshilfe.
-    /// IsError=false (recoverable) — die Kandidatenliste selbst ist die Handlungsanleitung.
+    /// IsError=true; die Kandidatenliste selbst ist die Handlungsanleitung.
     /// </summary>
     internal static CallToolResult AmbiguousSymbol(string identifier, IEnumerable<string> candidateLines)
     {
@@ -233,8 +225,7 @@ internal static partial class McpToolResults
 
     /// <summary>
     /// Kurzform fuer den Fall, dass ein Tool-Aufruf ungueltige oder unvollstaendige Argumente enthaelt.
-    /// IsError=false (recoverable) — ein Nutzer-/Agentenfehler bei den Argumenten, kein
-    /// Tool-Ausfall.
+    /// IsError=true; der Hinweis erklaert die Korrektur der Argumente.
     /// </summary>
     internal static CallToolResult InvalidArgument(
         string message,
@@ -329,7 +320,7 @@ internal static partial class McpToolResults
     /// <summary>
     /// Kurzform fuer den Fall, dass ein per Dateipfad angegebenes Tool-Argument (z. B.
     /// <c>get_file_skeleton</c>s <c>filePaths</c>-Array) auf kein <see cref="Microsoft.CodeAnalysis.Document"/>
-    /// in der Solution aufloest. IsError=false (recoverable) — Pfad korrigieren oder find_symbol
+    /// in der Solution aufloest. IsError=true — Pfad korrigieren oder find_symbol
     /// zur Orientierung nutzen.
     /// </summary>
     internal static CallToolResult FileNotFound(string relativePath)
@@ -423,7 +414,7 @@ internal static partial class McpToolResults
         var navigationText = McpNavigationText.Format(navigation);
         return new CallToolResult
         {
-            IsError = result.IsError == true,
+            IsError = navigation.Status.Operation == "error",
             Content = AppendNavigationText(result.Content, navigationText),
         };
     }
@@ -463,10 +454,8 @@ internal static partial class McpToolResults
 
     /// <summary>
     /// Antwort fuer den transienten Wartezustand, in dem der MCP-Server gerade die Solution
-    /// im Hintergrund laedt. Bewusst kein <see cref="CallToolResult.IsError"/>, weil der
-    /// Tool-Aufruf nicht falsch war — der Server braucht nur wenige Sekunden, bis die
-    /// Loesung resident ist. Clients (MCP-Hosts wie Claude Desktop, eigene Test-Harness)
-    /// erkennen den Text und koennen den Aufruf nach kurzer Pause wiederholen.
+    /// im Hintergrund laedt. IsError=false; der explizite Retry-Status im Content
+    /// unterscheidet Warten von einem abgeschlossenen semantischen Ergebnis.
     /// </summary>
     internal static CallToolResult Loading()
     {
@@ -474,6 +463,7 @@ internal static partial class McpToolResults
         {
             IsError = false,
             Content = CreateTextContent(
+                "Status: operation=retry, completeness=not_applicable\n" +
                 "[INFO]: Server laedt die Solution noch. Bitte in wenigen Sekunden erneut versuchen."),
         };
     }

@@ -46,7 +46,7 @@ public sealed class FindSymbolToolTests
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: patterns, kind: null, maxResults: 50, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("fieldPath:", textContent.Text, System.StringComparison.Ordinal);
@@ -64,7 +64,7 @@ public sealed class FindSymbolToolTests
             maxResults: 50,
             CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("namePatterns darf keine leeren Elemente enthalten.", textContent.Text, System.StringComparison.Ordinal);
@@ -83,7 +83,7 @@ public sealed class FindSymbolToolTests
             maxResults: 0,
             CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
@@ -98,7 +98,7 @@ public sealed class FindSymbolToolTests
         var elevenPatterns = Enumerable.Range(1, 11).Select(i => $"Pattern{i}").ToArray();
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: elevenPatterns, kind: null, maxResults: 50, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("Maximal 10 namePatterns pro Call erlaubt", textContent.Text, System.StringComparison.Ordinal);
@@ -289,7 +289,7 @@ public sealed class FindSymbolToolTests
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: ["Greeter"], kind: "invalid_kind", maxResults: 50, CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("invalid_kind", textContent.Text, System.StringComparison.Ordinal);

@@ -49,7 +49,7 @@ public sealed partial class GetCallTreeToolTests
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("DoesNotExistXyz", 2, null, 10), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
@@ -62,7 +62,7 @@ public sealed partial class GetCallTreeToolTests
         var result = await GetCallTreeTool.ExecuteAsync(
             state, new GetCallTreeInput("Run", 2, null, 10), CancellationToken.None);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("AMBIGUOUS_SYMBOL", textContent.Text, StringComparison.Ordinal);
     }
@@ -165,7 +165,7 @@ public sealed partial class GetCallTreeToolTests
         var result = CallGraphResponseBudget.ApplyFinalResponseBudget(oversized, 1_024);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, StringComparison.Ordinal);
         Assert.Contains("minimumResponseBytes: 1545", text, StringComparison.Ordinal);
         Assert.Contains("retry: denselben Aufruf mit maxResponseBytes=1545 wiederholen.", text, StringComparison.Ordinal);

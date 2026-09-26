@@ -26,7 +26,7 @@ public sealed class FindSymbolValidationToolTests
                 CancellationToken: CancellationToken.None,
                 Pattern: "Caller"));
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("namePatterns", textContent.Text, StringComparison.Ordinal);
@@ -47,7 +47,7 @@ public sealed class FindSymbolValidationToolTests
                 CancellationToken: CancellationToken.None,
                 Pattern: " "));
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("fieldPath: $.pattern", textContent.Text, StringComparison.Ordinal);
     }
