@@ -23,6 +23,7 @@ public static class ConfigNormalizer
         var fileFilters = config.FileFilters ?? new FileFiltersConfig();
         var global = config.Global ?? new GlobalConfig();
         var deadCode = config.DeadCode ?? new DeadCodeConfig();
+        var entryPointAttributes = NormalizeEntryPointAttributes(deadCode.EntryPointAttributes);
         var projectOverrides = config.ProjectOverrides ?? new Dictionary<string, ProjectOverrideEntry>();
         var pathOverrides = config.PathOverrides ?? new Dictionary<string, ProjectOverrideEntry>();
 
@@ -35,10 +36,21 @@ public static class ConfigNormalizer
                 ExemptWhenInheritsFrom = testSentinel.ExemptWhenInheritsFrom ?? Array.Empty<string>(),
             },
             FileFilters = fileFilters,
-            DeadCode = deadCode,
+            DeadCode = deadCode with { EntryPointAttributes = entryPointAttributes },
             ProjectOverrides = projectOverrides,
             PathOverrides = pathOverrides,
         };
+    }
+
+    private static IReadOnlyList<string> NormalizeEntryPointAttributes(IReadOnlyList<string>? attributes)
+    {
+        if (attributes is null || attributes.Count == 0) return Array.Empty<string>();
+
+        return attributes
+            .Where(attribute => !string.IsNullOrWhiteSpace(attribute))
+            .Select(attribute => attribute.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static IReadOnlyList<string> NormalizeClassNamePatterns(IReadOnlyList<string>? patterns)

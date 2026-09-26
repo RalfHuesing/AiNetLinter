@@ -87,6 +87,7 @@ internal static partial class DeadCodeAdvisoryScanner
     {
         var compilation = await project.GetCompilationAsync(ct);
         if (compilation is null) return;
+        context.EntryPointAttributeTypes = DeadCodeWhitelist.ResolveEntryPointAttributeTypes(compilation, context.Args.Config?.DeadCode);
 
         context.RazorEvidenceIndex = await RazorGeneratedEvidenceIndex.CreateAsync(project, ct);
 
@@ -180,9 +181,8 @@ internal static partial class DeadCodeAdvisoryScanner
         CancellationToken ct)
     {
         if (!ShouldCheckSymbol(typeSymbol, context.Args)
-            || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint)
-            || DeadCodeSuppression.IsSuppressed(typeSymbol)
-            || typeSymbol.GetMembers().Any(DeadCodeWhitelist.IsCompilerRoot))
+            || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint, context.EntryPointAttributeTypes)
+            || DeadCodeSuppression.IsSuppressed(typeSymbol))
         {
             return false;
         }
@@ -236,7 +236,7 @@ internal static partial class DeadCodeAdvisoryScanner
         if (member.IsImplicitlyDeclared) return;
         if (!member.DeclaringSyntaxReferences.Any(r => r.SyntaxTree == typeNode.SyntaxTree && typeNode.Span.Contains(r.Span))) return;
         if (!context.ScannedMembers.Add(member)) return;
-        if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint)) return;
+        if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint, context.EntryPointAttributeTypes)) return;
         if (DeadCodeSuppression.IsSuppressed(member)) return;
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;

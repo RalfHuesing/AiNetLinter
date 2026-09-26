@@ -519,6 +519,8 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 
 `DeadCode.DefaultApiSurface` ist standardmäßig `closed_solution`: Auch öffentliche Symbole bleiben Prüfkandidaten. `external_library` schützt effektiv externe API einschließlich geschützter Erweiterungspunkte und Implementierungen externer Verträge. Die enthaltende Typkette zählt; ein öffentliches Member in einem verborgenen Typ ist nicht automatisch geschützt. Fehlende relevante Friend-Consumer werden als unentscheidbar ausgewiesen.
 
+Die markierten Methoden und ihre deklarierenden Typen werden bei den semantisch aufgelösten Attributtypen `System.Runtime.CompilerServices.ModuleInitializerAttribute` und `Microsoft.JSInterop.JSInvokableAttribute` geschützt. `DeadCode.EntryPointAttributes` ergänzt diese Defaults mit vollqualifizierten Attributtypen, zum Beispiel `Microsoft.SemanticKernel.KernelFunctionAttribute`. Ein gleichnamiges Attribut eines anderen Typs schützt die Methode nicht.
+
 Gültig sind ausschließlich `closed_solution` und `external_library`. Explizit andere Werte führen für betroffene produktive Kandidatenprojekte zu `DEAD_CODE_API_SURFACE_NOT_CONFIGURED`. Fehlende globale Werte verwenden den Default. `ProjectOverrides.<Muster>.DeadCode.ApiSurface` überschreibt ihn; das erste passende Projekt-Override gewinnt. Fehlende/null Overrides erben. `PathOverrides` verändern diese Projektentscheidung nicht.
 
 | Option unter `DeadCode` | Default | Wirkung |
@@ -529,6 +531,7 @@ Gültig sind ausschließlich `closed_solution` und `external_library`. Explizit 
 | `MaxCandidateGroups` | `20` | Standardprojektion, begrenzt auf 1–20 Gruppen |
 | `MaxResponseBytes` | `8192` | Standardantwort, begrenzt auf 512–8192 UTF-8-Bytes; nur ganze Einträge |
 | `ProjectRoles` | `{}` | Exakter, groß-/kleinschreibungssensitiver Projektname → `production`, `test` oder `unknown` |
+| `EntryPointAttributes` | `[]` | Vollqualifizierte Attributtypen, additiv zu ModuleInitializer und JSInvokable |
 
 Ein nichtpositives Zeitbudget beendet den Advisory ohne Negativbefund; das Gate-Budget bleibt unverändert. Ausgabelimits sparen keine Scanzeit. Fortsetzungen lesen denselben Snapshot, ohne erneut zu scannen.
 
@@ -542,7 +545,8 @@ Die explizite Projektrolle hat Vorrang. Ohne Override wird `build_property.IsTes
     "SolutionBudgetSeconds": 60,
     "MaxCandidateGroups": 20,
     "MaxResponseBytes": 8192,
-    "ProjectRoles": { "Checks": "test", "MixedHost": "unknown" }
+    "ProjectRoles": { "Checks": "test", "MixedHost": "unknown" },
+    "EntryPointAttributes": ["Microsoft.SemanticKernel.KernelFunctionAttribute"]
   },
   "ProjectOverrides": {
     "PublicSdk": { "DeadCode": { "ApiSurface": "external_library" } }

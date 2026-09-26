@@ -383,7 +383,8 @@
     "SolutionBudgetSeconds": 60,
     "MaxCandidateGroups": 20,
     "MaxResponseBytes": 8192,
-    "ProjectRoles": {}
+    "ProjectRoles": {},
+    "EntryPointAttributes": []
   },
   "RuleMetadata": {
     "MaxLineCount": {

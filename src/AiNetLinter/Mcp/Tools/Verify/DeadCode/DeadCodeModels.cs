@@ -220,6 +220,7 @@ internal sealed class DeadCodeScanContext(
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
+    internal IReadOnlyList<Microsoft.CodeAnalysis.INamedTypeSymbol> EntryPointAttributeTypes { get; set; } = Array.Empty<Microsoft.CodeAnalysis.INamedTypeSymbol>();
     public DeadCodeUsageIndex UsageIndex { get; set; } = new();
     public HashSet<Microsoft.CodeAnalysis.ISymbol> ScannedMembers { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public int ScannedCount { get; set; }

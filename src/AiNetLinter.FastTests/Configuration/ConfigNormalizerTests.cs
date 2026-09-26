@@ -38,6 +38,35 @@ public sealed class ConfigNormalizerTests
     }
 
     [Fact]
+    public void Normalize_RestoresEmptyEntryPointAttributes_WhenListIsNull()
+    {
+        var config = CreateBaseConfig() with
+        {
+            DeadCode = new DeadCodeConfig { EntryPointAttributes = null! },
+        };
+
+        var normalized = ConfigNormalizer.Normalize(config);
+
+        Assert.Empty(normalized.DeadCode.EntryPointAttributes);
+    }
+
+    [Fact]
+    public void Normalize_TrimsAndDeduplicatesEntryPointAttributes()
+    {
+        var config = CreateBaseConfig() with
+        {
+            DeadCode = new DeadCodeConfig
+            {
+                EntryPointAttributes = [" Example.PluginEntryAttribute ", "Example.PluginEntryAttribute"],
+            },
+        };
+
+        var normalized = ConfigNormalizer.Normalize(config);
+
+        Assert.Equal(["Example.PluginEntryAttribute"], normalized.DeadCode.EntryPointAttributes);
+    }
+
+    [Fact]
     public void Normalize_ThrowsForNullPatternEntry()
     {
         var config = CreateBaseConfig() with

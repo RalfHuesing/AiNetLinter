@@ -12,6 +12,8 @@ public sealed record DeadCodeConfig
     public int MaxCandidateGroups { get; init; } = 20;
     public int MaxResponseBytes { get; init; } = 8192;
     public System.Collections.Generic.Dictionary<string, string> ProjectRoles { get; init; } = new(System.StringComparer.Ordinal);
+    /// <summary>Vollqualifizierte Attribute, deren markierte Methoden als Einstiegspunkte gelten.</summary>
+    public System.Collections.Generic.IReadOnlyList<string> EntryPointAttributes { get; init; } = System.Array.Empty<string>();
 }
 
 /// <summary>Projektbezogene Ueberschreibung der Dead-Code-Policy.</summary>

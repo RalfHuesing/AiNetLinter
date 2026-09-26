@@ -14,7 +14,7 @@ Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander 
   - Nicht: `MapGet`-/`MapPost`-Namenslisten, Framework-Sonderfälle oder eine allgemeine Interprocedural-Analyse hinzufügen.
   - Abnahme: Ein Rot-Test für den belegten `AuthJwtSigningDisabled`/`MapPost`-Fall wird grün; Tests decken aufgelöste Überladung, mehrdeutige Bindung, `JsonConverter.Read`/`Write` und Interface-Slots ab. Eine gewöhnliche unreferenzierte Nicht-Kontraktmethode bleibt Kandidat. Incremental Gate grün.
 
-- [ ] **3 — Einstiegspunkt-Attribute konfigurierbar schützen**
+- [x] **3 — Einstiegspunkt-Attribute konfigurierbar schützen**
   - Intention: Bekannte statische und JS-Einstiege sowie Projekt-Plugins ohne projektspezifische Engine-Regeln schützen.
   - Scope: `DeadCodeWhitelist`, `DeadCodeConfig`, Konfigurationsnormalisierung und Tests um `DeadCode.EntryPointAttributes` ergänzen. Die zwei festen Defaults `System.Runtime.CompilerServices.ModuleInitializerAttribute` und `Microsoft.JSInterop.JSInvokableAttribute` behalten; zusätzliche vollqualifizierte Attributtypen additiv und per semantischer Typidentität auswerten. Die markierte Methode und ihren deklarierenden Typ schützen. Konfiguration und Beispiel in `Docs/linter/configuration.md` und `ainetlinter-rules.json` synchronisieren.
   - Nicht: Semantic Kernel, MudBlazor oder andere Drittanbieterattribute fest einbauen.

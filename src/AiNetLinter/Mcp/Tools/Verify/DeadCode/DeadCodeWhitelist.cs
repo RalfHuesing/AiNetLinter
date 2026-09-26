@@ -12,15 +12,39 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// </summary>
 internal static class DeadCodeWhitelist
 {
+    private static readonly string[] DefaultEntryPointAttributes =
+    [
+        "System.Runtime.CompilerServices.ModuleInitializerAttribute",
+        "Microsoft.JSInterop.JSInvokableAttribute",
+    ];
+
     /// <summary>
     /// Prueft, ob ein Symbol gemaess Compiler-, Framework- und Konstruktor-Regeln gewhitelistet ist.
     /// </summary>
-    internal static bool IsWhitelisted(ISymbol symbol, IMethodSymbol? entryPoint)
+    internal static IReadOnlyList<INamedTypeSymbol> ResolveEntryPointAttributeTypes(
+        Compilation compilation,
+        AiNetLinter.Configuration.DeadCodeConfig? config)
+    {
+        var configuredNames = config?.EntryPointAttributes ?? System.Array.Empty<string>();
+        return DefaultEntryPointAttributes.Concat(configuredNames)
+            .Where(metadataName => !string.IsNullOrWhiteSpace(metadataName))
+            .Select(compilation.GetTypeByMetadataName)
+            .Where(type => type is not null)
+            .Select(type => type!)
+            .ToArray();
+    }
+
+    internal static bool IsWhitelisted(
+        ISymbol symbol,
+        IMethodSymbol? entryPoint,
+        IReadOnlyList<INamedTypeSymbol> entryPointAttributeTypes)
     {
         if (symbol.IsImplicitlyDeclared) return true;
         if (IsCompilerGeneratedName(symbol.Name)) return true;
         if (IsEntryPointSymbol(symbol, entryPoint)) return true;
-        if (HasWhitelistedAttribute(symbol)) return true;
+        if (HasWhitelistedAttribute(symbol, entryPointAttributeTypes)) return true;
+        if (symbol is INamedTypeSymbol type && type.GetMembers().OfType<IMethodSymbol>()
+                .Any(method => HasWhitelistedAttribute(method, entryPointAttributeTypes))) return true;
         if (IsSpecialMethodKind(symbol)) return true;
         if (IsUtilityClassConstructor(symbol)) return true;
 
@@ -44,13 +68,32 @@ internal static class DeadCodeWhitelist
         return false;
     }
 
-    internal static bool IsCompilerRoot(ISymbol symbol) => symbol.GetAttributes().Any(attribute =>
-        attribute.AttributeClass?.ToDisplayString() == "System.Runtime.CompilerServices.ModuleInitializerAttribute"
-        && attribute.AttributeClass.Locations.All(location => !location.IsInSource));
-
-    private static bool HasWhitelistedAttribute(ISymbol symbol)
+    private static bool HasWhitelistedAttribute(ISymbol symbol, IReadOnlyList<INamedTypeSymbol> entryPointAttributeTypes)
     {
-        return IsCompilerRoot(symbol);
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            var attributeType = attribute.AttributeClass;
+            if (attributeType is null) continue;
+
+            foreach (var protectedType in entryPointAttributeTypes)
+            {
+                if (HasSameMetadataIdentity(attributeType, protectedType))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasSameMetadataIdentity(INamedTypeSymbol attributeType, INamedTypeSymbol protectedType)
+    {
+        return attributeType.ContainingAssembly.Identity.Equals(protectedType.ContainingAssembly.Identity)
+            && string.Equals(
+                attributeType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                protectedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                StringComparison.Ordinal);
     }
 
     private static bool IsSpecialMethodKind(ISymbol symbol)
