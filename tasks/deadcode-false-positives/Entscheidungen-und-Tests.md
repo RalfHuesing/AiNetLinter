@@ -1,4 +1,11 @@
-# Entscheidung: Dead-Code-Ausgabe stark begrenzen
+# Historischer Zwischenstand: Dead-Code-Ausgabe stark begrenzen
+
+Die Empfehlung dieses Zwischenstands, Typen und Member ganz aus der
+Dead-Code-Ausgabe zu entfernen, wurde nach der Diskussion über agentische
+Refactorings verworfen. Maßgeblich für die laufende Konzeptplanung ist
+`Konzept.md` (`status: draft`). Die Gegenbeispiele und Rot-Tests hier
+bleiben als Analysebelege erhalten; die früheren Produktentscheidungen
+unten sind keine Umsetzungsfreigabe.
 
 ## Warum die bisherige Strategie nicht zuverlässig werden kann
 
