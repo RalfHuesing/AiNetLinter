@@ -28,11 +28,13 @@ internal static class DocsCommand
         // MCP
         { "agent-api", "Docs/mcp/tools.md" },
         { "mcp-tools", "Docs/mcp/tools.md" },
+        { "mcp-dead-code", "Docs/mcp/dead-code.md" },
         { "mcp-server", "Docs/mcp/server.md" },
         { "mcp-integration", "Docs/mcp/integration.md" },
         { McpBootstrapDocument, "Docs/mcp/mcp-bootstrap.md" },
 
         // Allgemein & Regeln
+        { "index", "Docs/index.md" },
         { "readme", "README.md" },
         { "rationale", "Docs/rationale.md" },
         { "ainetlinter-rules-json", ConfigLoader.FileName },

@@ -21,10 +21,12 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\README.md" LogicalName="README.md" />
+    <EmbeddedResource Include="..\..\Docs\index.md" LogicalName="Docs/index.md" />
     <EmbeddedResource Include="..\..\Docs\linter\configuration.md" LogicalName="Docs/linter/configuration.md" />
     <EmbeddedResource Include="..\..\Docs\linter\cli.md" LogicalName="Docs/linter/cli.md" />
     <EmbeddedResource Include="..\..\Docs\linter\integration.md" LogicalName="Docs/linter/integration.md" />
     <EmbeddedResource Include="..\..\Docs\mcp\tools.md" LogicalName="Docs/mcp/tools.md" />
+    <EmbeddedResource Include="..\..\Docs\mcp\dead-code.md" LogicalName="Docs/mcp/dead-code.md" />
     <EmbeddedResource Include="..\..\Docs\mcp\server.md" LogicalName="Docs/mcp/server.md" />
     <EmbeddedResource Include="..\..\Docs\mcp\integration.md" LogicalName="Docs/mcp/integration.md" />
     <EmbeddedResource Include="..\..\Docs\mcp\mcp-bootstrap.md" LogicalName="Docs/mcp/mcp-bootstrap.md" />

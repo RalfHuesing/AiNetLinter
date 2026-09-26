@@ -2,16 +2,19 @@
 
 Nur den zur Aufgabe passenden Vertrag laden. AiNetLinter analysiert C#/.NET-Solutions mit Roslyn und lokale verwaltete Assemblies über Metadaten/Dekompilate; Web-Regeln sind separat konfigurierbar.
 
-| Aufgabe | Lesen |
-| --- | --- |
-| Tools wählen, Antworten auswerten, Symbole verfolgen | [MCP-Werkzeugwahl und Verträge](mcp/tools.md) |
-| Neue MCP-Integration einrichten | [Bootstrap](mcp/mcp-bootstrap.md), danach bei Bedarf [Host-Integration](mcp/integration.md) |
-| Dead-Code-Kandidaten beurteilen | [Nutzungsregeln, Gegenproben und Grenzen](mcp/dead-code.md) |
-| Regeln/Schwellenwerte/Ausnahmen ändern | [Konfiguration](linter/configuration.md) |
-| CLI aufrufen, Exit-Code oder Baseline interpretieren | [CLI](linter/cli.md) |
-| CLI in Zielprojekt/CI integrieren | [Integration](linter/integration.md) |
-| Laden, Daemon, Cache oder Logs untersuchen | [Serverbetrieb](mcp/server.md) |
-| Aussagekraft einer Regel/Metrik verstehen | [Analysegrenzen](rationale.md) |
+Dieser Einstieg ist mit `ainetlinter --docs index` oder `ainetlinter -d index` abrufbar. Folgeaufrufe geben jeweils ein Dokument auf stdout aus; ein Target ist dafür nicht erforderlich.
+
+| Aufgabe | Lesen | CLI-Aufruf |
+| --- | --- | --- |
+| Tools wählen, Antworten auswerten, Symbole verfolgen | [MCP-Werkzeugwahl und Verträge](mcp/tools.md) | `ainetlinter --docs mcp-tools` |
+| Neue MCP-Integration einrichten | [Bootstrap](mcp/mcp-bootstrap.md) | `ainetlinter --docs mcp-bootstrap` |
+| MCP-Host registrieren | [Host-Integration](mcp/integration.md) | `ainetlinter --docs mcp-integration` |
+| Dead-Code-Kandidaten beurteilen | [Nutzungsregeln, Gegenproben und Grenzen](mcp/dead-code.md) | `ainetlinter --docs mcp-dead-code` |
+| Regeln/Schwellenwerte/Ausnahmen ändern | [Konfiguration](linter/configuration.md) | `ainetlinter --docs configuration` |
+| CLI aufrufen, Exit-Code oder Baseline interpretieren | [CLI](linter/cli.md) | `ainetlinter --docs cli` |
+| CLI in Zielprojekt/CI integrieren | [Integration](linter/integration.md) | `ainetlinter --docs integration` |
+| Laden, Daemon, Cache oder Logs untersuchen | [Serverbetrieb](mcp/server.md) | `ainetlinter --docs mcp-server` |
+| Aussagekraft einer Regel/Metrik verstehen | [Analysegrenzen](rationale.md) | `ainetlinter --docs rationale` |
 
 ## Vor der ersten Analyse
 

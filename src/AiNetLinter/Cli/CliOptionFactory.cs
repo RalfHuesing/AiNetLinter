@@ -78,7 +78,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive). 'mcp-bootstrap' erklaert die einmalige MCP-Projektintegration.",
+        Description = "Gibt eingebettete Dokumentation aus (case-insensitive). Einstieg: --docs index. Namen: index, cli, configuration, integration, mcp-tools, mcp-dead-code, mcp-server, mcp-integration, mcp-bootstrap, mcp-rule, readme, rationale, ainetlinter-rules-json. Aliase: linter-cli, linter-config, linter-integration, agent-api.",
     };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")

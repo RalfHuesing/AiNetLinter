@@ -25,6 +25,7 @@ ainetlinter --search-rules "sealed"
 ainetlinter --search-rules "agent"
 
 # Integrierte Dokumentation direkt auf stdout ausgeben:
+ainetlinter --docs index
 ainetlinter --docs cli
 ainetlinter --docs configuration
 ainetlinter --docs mcp-tools
@@ -59,7 +60,7 @@ ainetlinter --config <Pfad-zur-ainetlinter-rules.json> --path <Pfad-zur-slnx-ode
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (`cli`, `configuration`, `integration`, `mcp-tools`, `mcp-server`, `mcp-integration`, `mcp-bootstrap`, `mcp-rule`, `readme`, `rationale`, `ainetlinter-rules-json`; case-insensitive) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (`index`, `cli`, `configuration`, `integration`, `mcp-tools`, `mcp-dead-code`, `mcp-server`, `mcp-integration`, `mcp-bootstrap`, `mcp-rule`, `readme`, `rationale`, `ainetlinter-rules-json`; case-insensitive). `index` liefert Einstieg und Folgeaufrufe. |
 | `--mcp-server` | bool | Startet den ThinClient des stdio-basierten MCP-Servers statt eines Lint-Laufs |
 | `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
 | `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard `45` Minuten) |
