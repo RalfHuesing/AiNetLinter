@@ -238,6 +238,7 @@ public sealed partial class VerifyToolContractE2ETests
             "category=magic_value:",
             "symbolIdentifier=h:");
         var firstText = Assert.IsType<TextContentBlock>(Assert.Single(first.Content)).Text;
+        Assert.Contains("population=gate_violations+all_advisories", firstText, StringComparison.Ordinal);
         Assert.True(
             firstText.IndexOf("category=dead_code", StringComparison.Ordinal)
             < firstText.IndexOf("category=magic_value:", StringComparison.Ordinal));

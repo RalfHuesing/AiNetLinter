@@ -568,7 +568,10 @@ Kurzform `scope: changes -> solution`; Ausschlüsse bleiben nur bei tatsächlich
 Vorkommen sichtbar.
 
 Nur bei sichtbarer Evidenz oder Trunkierung erscheint deren Summary
-`returned=<sichtbar>/<gesamt>; truncation=<Grund>`. Jeder Finding-Eintrag enthält
+`returned=<sichtbar>/<gesamt>; truncation=<Grund>; population=gate_violations+all_advisories`.
+Der Nenner umfasst alle Gate-Verstöße und Advisory-Einträge aller Kategorien,
+auch wenn nur ein Teil sichtbar ist; er ist nicht der Dead-Code-Kandidatenzähler.
+Jeder Finding-Eintrag enthält
 Regel, Severity, Grund und genau ein `ref`: der kanonische Positions-Handoff ist
 direkt für `get_symbol_body` verwendbar. `failed`
 enthält mindestens einen vollständigen Finding-Eintrag; andernfalls ist das

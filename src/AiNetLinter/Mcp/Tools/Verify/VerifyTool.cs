@@ -334,7 +334,7 @@ internal static partial class VerifyResponseFormatter
     {
         if (response.Evidence.Count > 0 || truncationReason != "none")
         {
-            lines.Add($"evidence: returned={response.Evidence.Count}/{response.EvidenceTotalCount}; truncation={truncationReason}");
+            lines.Add($"evidence: returned={response.Evidence.Count}/{response.EvidenceTotalCount}; truncation={truncationReason}; population=gate_violations+all_advisories");
         }
 
         AppendFindings(lines, response.Evidence, gateTotalCount);

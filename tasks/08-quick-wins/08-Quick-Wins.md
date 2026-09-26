@@ -5,7 +5,8 @@ Stand: 2026-09-26. Erledigte Punkte wurden aus diesem Task-Ordner entfernt; Umse
 | Punkt | Entscheidung | Nächster Schritt |
 |---|---|---|
 | [Cursor-Timeout bei kalten Assembly-Zielen](09-Cursor-Timeout-Rest.md) | Offen, relevant für einen Teil der gerouteten Tools. | Nach dem Release den zentralen Assembly-Session-Einstieg so anpassen, dass auch generische Tools binnen der Idle-Grenze antworten; danach mit neuem Server in Cursor prüfen. |
-| Verify-Zähler `evidence: returned=X/Y` | Kleine Verständlichkeitslücke bleibt: Der Zähler umfasst mehr als sichtbare Dead-Code-Kandidaten. `deadCode.candidates`, `shown`, `truncatedBy` und der paginierte Abruf sind inzwischen getrennt vorhanden. | Bei einer späteren MCP-Vertragsrunde die Legende oder Feldnamen präzisieren und Parser-/Bytebudget prüfen. Für den Release kein Blocker. |
+
+Neue bestätigte offene Quick-Win-Findings: keine.
 
 ## Ohne aktuelle Umsetzung
 

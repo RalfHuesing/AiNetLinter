@@ -122,6 +122,27 @@ public sealed class VerifyResponseFormatterTests
     }
 
     [Fact]
+    public void Success_EvidenceSummaryNamesGateViolationsAndAllAdvisoryCategories()
+    {
+        var advisory = new VerifyAdvisoryProjection(
+            2,
+            [
+                new VerifyEvidenceEntry("advisory_candidate", "dead_code", "advisory", "src/Probe.cs", 10, "Keine produktiven statischen Referenzen.", "h:dead"),
+                new VerifyEvidenceEntry("advisory_candidate", "magic_value", "advisory", "src/Probe.cs", 20, "Literal prüfen.", "src/Probe.cs:20"),
+            ],
+            "complete",
+            new VerifyDeadCodeSummary("complete", 1, 0, 1, 0, 0));
+
+        var text = GetText(VerifyResponseFormatter.Success(CreateParameters(
+            CreateScore(CreateViolation("src/Probe.cs", 5, "ProbeRule", "Regelverstoß.")), advisory)));
+
+        Assert.Contains("evidence: returned=3/3; truncation=none; population=gate_violations+all_advisories", text, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=complete; candidates=1", text, StringComparison.Ordinal);
+        Assert.Contains("category=magic_value", text, StringComparison.Ordinal);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
+    }
+
+    [Fact]
     public void Success_RazorAdvisoryReasonRemainsVisibleWithinTheFixedBudgetWithoutChangingVerdict()
     {
         const string razorReason = "Razor-Referenzen nicht entscheidbar: generiertes C# fehlt oder ist nicht auswertbar; Razor-Generierung/Projektladung gegenprüfen.";
