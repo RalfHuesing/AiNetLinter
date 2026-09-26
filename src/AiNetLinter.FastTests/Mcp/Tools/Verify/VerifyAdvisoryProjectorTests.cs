@@ -31,11 +31,11 @@ public sealed class VerifyAdvisoryProjectorTests
         var entries = Enumerable.Range(1, 2000).Select(index => new DeadCodeEntry(
             Id: $"candidate-{index}", Kind: "method", ContainerType: "Service",
             SymbolName: $"Unused{index}", File: "Service.cs", Line: index,
-            Column: 1, Accessibility: "private", Confidence: "high",
+            Column: 1, Accessibility: "private",
             Reason: "static scan", LimitsApplies: [], ProjectName: "TestApp",
             InternalSymbolIdentifier: $"M:TestApp.Service.Unused{index}")).ToArray();
         var scan = new DeadCodeScanResult(entries,
-            new DeadCodeSummary(1, 2000, 2000, 2000, 0, new Dictionary<string, int>()),
+            new DeadCodeSummary(1, 2000, 2000, new Dictionary<string, int>()),
             [], new DeadCodeRecommendedNextAction("countercheck", "prüfen"), false);
         var pages = new VerifyAdvisoryPageStore();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -87,7 +87,7 @@ public sealed class VerifyAdvisoryProjectorTests
     {
         var scan = new DeadCodeScanResult(
             [],
-            new DeadCodeSummary(0, 0, 0, 0, 0, new Dictionary<string, int>()),
+            new DeadCodeSummary(0, 0, 0, new Dictionary<string, int>()),
             [],
             new DeadCodeRecommendedNextAction("countercheck", "statische Grenzen prüfen"),
             IsTruncated: false);
@@ -113,13 +113,12 @@ public sealed class VerifyAdvisoryProjectorTests
             Line: 3,
             Column: 1,
             Accessibility: "private",
-            Confidence: "high",
             Reason: "static scan",
             LimitsApplies: [],
             ProjectName: "TestApp");
         var scan = new DeadCodeScanResult(
             [candidate],
-            new DeadCodeSummary(1, 2, 2, 2, 0, new Dictionary<string, int> { ["method"] = 2 }),
+            new DeadCodeSummary(1, 2, 2, new Dictionary<string, int> { ["method"] = 2 }),
             [],
             new DeadCodeRecommendedNextAction("continue", "weitere Kandidaten prüfen"),
             IsTruncated: true);
@@ -149,7 +148,6 @@ public sealed class VerifyAdvisoryProjectorTests
                 Line: line,
                 Column: 1,
                 Accessibility: "private",
-                Confidence: confidence,
                 Reason: "static scan",
                 LimitsApplies: [],
                 ProjectName: project);
@@ -163,7 +161,7 @@ public sealed class VerifyAdvisoryProjectorTests
         };
         var scan = new DeadCodeScanResult(
             entries,
-            new DeadCodeSummary(4, 4, 0, 4, 0, new Dictionary<string, int> { ["method"] = 4 }),
+            new DeadCodeSummary(4, 4, 0, new Dictionary<string, int> { ["method"] = 4 }),
             [],
             new DeadCodeRecommendedNextAction("countercheck", "statische Grenzen prüfen"),
             IsTruncated: false);
@@ -354,11 +352,6 @@ public sealed class VerifyAdvisoryProjectorTests
         var scan = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.All,
-                IncludeTests: false,
-                Mode: DeadCodeMode.Members,
                 MaxResults: int.MaxValue,
                 HandoffIdentity: identity),
             CancellationToken.None);
@@ -373,7 +366,7 @@ public sealed class VerifyAdvisoryProjectorTests
         Assert.Equal(2, compactIds.Length);
         Assert.Equal(compactIds.Length, compactIds.Distinct(StringComparer.Ordinal).Count());
 
-        var partialScan = scan with { Summary = scan.Summary with { Status = "partial", Undecidable = 1 } };
+        var partialScan = scan with { Summary = scan.Summary with { Status = "partial" } };
         var partial = GetVerifyAdvisoriesTool.Render(partialScan);
         var partialText = Assert.IsType<TextContentBlock>(Assert.Single(partial.Content)).Text;
         Assert.True(partialText.StartsWith("status=partial;", StringComparison.Ordinal));

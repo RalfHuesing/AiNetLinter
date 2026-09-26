@@ -20,7 +20,7 @@ public sealed class DeadCodeBoundaryTests
             new ProjectSpec("Checks", [("Code.cs", "public static class Check { public static int Read(State state) => state.Value; }")], ProjectReferences: ["Host"]));
         var config = TestHelper.CreateDefaultConfig() with { DeadCode = new DeadCodeConfig { ProjectRoles = new() { ["Checks"] = "test" } } };
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Field, Config: config));
+            new(Config: config));
         Assert.Empty(result.DeadSymbols);
     }
 
@@ -31,7 +31,7 @@ public sealed class DeadCodeBoundaryTests
             new ProjectSpec("Mixed", [("Code.cs", "public sealed class Worker { public void Work() { } }")]));
         var config = TestHelper.CreateDefaultConfig() with { DeadCode = new DeadCodeConfig { ProjectRoles = new() { ["Mixed"] = "unknown" } } };
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method, Config: config));
+            new(Config: config));
         Assert.Empty(result.DeadSymbols);
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Work");
     }
@@ -43,7 +43,7 @@ public sealed class DeadCodeBoundaryTests
             new ProjectSpec("Host", [("One.cs", "public partial class Worker { public void First() { } }"),
                 ("Two.cs", "// A longer independent declaration must not be consumed while visiting the first syntax tree.\npublic partial class Worker { public void Second() { } }")]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
+            new());
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Second" && entry.File.EndsWith("Two.cs", System.StringComparison.Ordinal));
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "First");
     }
@@ -62,7 +62,7 @@ public sealed class DeadCodeBoundaryTests
             new ProjectSpec("Checks", [("Code.cs", "public static class Check { public static object? Run() => Mapper.Read(new Payload()); }")],
                 ProjectReferences: ["Host"], AdditionalReferences: [MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
+            new());
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Value");
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.ProjectName == "Checks");
     }
@@ -77,11 +77,11 @@ public sealed class DeadCodeBoundaryTests
                 """)]));
         var config = TestHelper.CreateDefaultConfig() with { DeadCode = new DeadCodeConfig { DefaultApiSurface = "external_library" } };
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method, Config: config));
+            new(Config: config));
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName.Contains("Run", System.StringComparison.Ordinal));
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
         var closed = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
+            new());
         Assert.DoesNotContain(closed.DeadSymbols, entry => entry.ContainerType == "Api" && entry.SymbolName.Contains("Run", System.StringComparison.Ordinal));
     }
 
@@ -94,9 +94,8 @@ public sealed class DeadCodeBoundaryTests
                 public sealed class Api { internal void Extension() { } private void Orphan() { } }
                 """)]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
+            new());
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Extension");
-        Assert.Equal(1, result.Summary.Undecidable);
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
     }
 }

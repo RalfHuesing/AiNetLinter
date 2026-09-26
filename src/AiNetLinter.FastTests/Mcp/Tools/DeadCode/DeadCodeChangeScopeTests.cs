@@ -20,7 +20,6 @@ public sealed class DeadCodeChangeScopeTests
             new ProjectSpec("Host", [("Code.cs", "public sealed class Orphan { }")]));
         var document = fixture.Solution.Projects.Single().Documents.Single();
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution, new(
-            Accessibility: DeadCodeAccessibilityFilter.All,
             ScopeFiles: new HashSet<string> { document.FilePath! }));
         Assert.Equal("partial", result.Summary.Status);
         Assert.Equal("unavailable", result.Summary.Coverage!.ChangesBasis);
@@ -38,7 +37,6 @@ public sealed class DeadCodeChangeScopeTests
         var current = fixture.Solution.WithDocumentText(caller.Id,
             SourceText.From("public static class Caller { public static void Run() { } }"));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(current, new(
-            Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method,
             ScopeFiles: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { caller.FilePath! },
             PreviousSolution: fixture.Solution));
         var target = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Work");

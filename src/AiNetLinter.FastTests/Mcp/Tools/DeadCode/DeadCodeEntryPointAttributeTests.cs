@@ -128,9 +128,6 @@ public sealed class DeadCodeEntryPointAttributeTests
         DeadCodeAdvisoryScanner.ScanAsync(
             solution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.All,
                 Config: config ?? TestHelper.CreateDefaultConfig()),
             CancellationToken.None);
 }

@@ -13,27 +13,6 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 public sealed class VerifyAdvisoryPageStoreTests
 {
     [Fact]
-    public void DetailPagesOmitUndecidableSymbols()
-    {
-        var candidate = new DeadCodeEntry(
-            Id: "uncertain", Kind: "method", ContainerType: "Service",
-            SymbolName: "Uncertain", File: "Service.cs", Line: 7, Column: 1,
-            Accessibility: "private", Confidence: "low", Reason: "unknown binding",
-            LimitsApplies: [], ProjectName: "TestApp",
-            InternalSymbolIdentifier: "M:TestApp.Service.Uncertain");
-        var scan = new DeadCodeScanResult(
-            [], new DeadCodeSummary(0, 0, 0, 0, 1, new Dictionary<string, int>()), [],
-            new DeadCodeRecommendedNextAction("countercheck", "prüfen"),
-            IsTruncated: false, UndecidableSymbols: [candidate]);
-
-        var result = GetVerifyAdvisoriesTool.Render(scan);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-
-        Assert.DoesNotContain("Uncertain", text, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("M:TestApp.Service.Uncertain", text, System.StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void ReusesOnlyCompleteMatchingSolutionSnapshots()
     {
         var scan = CandidateScan("complete");
@@ -88,12 +67,12 @@ public sealed class VerifyAdvisoryPageStoreTests
     {
         DeadCodeEntry candidate = new(
             Id: "unused", Kind: "method", ContainerType: "Service", SymbolName: "Unused",
-            File: "Service.cs", Line: 3, Column: 1, Accessibility: "private", Confidence: "high",
+            File: "Service.cs", Line: 3, Column: 1, Accessibility: "private",
             Reason: "static scan", LimitsApplies: [], ProjectName: "TestApp",
             InternalSymbolIdentifier: "M:TestApp.Service.Unused");
         return new DeadCodeScanResult(
             includeCandidate ? [candidate] : [],
-            new DeadCodeSummary(1, 1, includeCandidate ? 1 : 0, 1, 0,
+            new DeadCodeSummary(1, 1, includeCandidate ? 1 : 0,
                 new Dictionary<string, int>(), Status: status),
             [], new DeadCodeRecommendedNextAction("countercheck", "prüfen"), IsTruncated: false);
     }

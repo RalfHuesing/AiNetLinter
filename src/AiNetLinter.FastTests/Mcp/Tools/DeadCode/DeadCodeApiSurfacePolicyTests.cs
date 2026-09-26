@@ -43,9 +43,6 @@ public sealed class DeadCodeApiSurfacePolicyTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             solution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.Method,
                 Config: config),
             CancellationToken.None);
 
@@ -53,11 +50,11 @@ public sealed class DeadCodeApiSurfacePolicyTests
             "PublicMethod" or "ProtectedMethod" or "ProtectedInternalMethod");
         Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "InternalMethod");
         Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "PrivateProtectedMethod");
-        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "PublicMemberInInternalType");
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "InternalContainer" && symbol.Kind == "class");
     }
 
     [Fact]
-    public async Task ScanAsync_ClosedSolutionReportsEffectivePublicSurfaceWithLowConfidence()
+    public async Task ScanAsync_ClosedSolutionIncludesEffectivePublicSurfaceAsCandidate()
     {
         using var solution = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\ClosedApi.slnx",
@@ -70,14 +67,11 @@ public sealed class DeadCodeApiSurfacePolicyTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             solution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.Method,
                 Config: config),
             CancellationToken.None);
 
-        var candidate = Assert.Single(result.DeadSymbols, symbol => symbol.SymbolName == "Unused");
-        Assert.Equal("low", candidate.Confidence);
+        var candidate = Assert.Single(result.DeadSymbols, symbol => symbol.SymbolName == "PublicApi");
+        Assert.Equal("class", candidate.Kind);
     }
 
     [Fact]

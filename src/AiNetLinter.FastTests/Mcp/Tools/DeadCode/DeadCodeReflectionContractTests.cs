@@ -27,8 +27,8 @@ public sealed class DeadCodeReflectionContractTests
             }
             """);
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Class));
-        Assert.Contains(result.UndecidableSymbols!, entry => entry.SymbolName == "Plugin");
+            new());
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Plugin");
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
     }
 
@@ -70,13 +70,12 @@ public sealed class DeadCodeReflectionContractTests
             """);
         var result = await Scan(fixture);
         Assert.Empty(result.DeadSymbols);
-        Assert.Empty(result.UndecidableSymbols!);
-    }
+}
 
     private static RoslynTestSolution Create(string source) =>
         RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\Reflection.slnx",
             new ProjectSpec("Host", [("Code.cs", source)]));
 
     private static Task<DeadCodeScanResult> Scan(RoslynTestSolution fixture) =>
-        DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
+        DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution, new());
 }

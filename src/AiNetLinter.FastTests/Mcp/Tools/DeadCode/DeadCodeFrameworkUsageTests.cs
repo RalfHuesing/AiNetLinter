@@ -77,6 +77,6 @@ public sealed class DeadCodeFrameworkUsageTests
         var compilation = await fixture.Solution.Projects.Single().GetCompilationAsync();
         Assert.DoesNotContain(compilation!.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         return await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
+            new());
     }
 }

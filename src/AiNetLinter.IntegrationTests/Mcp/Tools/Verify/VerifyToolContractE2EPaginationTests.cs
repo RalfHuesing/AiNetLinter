@@ -80,12 +80,10 @@ public sealed partial class VerifyToolContractE2ETests
             foreach (var entry in entries)
             {
                 var fields = entry.Split(" | ");
-                Assert.Equal(6, fields.Length);
+                Assert.Equal(4, fields.Length);
                 Assert.StartsWith("h:", fields[2], StringComparison.Ordinal);
                 Assert.True(identifiers.Add(fields[2]), fields[2]);
-                Assert.True(fields[3] is "test_only" or "unreferenced");
-                Assert.False(string.IsNullOrWhiteSpace(fields[4]));
-                Assert.False(string.IsNullOrWhiteSpace(fields[5]));
+                Assert.False(string.IsNullOrWhiteSpace(fields[3]));
             }
 
             offset += pageShown;

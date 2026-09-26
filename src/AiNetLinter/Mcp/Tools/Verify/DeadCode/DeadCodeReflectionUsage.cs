@@ -44,7 +44,7 @@ internal sealed class DeadCodeReflectionUsage(DeadCodeUsageIndex index)
 
     private void RecordSelection(ISymbol member, bool? selected, string role)
     {
-        if (role == "unknown" || selected is null) index.MarkUnknown(member, "reflection_selection");
+        if (role == "unknown" || selected is null) index.MarkUnknown(member);
         else index.Add(member, role);
     }
 
@@ -110,7 +110,7 @@ internal sealed class DeadCodeReflectionUsage(DeadCodeUsageIndex index)
                 if (source.Model.GetDeclaredSymbol(declaration) is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsAbstract: false } type) continue;
                 if (contract is not null && !type.AllInterfaces.Contains(contract, SymbolEqualityComparer.Default)
                     && !Inherits(type, contract)) continue;
-                if (contract is null || role == "unknown") index.MarkUnknown(type, "assembly_filter_or_activation");
+                if (contract is null || role == "unknown") index.MarkUnknown(type);
                 else index.Add(type, role);
             }
         }

@@ -99,11 +99,8 @@ public sealed class VerifyResponseFormatterTests
                 "Keine produktiven statischen Referenzen; 2 Testreferenz(en) gefunden.",
                 "h:abc",
                 RequiresAgentJudgment: true,
-                Confidence: "low",
                 EvidenceBoundary: "statisch",
-                CounterIndicators: ["Reflection"],
-                Usage: "test_only",
-                TestReferences: 2)],
+                CounterIndicators: ["Reflection"])],
             "complete",
             new VerifyDeadCodeSummary("complete", 1, Coverage: new DeadCodeScanCoverage("solution", 0, 0, 0, "finished", true)));
 
@@ -160,7 +157,6 @@ public sealed class VerifyResponseFormatterTests
                 razorReason,
                 "h:razor",
                 RequiresAgentJudgment: true,
-                Confidence: "low",
                 EvidenceBoundary: "statisch",
                 CounterIndicators: ["Razor-Generierung/Projektladung"])],
             "complete",
@@ -186,10 +182,7 @@ public sealed class VerifyResponseFormatterTests
                 $"src/Probe{index}.cs",
                 index + 1,
                 "Keine produktiven statischen Referenzen. " + new string('x', 300),
-                $"h:{index}",
-                Confidence: "high",
-                Usage: index < 2 ? "test_only" : "unreferenced",
-                TestReferences: index < 2 ? 1 : 0))
+                $"h:{index}"))
             .ToList();
         var advisory = new VerifyAdvisoryProjection(
             0,

@@ -76,7 +76,7 @@ internal sealed class DeadCodeXamlUsage(DeadCodeUsageIndex index)
     private void MarkUnknownPath(DeadCodeMarkupDocument source, string name)
     {
         foreach (var type in index.SourceTypes.Where(type => type.ContainingAssembly.Identity.Equals(source.Compilation.Assembly.Identity)))
-            foreach (var member in type.GetMembers(name).OfType<IPropertySymbol>()) index.MarkUnknown(member, "markup_binding_context");
+            foreach (var member in type.GetMembers(name).OfType<IPropertySymbol>()) index.MarkUnknown(member);
     }
 
     private void BindAttached(ElementContext context, XName name)

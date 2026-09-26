@@ -75,6 +75,6 @@ public sealed class DeadCodeMarkupContractTests
         var compilation = await solution.Projects.Single().GetCompilationAsync();
         Assert.DoesNotContain(compilation!.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         return await DeadCodeAdvisoryScanner.ScanAsync(solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.All));
+            new());
     }
 }

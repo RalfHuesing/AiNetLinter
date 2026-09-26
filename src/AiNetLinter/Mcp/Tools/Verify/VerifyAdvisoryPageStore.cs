@@ -30,7 +30,7 @@ internal sealed class VerifyAdvisoryPageStore
 
     private CallToolResult Start(DeadCodeScanResult scan, DeadCodeEntry[] candidates, VerifyAdvisorySnapshotContext? context)
     {
-        var snapshotScan = scan with { DeadSymbols = candidates, UndecidableSymbols = [] };
+        var snapshotScan = scan with { DeadSymbols = candidates };
         var id = Guid.NewGuid();
         var page = GetVerifyAdvisoriesTool.RenderPage(snapshotScan, candidates, 0, id);
         if (page.IsError == true) return page;
@@ -51,7 +51,7 @@ internal sealed class VerifyAdvisoryPageStore
         {
             RemoveExpired();
             snapshots.Add(id, new Snapshot(
-                scan with { DeadSymbols = candidates, UndecidableSymbols = [] },
+                scan with { DeadSymbols = candidates },
                 candidates,
                 context,
                 DateTimeOffset.UtcNow));

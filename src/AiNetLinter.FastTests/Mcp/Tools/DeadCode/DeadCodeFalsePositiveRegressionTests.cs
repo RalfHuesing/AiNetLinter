@@ -35,7 +35,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                     MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location)
                 ], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "AuthJwtSigningDisabled");
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnreferencedMethod");
@@ -58,7 +58,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                 }
                 """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.Id == "Handlers.Handle(int)");
         Assert.Contains(result.DeadSymbols, entry => entry.Id == "Handlers.Handle(string)");
@@ -78,7 +78,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                 }
                 """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.Id.StartsWith("Handlers.Handle(", StringComparison.Ordinal));
     }
@@ -99,7 +99,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                 public sealed class Ordinary { public void Unreferenced() { } }
                 """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Implicit" or "Explicit" or "Override");
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Unreferenced");
@@ -122,7 +122,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                     MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location)
                 ], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "StringConverter" && entry.SymbolName is "Read" or "Write");
     }
@@ -150,7 +150,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                 """)], OutputKind: Microsoft.CodeAnalysis.OutputKind.ConsoleApplication,
                 VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Field);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "_generation");
     }
@@ -186,7 +186,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.ContainerType == "Product.ReadableStream" && entry.SymbolName == "Read");
@@ -210,7 +210,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.All);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.Kind == "class" && entry.SymbolName == "ModuleHook");
@@ -232,7 +232,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Property);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.ContainerType.Contains("Cache.Key", StringComparison.Ordinal) && entry.SymbolName == "Slug");
@@ -263,7 +263,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Property);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.ContainerType == "Product.Payload" && entry.SymbolName == "Value");
@@ -290,7 +290,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Field);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "_state");
     }
@@ -325,7 +325,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             """)], OutputKind: Microsoft.CodeAnalysis.OutputKind.ConsoleApplication,
                 VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Class);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.Kind == "class" && entry.SymbolName == "HiddenPlugin");
@@ -351,7 +351,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
         var compilation = await Assert.Single(testSolution.Solution.Projects).GetCompilationAsync();
         Assert.Contains(compilation!.GetDiagnostics(), diagnostic => diagnostic.Id == "CS0162");
 
-        var result = await ScanAsync(testSolution, DeadCodeKindFilter.All, DeadCodeMode.Both);
+        var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.Reason.Contains("CS0162", StringComparison.Ordinal));
@@ -362,15 +362,8 @@ public sealed class DeadCodeFalsePositiveRegressionTests
             @"C:\ainetlinter-virtual\DeadCodeFalsePositiveRegressionTests.slnx",
             projects);
 
-    private static Task<DeadCodeScanResult> ScanAsync(
-        RoslynTestSolution testSolution,
-        DeadCodeKindFilter kind,
-        DeadCodeMode mode = DeadCodeMode.Members) =>
+    private static Task<DeadCodeScanResult> ScanAsync(RoslynTestSolution testSolution) =>
         DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: kind,
-                Mode: mode));
+            new DeadCodeAdvisoryOptions());
 }

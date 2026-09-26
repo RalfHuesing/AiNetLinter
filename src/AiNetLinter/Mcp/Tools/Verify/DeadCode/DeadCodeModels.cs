@@ -8,62 +8,10 @@ using AiNetLinter.Configuration;
 namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
-/// Filter fuer Deklarations-Sichtbarkeit bei Dead-Code-Hinweisprojektion.
-/// </summary>
-internal enum DeadCodeAccessibilityFilter
-{
-    All,
-    Private,
-    Internal,
-    Public,
-    PrivateInternal
-}
-
-/// <summary>
-/// Filter fuer Vertrauensstufe bei Dead-Code-Hinweisprojektion.
-/// </summary>
-internal enum DeadCodeConfidenceFilter
-{
-    Both,
-    High,
-    Low
-}
-
-/// <summary>
-/// Filter fuer Symbol-Art bei Dead-Code-Hinweisprojektion.
-/// </summary>
-internal enum DeadCodeKindFilter
-{
-    All,
-    Type,
-    Class,
-    Method,
-    Field,
-    Property,
-    Event,
-    Delegate
-}
-
-/// <summary>
-/// Modus fuer Dead-Code-Hinweisprojektion (Symbol-Graph, Compiler-Diagnosen oder beides).
-/// </summary>
-internal enum DeadCodeMode
-{
-    Members,
-    Locals,
-    Both
-}
-
-/// <summary>
 /// Ausfuehrungs-Argumente fuer Dead-Code-Hinweisprojektion.
 /// </summary>
 internal sealed record DeadCodeAdvisoryOptions(
-    DeadCodeAccessibilityFilter Accessibility = DeadCodeAccessibilityFilter.PrivateInternal,
-    DeadCodeConfidenceFilter Confidence = DeadCodeConfidenceFilter.Both,
-    DeadCodeKindFilter Kind = DeadCodeKindFilter.All,
     string? ScopeFilter = null,
-    bool IncludeTests = false,
-    DeadCodeMode Mode = DeadCodeMode.Members,
     int MaxResults = 50,
     IReadOnlySet<string>? ScopeFiles = null,
     Config? Config = null,
@@ -71,56 +19,7 @@ internal sealed record DeadCodeAdvisoryOptions(
     bool SolutionBudget = false,
     Microsoft.CodeAnalysis.Solution? PreviousSolution = null,
     TimeProvider? Clock = null,
-    string? RequestedScope = null)
-{
-    public static bool IsKnownAccessibility(string? value) => value?.ToLowerInvariant() is "all" or "private" or "internal" or "public" or "private_internal";
-    public static bool IsKnownConfidence(string? value) => value?.ToLowerInvariant() is "both" or "high" or "low";
-    public static bool IsKnownKind(string? value) => value?.ToLowerInvariant() is "all" or "type" or "class" or "method" or "field" or "property" or "event" or "delegate";
-    public static bool IsKnownMode(string? value) => value?.ToLowerInvariant() is "members" or "locals" or "both";
-
-    public static DeadCodeAccessibilityFilter ParseAccessibility(string? value) =>
-        value?.ToLowerInvariant() switch
-        {
-            "all" => DeadCodeAccessibilityFilter.All,
-            "private" => DeadCodeAccessibilityFilter.Private,
-            "internal" => DeadCodeAccessibilityFilter.Internal,
-            "public" => DeadCodeAccessibilityFilter.Public,
-            "private_internal" => DeadCodeAccessibilityFilter.PrivateInternal,
-            _ => DeadCodeAccessibilityFilter.PrivateInternal
-        };
-
-    public static DeadCodeConfidenceFilter ParseConfidence(string? value) =>
-        value?.ToLowerInvariant() switch
-        {
-            "both" => DeadCodeConfidenceFilter.Both,
-            "high" => DeadCodeConfidenceFilter.High,
-            "low" => DeadCodeConfidenceFilter.Low,
-            _ => DeadCodeConfidenceFilter.Both
-        };
-
-    public static DeadCodeKindFilter ParseKind(string? value) =>
-        value?.ToLowerInvariant() switch
-        {
-            "all" => DeadCodeKindFilter.All,
-            "type" => DeadCodeKindFilter.Type,
-            "class" => DeadCodeKindFilter.Class,
-            "method" => DeadCodeKindFilter.Method,
-            "field" => DeadCodeKindFilter.Field,
-            "property" => DeadCodeKindFilter.Property,
-            "event" => DeadCodeKindFilter.Event,
-            "delegate" => DeadCodeKindFilter.Delegate,
-            _ => DeadCodeKindFilter.All
-        };
-
-    public static DeadCodeMode ParseMode(string? value) =>
-        value?.ToLowerInvariant() switch
-        {
-            "members" => DeadCodeMode.Members,
-            "locals" => DeadCodeMode.Locals,
-            "both" => DeadCodeMode.Both,
-            _ => DeadCodeMode.Members
-        };
-}
+    string? RequestedScope = null);
 
 /// <summary>
 /// Einzelner toter Code-Fund im Structured Output von Dead-Code-Hinweisprojektion.
@@ -134,14 +33,11 @@ internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("line")] int Line,
     [property: JsonPropertyName("column")] int Column,
     [property: JsonPropertyName("accessibility")] string Accessibility,
-    [property: JsonPropertyName("confidence")] string Confidence,
     [property: JsonPropertyName("reason")] string Reason,
     [property: JsonPropertyName("limitsApplies")] IReadOnlyList<string> LimitsApplies,
     [property: JsonPropertyName("resultType")] string ResultType = "candidate",
     [property: JsonPropertyName("evidenceBoundary")] string EvidenceBoundary = "statische Referenzsuche innerhalb der Solution; keine Laufzeit- oder externen Consumer-Beweise",
     [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null,
-    [property: JsonPropertyName("usage")] string Usage = "unreferenced",
-    [property: JsonPropertyName("testReferences")] int TestReferences = 0,
     [property: JsonPropertyName("internalSymbolIdentifier")] string? InternalSymbolIdentifier = null,
     [property: JsonIgnore] string? ProjectName = null,
     int Priority = 2);
@@ -153,19 +49,14 @@ internal sealed record DeadCodeSummary(
     [property: JsonPropertyName("documentsInScope")] int DocumentsInScope,
     [property: JsonPropertyName("scannedSymbols")] int ScannedSymbols,
     [property: JsonPropertyName("totalDead")] int TotalDead,
-    [property: JsonPropertyName("high")] int High,
-    [property: JsonPropertyName("low")] int Low,
     [property: JsonPropertyName("byKind")] IReadOnlyDictionary<string, int> ByKind,
     [property: JsonPropertyName("status")] string Status = "checked",
     [property: JsonPropertyName("cause")] string Cause = "Statischer Scan im angeforderten Scope.",
-    [property: JsonPropertyName("confidence")] string Confidence = "medium",
     [property: JsonPropertyName("returnedCandidates")] int ReturnedCandidates = 0,
     [property: JsonPropertyName("truncatedBy")] int TruncatedBy = 0,
     [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null,
-    [property: JsonPropertyName("undecidable")] int Undecidable = 0,
     [property: JsonPropertyName("apiProtected")] int ApiProtected = 0,
-    DeadCodeScanCoverage? Coverage = null,
-    IReadOnlyDictionary<string, int>? UndecidableReasons = null);
+    DeadCodeScanCoverage? Coverage = null);
 
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
@@ -184,8 +75,7 @@ internal sealed record DeadCodeScanResult(
     [property: JsonPropertyName("recommendedNextAction")] DeadCodeRecommendedNextAction RecommendedNextAction,
     [property: JsonPropertyName("isTruncated")] bool IsTruncated,
     [property: JsonPropertyName("resultType")] string ResultType = "candidate",
-    [property: JsonPropertyName("deletionClaim")] bool DeletionClaim = false,
-    IReadOnlyList<DeadCodeEntry>? UndecidableSymbols = null);
+    [property: JsonPropertyName("deletionClaim")] bool DeletionClaim = false);
 
 /// <summary>
 /// Konstante Standard-Limits fuer die Heuristik-Transparenz.
@@ -195,13 +85,12 @@ internal static class DeadCodeLimits
     public static readonly IReadOnlyList<string> DefaultLimits =
     [
         "publicApiSurface: Public/Protected Symbole koennen von externen Consumern genutzt werden",
-        "reflection: Dynamische Aufrufe per Reflection (Type.GetMethod o.ae.) sind statisch unsichtbar",
-        "interfaceImplementation: Aufrufe koennen indirekt ueber Interface-Typen erfolgen",
-        "jsonSerializer: DTO-Properties werden per JSON/XML-Serializer oder Model-Binding instanziiert",
-        "optionsBinding: Configuration-POCOs werden per IOptions<T> gebunden",
-        "aspNetRouting: Endpunkte und Controller werden per HTTP-Routing aufgerufen",
+        "reflection: Dynamische Namen und nicht erkannte Reflection-Aufrufe sind statisch unsichtbar",
+        "markup: Laufzeit-Markup und nicht aufgeloeste Bindungen sind nicht vollstaendig sichtbar",
+        "dynamic: Aufrufe ueber dynamic sind statisch nicht aufloesbar",
+        "externalConsumer: Externe Consumer sind nicht Teil der Solution",
         "internalsVisibleTo: Internal-Symbole koennen in befreundeten Assemblies referenziert sein",
-        "di: Dependency-Injection Container loesen Konstruktoren und Typen dynamisch auf"
+        "projectRoles: Unbekannte Rollen unterdruecken Kandidaten"
     ];
 }
 
@@ -219,19 +108,17 @@ internal sealed class DeadCodeScanContext(
     public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
-    public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
     internal IReadOnlyList<Microsoft.CodeAnalysis.INamedTypeSymbol> EntryPointAttributeTypes { get; set; } = Array.Empty<Microsoft.CodeAnalysis.INamedTypeSymbol>();
     public DeadCodeUsageIndex UsageIndex { get; set; } = new();
     public HashSet<Microsoft.CodeAnalysis.ISymbol> ScannedMembers { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public int ScannedCount { get; set; }
-    public int UndecidableCount { get; set; }
     public int ApiProtectedCount { get; set; }
     public DeadCodeScanProgress Progress { get; } = new(args.Clock);
 }
 
 internal sealed record DeadCodeScanCoverage(string RequestedScope, int ProcessedDocuments, int OpenDocuments,
     long ElapsedMilliseconds, string StopReason, bool ReferencesComplete,
-    string ExcludedKinds = "constructors,accessors,operators,finalizers,enum_values,events,indexers,generated_declarations",
+    string ExcludedKinds = "fields,constants,properties,record_components,events,indexers,enum_values,locals,constructors,accessors,operators,finalizers,generated_declarations",
     string ChangesBasis = "not_applicable");
 
 internal sealed class DeadCodeScanProgress(TimeProvider? clock = null)
@@ -245,5 +132,4 @@ internal sealed class DeadCodeScanProgress(TimeProvider? clock = null)
     public long BudgetMilliseconds { get; set; }
     public string ChangesBasis { get; set; } = "not_applicable";
     public HashSet<string> PriorTargets { get; } = new(StringComparer.Ordinal);
-    public Dictionary<string, DeadCodeEntry> UncertainSymbols { get; } = new(StringComparer.Ordinal);
 }

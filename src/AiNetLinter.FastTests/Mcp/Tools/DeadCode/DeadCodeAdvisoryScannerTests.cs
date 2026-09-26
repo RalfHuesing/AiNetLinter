@@ -22,12 +22,12 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            new DeadCodeAdvisoryOptions(),
             cancellation.Token));
     }
 
     [Fact]
-    public async Task ScanAsync_PrivateUnusedMethod_ReturnsHighConfidenceDeadCode()
+    public async Task ScanAsync_PrivateUnusedMethod_ReturnsCandidate()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -39,16 +39,13 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.All,
-            Confidence: DeadCodeConfidenceFilter.High,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("UnusedHelper", dead.SymbolName);
         Assert.Equal("method", dead.Kind);
-        Assert.Equal("high", dead.Confidence);
         Assert.Equal("private", dead.Accessibility);
     }
 
@@ -65,9 +62,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.Method);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -94,9 +89,7 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.Private,
-                Confidence: DeadCodeConfidenceFilter.High,
-                Kind: DeadCodeKindFilter.Method),
+                ),
             CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "ReflectionCallback");
@@ -119,7 +112,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new DeadCodeAdvisoryOptions(Mode: DeadCodeMode.Both),
+            new DeadCodeAdvisoryOptions(),
             CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "_serializedValue");
@@ -140,9 +133,7 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.Internal,
-                Confidence: DeadCodeConfidenceFilter.High,
-                Kind: DeadCodeKindFilter.Class),
+                ),
             CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "SerializedContract");
@@ -173,9 +164,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.All,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.Method);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -201,9 +190,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.All,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -228,9 +215,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.High,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -253,9 +238,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.Method);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -276,10 +259,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Mode: DeadCodeMode.Locals,
-            Accessibility: DeadCodeAccessibilityFilter.All,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -300,10 +280,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Mode: DeadCodeMode.Both,
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.High,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -325,9 +302,6 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.Method,
             MaxResults: 2);
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
@@ -344,14 +318,14 @@ public sealed class DeadCodeAdvisoryScannerTests
             ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
         var complete = await DeadCodeAdvisoryScanner.ScanAsync(
             completeSolution.Solution,
-            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            new DeadCodeAdvisoryOptions(),
             CancellationToken.None);
 
         using var truncatedSolution = CreateSolution(
             ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
         var truncated = await DeadCodeAdvisoryScanner.ScanAsync(
             truncatedSolution.Solution,
-            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method, MaxResults: 1),
+            new DeadCodeAdvisoryOptions(MaxResults: 1),
             CancellationToken.None);
 
         Assert.Equal("countercheck", complete.RecommendedNextAction.Action);
@@ -367,7 +341,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new DeadCodeAdvisoryOptions(Kind: DeadCodeKindFilter.Method),
+            new DeadCodeAdvisoryOptions(),
             CancellationToken.None);
 
         Assert.Empty(result.DeadSymbols);
@@ -393,10 +367,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            ScopeFilter: "Included",
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.Method);
+            ScopeFilter: "Included");
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -423,9 +394,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.All,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
@@ -446,9 +415,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             """));
 
         var args = new DeadCodeAdvisoryOptions(
-            Accessibility: DeadCodeAccessibilityFilter.Private,
-            Confidence: DeadCodeConfidenceFilter.Both,
-            Kind: DeadCodeKindFilter.All);
+            );
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 

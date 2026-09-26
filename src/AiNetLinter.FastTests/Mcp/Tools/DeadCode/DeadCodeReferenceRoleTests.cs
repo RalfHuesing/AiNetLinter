@@ -144,14 +144,11 @@ public sealed class DeadCodeReferenceRoleTests
         var independentCandidate = Assert.Single(
             result.DeadSymbols,
             symbol => symbol.ContainerType == "Product.Service" && symbol.SymbolName == "IndependentUnused");
-        Assert.Equal("unreferenced", independentCandidate.Usage);
-        Assert.Equal(0, independentCandidate.TestReferences);
-        Assert.Equal("high", independentCandidate.Confidence);
         Assert.Contains("Keine relevante produktive Nutzung", independentCandidate.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ScanAsync_TestOnlyBaseCall_DoesNotKeepOverrideLive()
+    public async Task ScanAsync_TestProjectBaseCall_DoesNotKeepOverrideLive()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [
@@ -184,8 +181,7 @@ public sealed class DeadCodeReferenceRoleTests
         var result = await ScanMethodsAsync(unknownCaller.Project.Solution);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
-        Assert.True(result.Summary.Undecidable > 0);
-    }
+}
 
     [Fact]
     public async Task ScanAsync_TestProjectReferenceWithoutFilePath_IsUsage()
@@ -206,7 +202,7 @@ public sealed class DeadCodeReferenceRoleTests
     }
 
     [Fact]
-    public async Task ScanAsync_StaticTypeWithUnknownMemberReference_CountsEachUndecidableSymbolOnce()
+    public async Task ScanAsync_StaticTypeWithUnknownMemberReference_IsNotReportedAsDeadCode()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [
@@ -220,14 +216,10 @@ public sealed class DeadCodeReferenceRoleTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             unmappedCaller.Project.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.All),
+                ),
             CancellationToken.None);
 
-        Assert.True(result.Summary.Undecidable > 0);
-        Assert.Equal(result.Summary.Undecidable, result.UndecidableSymbols!.Select(entry => entry.Id).Distinct().Count());
-        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
+Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
     }
 
     [Fact]
@@ -281,8 +273,6 @@ public sealed class DeadCodeReferenceRoleTests
         DeadCodeAdvisoryScanner.ScanAsync(
             solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.Method),
+                ),
             CancellationToken.None);
 }

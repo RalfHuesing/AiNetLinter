@@ -23,8 +23,6 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// </summary>
 internal static partial class DeadCodeAdvisoryScanner
 {
-    public const int DefaultMaxResults = 50;
-
     internal static IReadOnlyList<DeadCodeApiSurfaceIssue> ValidateApiSurface(
         Solution solution,
         IReadOnlySet<string>? scopeFiles,
@@ -89,23 +87,18 @@ internal static partial class DeadCodeAdvisoryScanner
         if (compilation is null) return;
         context.EntryPointAttributeTypes = DeadCodeWhitelist.ResolveEntryPointAttributeTypes(compilation, context.Args.Config?.DeadCode);
 
-        context.RazorEvidenceIndex = await RazorGeneratedEvidenceIndex.CreateAsync(project, ct);
-
         var entryPoint = compilation.GetEntryPoint(ct);
         var hasInternalsVisibleTo = CheckInternalsVisibleTo(compilation.Assembly);
 
-        if (context.Args.Mode is DeadCodeMode.Members or DeadCodeMode.Both)
+        foreach (var document in documents)
         {
-            foreach (var document in documents)
+            ct.ThrowIfCancellationRequested();
+            if (context.Progress.ElapsedMilliseconds >= context.Progress.BudgetMilliseconds)
             {
-                ct.ThrowIfCancellationRequested();
-                if (context.Progress.ElapsedMilliseconds >= context.Progress.BudgetMilliseconds)
-                {
-                    context.Progress.BudgetExpired = true;
-                    return;
-                }
-                await ScanDocumentAsync(document, entryPoint, hasInternalsVisibleTo, context, ct);
+                context.Progress.BudgetExpired = true;
+                return;
             }
+            await ScanDocumentAsync(document, entryPoint, hasInternalsVisibleTo, context, ct);
         }
 
         // Dead-code candidates are deliberately limited to explicit types and ordinary methods.
@@ -180,8 +173,7 @@ internal static partial class DeadCodeAdvisoryScanner
         DeadCodeScanContext context,
         CancellationToken ct)
     {
-        if (!ShouldCheckSymbol(typeSymbol, context.Args)
-            || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint, context.EntryPointAttributeTypes)
+        if (DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint, context.EntryPointAttributeTypes)
             || DeadCodeSuppression.IsSuppressed(typeSymbol))
         {
             return false;
@@ -194,18 +186,13 @@ internal static partial class DeadCodeAdvisoryScanner
         }
 
         var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context, ct);
-        if (referenceAnalysis.IsUndecidable)
-        {
-            RecordUncertainty(typeSymbol, document, context);
-            return false;
-        }
+        if (referenceAnalysis.HasUnknownReference) return false;
 
         var isDead = referenceAnalysis.IsDeadCandidate;
         if (!isDead) return false;
 
-        if (context.Args.Confidence == DeadCodeConfidenceFilter.High && ClassifyConfidence(typeSymbol, hasInternalsVisibleTo) != "high") return false;
         context.DeadContainerTypes.Add(typeSymbol);
-        AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo, referenceAnalysis);
+        AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo);
         return true;
     }
 
@@ -238,8 +225,7 @@ internal static partial class DeadCodeAdvisoryScanner
         if (!context.ScannedMembers.Add(member)) return;
         if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint, context.EntryPointAttributeTypes)) return;
         if (DeadCodeSuppression.IsSuppressed(member)) return;
-        if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
-        if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
+        if (!DeadCodeFilters.ShouldCheckMember(member)) return;
         context.ScannedCount++;
         if (IsApiProtected(member, document, context))
         {
@@ -248,15 +234,11 @@ internal static partial class DeadCodeAdvisoryScanner
         }
 
         var referenceAnalysis = await AnalyzeReferencesAsync(member, context, ct);
-        if (referenceAnalysis.IsUndecidable)
-        {
-            RecordUncertainty(member, document, context);
-            return;
-        }
+        if (referenceAnalysis.HasUnknownReference) return;
 
         if (referenceAnalysis.IsDeadCandidate)
         {
-            AddDeadSymbol(context, member, document, hasInternalsVisibleTo, referenceAnalysis);
+            AddDeadSymbol(context, member, document, hasInternalsVisibleTo);
         }
     }
 
@@ -277,7 +259,7 @@ internal static partial class DeadCodeAdvisoryScanner
     {
         ct.ThrowIfCancellationRequested();
         if (DeadCodeApiSurfacePolicy.HasMissingFriend(symbol, context.Solution))
-            context.UsageIndex.MarkUnknown(symbol, "friend_consumer_missing");
+            context.UsageIndex.MarkUnknown(symbol);
         var references = symbol is INamedTypeSymbol type
             ? GetRelatedReferenceSymbols(symbol).Concat(type.GetMembers().SelectMany(GetRelatedReferenceSymbols))
             : GetRelatedReferenceSymbols(symbol);
@@ -285,9 +267,7 @@ internal static partial class DeadCodeAdvisoryScanner
             symbol is INamedTypeSymbol ? DeadCodeUsageIndex.Key(symbol) : null)).ToArray();
         return await Task.FromResult(new SymbolReferenceAnalysis(
             analyses.Any(analysis => analysis.HasKnownReference),
-            analyses.Any(analysis => analysis.Unknown),
-            analyses.Sum(analysis => analysis.Tests),
-            analyses.Sum(analysis => analysis.Writes)));
+            analyses.Any(analysis => analysis.Unknown)));
     }
 
     private static IEnumerable<ISymbol> GetRelatedReferenceSymbols(ISymbol symbol)
@@ -315,9 +295,8 @@ internal static partial class DeadCodeAdvisoryScanner
         }
     }
 
-    private readonly record struct SymbolReferenceAnalysis(bool HasKnownReference, bool HasUnknownReference, int TestReferenceCount, int WriteReferenceCount = 0)
+    private readonly record struct SymbolReferenceAnalysis(bool HasKnownReference, bool HasUnknownReference)
     {
-        public bool IsUndecidable => HasUnknownReference;
         public bool IsDeadCandidate => !HasKnownReference && !HasUnknownReference;
     }
 
@@ -352,13 +331,6 @@ internal static partial class DeadCodeAdvisoryScanner
         }
     }
 
-    private static string ClassifyConfidence(ISymbol symbol, bool hasInternalsVisibleTo)
-    {
-        if (symbol.DeclaredAccessibility == Accessibility.Private) return "high";
-        if (symbol.DeclaredAccessibility == Accessibility.Internal && !hasInternalsVisibleTo) return "high";
-        return "low";
-    }
-
     private static IReadOnlyList<string> DetermineLimitsApplies(ISymbol symbol, bool hasInternalsVisibleTo)
     {
         var limits = new List<string>();
@@ -372,17 +344,6 @@ internal static partial class DeadCodeAdvisoryScanner
         if (hasInternalsVisibleTo && symbol.DeclaredAccessibility == Accessibility.Internal)
         {
             limits.Add("internalsVisibleTo");
-        }
-
-        if (symbol is IPropertySymbol)
-        {
-            limits.Add("jsonSerializer");
-            limits.Add("optionsBinding");
-        }
-
-        if (GetImplementedInterfaceMembers(symbol).Any())
-        {
-            limits.Add("interfaceImplementation");
         }
 
         return limits;
@@ -434,18 +395,8 @@ internal static partial class DeadCodeAdvisoryScanner
         return ViolationScopeFilter.MatchesScope(document.FilePath ?? "", projectName, solutionDir, args.ScopeFilter);
     }
 
-    private static bool ShouldCheckSymbol(INamedTypeSymbol symbol, DeadCodeAdvisoryOptions args) =>
-        DeadCodeFilters.ShouldCheckSymbol(symbol, args);
-
-    private static bool ShouldCheckMemberKind(ISymbol member, DeadCodeKindFilter kindFilter) =>
-        DeadCodeFilters.ShouldCheckMemberKind(member, kindFilter);
-
-    private static bool MatchesAccessibilityFilter(Accessibility accessibility, DeadCodeAccessibilityFilter filter) =>
-        DeadCodeFilters.MatchesAccessibilityFilter(accessibility, filter);
-
     internal static string GetSymbolKindString(ISymbol symbol) =>
         DeadCodeFilters.GetSymbolKindString(symbol);
 
-    private static string GetAccessibilityString(Accessibility accessibility) =>
-        DeadCodeFilters.GetAccessibilityString(accessibility);
+    internal static string GetAccessibilityString(Accessibility accessibility) => DeadCodeFilters.GetAccessibilityString(accessibility);
 }

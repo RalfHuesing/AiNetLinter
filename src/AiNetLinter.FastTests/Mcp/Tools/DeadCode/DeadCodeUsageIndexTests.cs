@@ -16,7 +16,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class DeadCodeUsageIndexTests
 {
     [Fact]
-    public async Task IndexSeparatesWritesAndReadsAndKeepsUnrelatedMember()
+    public async Task IndexCountsAssignmentsAsUsageAndKeepsUnrelatedMemberUnreferenced()
     {
         using var fixture = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\Usage.slnx", new ProjectSpec("Host", [("State.cs", """
@@ -31,9 +31,8 @@ public sealed class DeadCodeUsageIndexTests
         var index = await DeadCodeUsageIndex.CreateAsync(fixture.Solution, CancellationToken.None);
         var compilation = await fixture.Solution.Projects.Single().GetCompilationAsync();
         var type = compilation!.GetTypeByMetadataName("State")!;
-        Assert.False(index.Analyze(type.GetMembers("Written").Single()).Production);
-        Assert.Equal(1, index.Analyze(type.GetMembers("Written").Single()).Writes);
-        Assert.True(index.Analyze(type.GetMembers("Read").Single()).Production);
+        Assert.True(index.Analyze(type.GetMembers("Written").Single()).Production);
+Assert.True(index.Analyze(type.GetMembers("Read").Single()).Production);
         Assert.False(index.Analyze(type.GetMembers("Unrelated").Single()).Production);
     }
 

@@ -79,7 +79,6 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
         Assert.Contains(result.DeadSymbols, entry => entry.Kind == "class" && entry.SymbolName == "UnreferencedType");
         Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Convert");
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Wire" or "Constant" or "_state" or "UsedByTest");
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Usage == "test_only");
     }
 
     [Fact]
@@ -101,7 +100,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
         };
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.All, Config: config));
+            new(Config: config));
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.ProjectName == "Tests.Support");
     }
@@ -123,7 +122,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
             }
             """)], VirtualProjectDirectory: "src/TestApp"));
 
-        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
+        var result = await ScanAsync(testSolution.Solution);
 
         Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
@@ -153,10 +152,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
             new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.Private,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: DeadCodeKindFilter.All,
-                Mode: DeadCodeMode.Both),
+                ),
             CancellationToken.None);
 
         Assert.Empty(result.DeadSymbols);
@@ -181,7 +177,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
+        var result = await ScanAsync(testSolution.Solution);
 
         Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
@@ -203,11 +199,9 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
             }
             """)], VirtualProjectDirectory: "src/Product"));
 
-        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution.Solution);
 
         var callback = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Initialize");
-        Assert.Equal("unreferenced", callback.Usage);
-        Assert.Equal("low", callback.Confidence);
         Assert.Contains("publicApiSurface", callback.LimitsApplies);
         Assert.Contains("reflection", callback.LimitsApplies);
         Assert.Contains(callback.Countercheck!, check => check.Contains("Consumer", StringComparison.OrdinalIgnoreCase));
@@ -263,19 +257,16 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
             }
             """)], VirtualProjectDirectory: "src/TestApp"));
 
-        var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Method);
+        var result = await ScanAsync(testSolution.Solution);
 
         var dynamicCandidate = Assert.Single(result.DeadSymbols, entry =>
             entry.ContainerType == "DynamicTarget" && entry.SymbolName == "Dispatch");
         Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.ContainerType == "ReflectedTarget" && entry.SymbolName == "Invoke");
 
-        Assert.Equal("unreferenced", dynamicCandidate.Usage);
-        Assert.Equal("low", dynamicCandidate.Confidence);
         Assert.Contains("reflection", dynamicCandidate.LimitsApplies);
         Assert.Contains(dynamicCandidate.Countercheck!, item => item.Equals("Dynamic", StringComparison.OrdinalIgnoreCase));
-        Assert.True(result.Summary.Undecidable > 0);
-        Assert.Contains("statische Referenzsuche", dynamicCandidate.EvidenceBoundary, StringComparison.OrdinalIgnoreCase);
+Assert.Contains("statische Referenzsuche", dynamicCandidate.EvidenceBoundary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Reflection", result.RecommendedNextAction.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.False(result.DeletionClaim);
     }
@@ -286,14 +277,11 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
             projects);
 
     private static Task<DeadCodeScanResult> ScanAllAsync(Solution solution) =>
-        ScanAsync(solution, DeadCodeKindFilter.All);
+        ScanAsync(solution);
 
-    private static Task<DeadCodeScanResult> ScanAsync(Solution solution, DeadCodeKindFilter kind) =>
+    private static Task<DeadCodeScanResult> ScanAsync(Solution solution) =>
         DeadCodeAdvisoryScanner.ScanAsync(
             solution,
-            new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.All,
-                Confidence: DeadCodeConfidenceFilter.Both,
-                Kind: kind),
+            new DeadCodeAdvisoryOptions(),
             CancellationToken.None);
 }

@@ -18,10 +18,9 @@ public sealed class DeadCodeBudgetTests
         using var fixture = RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\LateBudget.slnx",
             new ProjectSpec("Host", [("First.cs", "public sealed class First { }"), ("Second.cs", "public sealed class Second { }")]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
-            new(Accessibility: DeadCodeAccessibilityFilter.All, Clock: new DocumentBoundaryClock()));
+            new(Clock: new DocumentBoundaryClock()));
         Assert.Equal("First", Assert.Single(result.DeadSymbols).SymbolName);
-        Assert.Equal(0, result.Summary.Undecidable);
-        Assert.Equal(1, result.Summary.Coverage!.ProcessedDocuments);
+Assert.Equal(1, result.Summary.Coverage!.ProcessedDocuments);
         Assert.Equal(1, result.Summary.Coverage.OpenDocuments);
         Assert.True(result.Summary.Coverage.ReferencesComplete);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(GetVerifyAdvisoriesTool.Render(result).Content)).Text;
@@ -45,8 +44,7 @@ public sealed class DeadCodeBudgetTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new(Config: TestHelper.CreateDefaultConfig() with { DeadCode = new DeadCodeConfig { VerifyBudgetSeconds = 0 } }));
         Assert.Empty(result.DeadSymbols);
-        Assert.Equal(0, result.Summary.Undecidable);
-        Assert.Equal("partial", result.Summary.Status);
+Assert.Equal("partial", result.Summary.Status);
         Assert.Equal(1, result.Summary.Coverage!.OpenDocuments);
         Assert.Equal("budget", result.Summary.Coverage.StopReason);
         Assert.False(result.Summary.Coverage.ReferencesComplete);

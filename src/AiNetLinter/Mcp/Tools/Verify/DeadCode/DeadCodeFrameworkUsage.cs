@@ -60,7 +60,7 @@ internal sealed class DeadCodeFrameworkUsage(DeadCodeUsageIndex index)
         foreach (var type in types)
             foreach (var property in type.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic && !property.IsIndexer))
             {
-                if (customOptions) index.MarkUnknown(property, "configuration_options");
+                if (customOptions) index.MarkUnknown(property);
                 else if (property.SetMethod?.DeclaredAccessibility == Accessibility.Public) index.Add(property, context.Source.Role);
             }
     }
@@ -69,7 +69,7 @@ internal sealed class DeadCodeFrameworkUsage(DeadCodeUsageIndex index)
     {
         foreach (var type in context.Method.TypeArguments.OfType<INamedTypeSymbol>())
             foreach (var property in type.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
-                index.MarkUnknown(property, "mapper_columns_or_custom_mapping");
+                index.MarkUnknown(property);
     }
 
     private void BindMiddleware(INamedTypeSymbol type, string role)

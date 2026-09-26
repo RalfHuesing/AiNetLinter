@@ -535,7 +535,7 @@ Gültig sind ausschließlich `closed_solution` und `external_library`. Explizit 
 
 Ein nichtpositives Zeitbudget beendet den Advisory ohne Negativbefund; das Gate-Budget bleibt unverändert. Ausgabelimits sparen keine Scanzeit. Fortsetzungen lesen denselben Snapshot, ohne erneut zu scannen.
 
-Die explizite Projektrolle hat Vorrang. Ohne Override wird `build_property.IsTestProject` aus den Roslyn-Projekteigenschaften ausgewertet, danach eine tatsächliche xUnit-/NUnit-/MSTest-Metadatenreferenz. Sonst gilt `production`. Ein Name oder Ordner `Test` macht keinen Test. Nicht trennbare gemischte Rollen mit `unknown` konfigurieren; nicht erkannte Rollenwerte werden ebenfalls unbekannt behandelt. Host-Aufrufe zählen standardmäßig produktiv. Testprojekte liefern Referenzen, keine Bereinigungskandidaten; ausschließlich testbenutzter Produktionscode bleibt `test_only`.
+Die explizite Projektrolle hat Vorrang. Ohne Override wird `build_property.IsTestProject` aus den Roslyn-Projekteigenschaften ausgewertet, danach eine tatsächliche xUnit-/NUnit-/MSTest-Metadatenreferenz. Sonst gilt `production`. Ein Name oder Ordner `Test` macht keinen Test. Nicht trennbare gemischte Rollen mit `unknown` konfigurieren; nicht erkannte Rollenwerte werden ebenfalls unbekannt behandelt. Host-Aufrufe zählen standardmäßig produktiv. Testprojekte liefern Referenzen, keine Kandidaten; eine Testreferenz unterdrückt den Kandidaten für Produktionscode.
 
 ```json
 {
@@ -554,7 +554,7 @@ Die explizite Projektrolle hat Vorrang. Ohne Override wird `build_property.IsTes
 }
 ```
 
-Die mitgelieferte `ainetlinter-rules.json` enthält diese Produktdefaults und eine leere Rollenmap. Confidence-Stufen entfallen im Dead-Code-Advisory. Konkrete Unterdrückungen, Unentscheidbarkeitsgründe, positive Gegenproben und bewusst ausgeschlossene Symbolarten stehen im [Dead-Code-Vertrag](../mcp/dead-code.md).
+Die mitgelieferte `ainetlinter-rules.json` enthält diese Produktdefaults und eine leere Rollenmap. Der Dead-Code-Vertrag veröffentlicht keine Confidence-Stufen, `test_only`- oder `undecidable`-Zähler oder -Zeilen. Prüfkandidaten, bekannte Schutzsignale und ausgeschlossene Symbolarten stehen im [Dead-Code-Vertrag](../mcp/dead-code.md).
 
 ### StaticTestSentinel-Konfiguration
 

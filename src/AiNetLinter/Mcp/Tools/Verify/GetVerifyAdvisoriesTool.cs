@@ -59,11 +59,6 @@ internal static class GetVerifyAdvisoriesTool
             scan = await DeadCodeAdvisoryScanner.ScanAsync(
                 solution,
                 new DeadCodeAdvisoryOptions(
-                    Accessibility: DeadCodeAccessibilityFilter.All,
-                    Confidence: DeadCodeConfidenceFilter.Both,
-                    Kind: DeadCodeKindFilter.All,
-                    IncludeTests: false,
-                    Mode: DeadCodeMode.Members,
                     MaxResults: UnboundedCandidateLimit,
                     Config: config,
                     HandoffIdentity: server.HandoffSymbolIdentity,

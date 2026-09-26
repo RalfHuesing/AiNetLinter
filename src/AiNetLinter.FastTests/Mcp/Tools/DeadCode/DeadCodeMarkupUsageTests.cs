@@ -25,7 +25,7 @@ public sealed class DeadCodeMarkupUsageTests
                 <TextBlock Text="{Binding Label}" />
             </Window>
             """).Project.Solution;
-        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new());
         Assert.Empty(result.DeadSymbols);
     }
 
@@ -39,10 +39,9 @@ public sealed class DeadCodeMarkupUsageTests
         var solution = fixture.Solution.Projects.Single().AddAdditionalDocument("View.xaml", """
             <Window><TextBlock Text="{Binding Label}" /></Window>
             """).Project.Solution;
-        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new());
         Assert.Empty(result.DeadSymbols);
-        Assert.Equal(0, result.Summary.Undecidable);
-    }
+}
 
     [Fact]
     public async Task RazorEventBindsCodeBehindAndKeepsPublicUnboundMethod()
@@ -52,7 +51,7 @@ public sealed class DeadCodeMarkupUsageTests
         var solution = fixture.Solution.Projects.Single().AddAdditionalDocument("View.razor", """
             <button @onclick="Click">Run</button>
             """).Project.Solution;
-        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new());
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Click");
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
     }

@@ -32,7 +32,7 @@ Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander 
   - Nicht: Teilscan als vollständig ausgeben oder für Pagination neu scannen.
   - Abnahme: Token-Fortsetzung und passender tokenloser Abruf verwenden denselben Snapshot; Änderung an Solution oder Konfiguration erzwingt neuen Scan. Budgetabbruch mit null Treffern bleibt sichtbar `partial`. Seiten enthalten keine `undecidable`-Details. Incremental Gate grün.
 
-- [ ] **6 — Überflüssigen Dead-Code-Vertrag entfernen und Dokumentation abschließen**
+- [x] **6 — Überflüssigen Dead-Code-Vertrag entfernen und Dokumentation abschließen**
   - Intention: Nach der Verengung keine toten Datenmodelle, Optionen oder Dokumentationsversprechen zurücklassen.
   - Scope: Ausschließlich für die alte Feld-/Property-, `test_only`-, `undecidable`- oder Confidence-Analyse benötigte Heuristiken, Modelle, Optionen und Tests entfernen; gemeinsame Nutzungs- und Abdeckungslogik erhalten. `Docs/mcp/dead-code.md`, `Docs/mcp/tools.md`, `Docs/linter/configuration.md`, `Docs/linter/cli.md`, `ainetlinter-rules.json` und betroffene Agentenregeln gegen den implementierten Vertrag synchronisieren.
   - Nicht: Neue Analysearten ergänzen oder die in [Konzept.md](Konzept.md) bewusst ausgeschlossenen Member zurückholen.

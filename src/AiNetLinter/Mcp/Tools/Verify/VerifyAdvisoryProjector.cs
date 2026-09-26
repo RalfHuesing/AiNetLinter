@@ -71,11 +71,6 @@ internal static class VerifyAdvisoryProjector
             var result = await DeadCodeAdvisoryScanner.ScanAsync(
                 solution,
                 new DeadCodeAdvisoryOptions(
-                    Accessibility: DeadCodeAccessibilityFilter.All,
-                    Confidence: DeadCodeConfidenceFilter.Both,
-                    Kind: DeadCodeKindFilter.All,
-                    IncludeTests: false,
-                    Mode: DeadCodeMode.Members,
                     MaxResults: UnboundedCandidateLimit,
                     ScopeFiles: settings.ScopeFiles,
                     Config: settings.Config,

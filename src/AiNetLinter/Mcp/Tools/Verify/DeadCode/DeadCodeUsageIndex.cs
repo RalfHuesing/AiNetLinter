@@ -17,7 +17,6 @@ internal sealed class DeadCodeUsageIndex
     private readonly Dictionary<string, List<Usage>> usages = new(StringComparer.Ordinal);
     internal List<DeadCodeUsageDocument> Documents { get; } = [];
     internal List<INamedTypeSymbol> SourceTypes { get; } = [];
-    internal Dictionary<string, HashSet<string>> UnknownReasons { get; } = new(StringComparer.Ordinal);
     internal HashSet<string> CoverageGaps { get; } = new(StringComparer.Ordinal);
     internal Dictionary<string, List<DeadCodeGenericBinding>> TypeArguments { get; } = new(StringComparer.Ordinal);
 
@@ -75,9 +74,9 @@ internal sealed class DeadCodeUsageIndex
         if (symbol is not (INamedTypeSymbol or IMethodSymbol or IPropertySymbol or IFieldSymbol)) return;
         var owner = source.Model.GetEnclosingSymbol(name.SpanStart, ct);
         var ownerType = owner as INamedTypeSymbol ?? owner?.ContainingType;
-        Add(symbol, source.Role, ownerType, IsWrite(name));
+        Add(symbol, source.Role, ownerType);
         if (symbol.ContainingType is { } type && !SymbolEqualityComparer.Default.Equals(type, ownerType))
-            Add(type, source.Role, ownerType, false);
+            Add(type, source.Role, ownerType);
     }
 
     private ISymbol? GetReferencedSymbol(DeadCodeUsageDocument source, SimpleNameSyntax name, CancellationToken ct)
@@ -89,7 +88,7 @@ internal sealed class DeadCodeUsageIndex
         if (symbol is not null || symbolInfo.CandidateReason == CandidateReason.None) return symbol;
 
         foreach (var candidate in symbolInfo.CandidateSymbols.OfType<IMethodSymbol>())
-            MarkUnknown(candidate, "ambiguous_method_group_binding");
+            MarkUnknown(candidate);
         return null;
     }
 
@@ -100,7 +99,7 @@ internal sealed class DeadCodeUsageIndex
         {
             var symbol = source.Model.GetDeclaredSymbol(declaration, ct);
             if (symbol is INamedTypeSymbol or IMethodSymbol or IFieldSymbol or IPropertySymbol)
-                MarkUnknown(symbol, "declaration_role");
+                MarkUnknown(symbol);
         }
     }
 
@@ -119,45 +118,29 @@ internal sealed class DeadCodeUsageIndex
         }
     }
 
-    private static bool IsWrite(SimpleNameSyntax name)
-    {
-        SyntaxNode node = name.Parent is MemberAccessExpressionSyntax access && access.Name == name ? access : name;
-        return node.Parent is AssignmentExpressionSyntax assignment && assignment.Left == node
-            && assignment.RawKind == (int)Microsoft.CodeAnalysis.CSharp.SyntaxKind.SimpleAssignmentExpression
-            || node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.ValueText == "out";
-    }
-
-    internal void Add(ISymbol symbol, string role, INamedTypeSymbol? owner = null, bool write = false)
+    internal void Add(ISymbol symbol, string role, INamedTypeSymbol? owner = null)
     {
         var key = Key(symbol);
         if (!usages.TryGetValue(key, out var entries)) usages[key] = entries = [];
-        entries.Add(new(role, owner is null ? null : Key(owner), write));
+        entries.Add(new(role, owner is null ? null : Key(owner)));
     }
 
-    internal void MarkUnknown(ISymbol symbol, string reason)
-    {
-        Add(symbol, "unknown");
-        var key = Key(symbol);
-        if (!UnknownReasons.TryGetValue(key, out var reasons)) UnknownReasons[key] = reasons = new(StringComparer.Ordinal);
-        reasons.Add(reason);
-    }
+    internal void MarkUnknown(ISymbol symbol) => Add(symbol, "unknown");
 
     internal DeadCodeUsageAnalysis Analyze(ISymbol symbol, string? ignoredOwner = null)
     {
-        if (!usages.TryGetValue(Key(symbol), out var entries)) return new(false, false, 0, 0);
+        if (!usages.TryGetValue(Key(symbol), out var entries)) return new(false, false, false);
         var relevant = entries.Where(entry => entry.Owner is null || entry.Owner != ignoredOwner).Where(entry => symbol is not INamedTypeSymbol || entry.Owner != Key(symbol)).ToArray();
-        var readers = relevant.Where(entry => !entry.Write).ToArray();
-        return new(readers.Any(entry => entry.Role == "production"), readers.Any(entry => entry.Role == "unknown"),
-            readers.Count(entry => entry.Role == "test"), relevant.Count(entry => entry.Write));
+        return new(relevant.Any(entry => entry.Role == "production"), relevant.Any(entry => entry.Role == "unknown"), relevant.Any(entry => entry.Role == "test"));
     }
 
-    private sealed record Usage(string Role, string? Owner, bool Write);
+    private sealed record Usage(string Role, string? Owner);
 }
 
 internal sealed record DeadCodeUsageDocument(Document Document, SemanticModel Model, SyntaxNode Root, string Role);
-internal readonly record struct DeadCodeUsageAnalysis(bool Production, bool Unknown, int Tests, int Writes)
+internal readonly record struct DeadCodeUsageAnalysis(bool Production, bool Unknown, bool Tests)
 {
-    internal bool HasKnownReference => Production || Tests > 0;
+    internal bool HasKnownReference => Production || Tests;
 }
 
 internal sealed record DeadCodeGenericBinding(INamedTypeSymbol Type, string Role);

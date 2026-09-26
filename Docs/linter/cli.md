@@ -126,7 +126,7 @@ ainetlinter --path ./MeinProjekt.slnx --remove-disable-all
 
 ## Agentische Nutzung
 
-Für Symbolnavigation und das Source-Gate siehe [MCP-Werkzeugwahl und Verträge](../mcp/tools.md). Dead-Code-Advisories sind separate Prüfkandidaten; sie beeinflussen den Gate-Status nicht.
+Für Symbolnavigation und das Source-Gate siehe [MCP-Werkzeugwahl und Verträge](../mcp/tools.md). Dead-Code-Advisories melden nur unreferenzierte Typen und gewöhnliche Methoden aus eindeutig produktiven Projekten; Testreferenzen zählen als Nutzung. Felder, Properties und lokale Variablen sind ausgeschlossen. Sie beeinflussen den Gate-Status nicht; Details zu Ausgabe und Abdeckung stehen im [Dead-Code-Vertrag](../mcp/dead-code.md).
 
 ## 5. Exit-Codes
 
