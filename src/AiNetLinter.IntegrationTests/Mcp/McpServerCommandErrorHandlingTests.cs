@@ -23,7 +23,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandErrorHandlingTests
 {
-    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
+    private const string LoadingMessagePrefix = "Status: operation=retry, completeness=not_applicable";
 
     [Fact]
     public async Task RunAsync_MissingSolutionTarget_ReturnsInvalidArgumentError()
@@ -67,7 +67,7 @@ public sealed class McpServerCommandErrorHandlingTests
                 },
                 cts.Token);
 
-            Assert.NotEqual(true, result.IsError);
+            Assert.Equal(true, result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
             Assert.Contains("[ERROR]: INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
             Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);

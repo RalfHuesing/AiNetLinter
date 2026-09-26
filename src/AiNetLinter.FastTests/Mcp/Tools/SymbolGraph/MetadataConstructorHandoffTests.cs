@@ -189,7 +189,7 @@ public sealed class MetadataConstructorHandoffTests
         Assert.NotEmpty(handoffId);
         var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(handoffId);
         Assert.True(restored.IsSuccess, restored.Error?.Message);
-        Assert.Contains($"{constructorDocId}~p:{appProject.Id.Id:N}", restored.Value!, StringComparison.Ordinal);
+        Assert.Contains($"{constructorDocId}~p:{AnalysisSymbolIdentity.GetStableProjectMarker(appProject)}", restored.Value!, StringComparison.Ordinal);
 
         var (resolved, resolutionError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             scenario.Solution,

@@ -196,7 +196,9 @@ internal static class SymbolIdentifierResolver
         var matches = new List<ISymbol>();
         foreach (var project in solution.Projects)
         {
-            if (selectedProjectId is { } projectId && project.Id.Id != projectId) continue;
+            if (selectedProjectId is { } projectId
+                && project.Id.Id != projectId
+                && !string.Equals(AnalysisSymbolIdentity.GetStableProjectMarker(project), projectId.ToString("N"), StringComparison.Ordinal)) continue;
             matches.AddRange(await FindProjectExactStableIdsAsync(
                 project, normalizedStableId, ct).ConfigureAwait(false));
             if (assemblyCandidates is not null)

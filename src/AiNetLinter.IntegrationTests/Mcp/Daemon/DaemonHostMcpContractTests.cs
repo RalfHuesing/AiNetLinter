@@ -94,7 +94,7 @@ public sealed class DaemonHostMcpContractTests
             registry,
             composition);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.Equal(true, result.IsError);
         var text = TextOf(result);
         Assert.Contains(LinterErrorCodes.InvalidAssembly, text, StringComparison.Ordinal);
         Assert.Contains(nativeAssemblyPath, text, StringComparison.Ordinal);

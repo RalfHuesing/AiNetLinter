@@ -23,7 +23,9 @@ internal sealed record McpProcessTarget(
 
 internal sealed class McpProcessHost : IAsyncDisposable
 {
-    private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
+    private const string LoadingStatus = "Status: operation=retry, completeness=not_applicable";
+    private const string RunningStatus = "Status: operation=running, completeness=not_applicable";
+    private const string OperationTokenPrefix = "operationToken=";
     // Große Dogfood-Workspaces können nach dem MCP-Handshake noch deutlich
     // länger als 15 Sekunden laden; der Loading-Vertrag bleibt dabei gültig.
     private const int LoadingRetryCount = 120;
@@ -122,18 +124,22 @@ internal sealed class McpProcessHost : IAsyncDisposable
         CancellationToken cancellationToken)
     {
 
+        var arguments = new Dictionary<string, object?>(effectiveArguments);
         for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
         {
             using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutSource.CancelAfter(timeout ?? DefaultCallTimeout);
-            var result = await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: timeoutSource.Token).ConfigureAwait(false);
+            var result = await client.CallToolAsync(toolName, arguments, cancellationToken: timeoutSource.Token).ConfigureAwait(false);
+            if (IsRunningResponse(result, out var operationToken))
+            {
+                arguments["operationToken"] = operationToken;
+                continue;
+            }
             if (!IsLoadingResponse(result)) return result;
             await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(false);
         }
 
-        using var finalTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        finalTimeout.CancelAfter(timeout ?? DefaultCallTimeout);
-        return await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: finalTimeout.Token).ConfigureAwait(false);
+        throw new TimeoutException($"MCP-Tool '{toolName}' lieferte nach {LoadingRetryCount} Abrufen kein Endergebnis.");
     }
 
     public async Task<string> CallToolGetTextAsync(string toolName, IReadOnlyDictionary<string, object?>? arguments = null)
@@ -191,7 +197,21 @@ internal sealed class McpProcessHost : IAsyncDisposable
     private static bool IsLoadingResponse(CallToolResult result) =>
         result.IsError != true && result.Content is { Count: > 0 } &&
         result.Content[0] is TextContentBlock text &&
-        text.Text?.StartsWith(LoadingMessagePrefix, StringComparison.Ordinal) == true;
+        text.Text?.StartsWith(LoadingStatus, StringComparison.Ordinal) == true;
+
+    private static bool IsRunningResponse(CallToolResult result, out string operationToken)
+    {
+        operationToken = string.Empty;
+        if (result.IsError == true || result.Content is not { Count: > 0 }
+            || result.Content[0] is not TextContentBlock text
+            || text.Text?.StartsWith(RunningStatus, StringComparison.Ordinal) != true) return false;
+
+        var tokenLine = text.Text.Split('\n', StringSplitOptions.TrimEntries)
+            .FirstOrDefault(line => line.StartsWith(OperationTokenPrefix, StringComparison.Ordinal));
+        operationToken = tokenLine is null ? string.Empty : tokenLine[OperationTokenPrefix.Length..];
+        if (operationToken.Length == 0) throw new InvalidOperationException("Laufende MCP-Operation ohne operationToken.");
+        return true;
+    }
 
     internal static async Task<T> ConnectWithRetryAsync<T>(
         Func<CancellationToken, Task<T>> connectAttempt,

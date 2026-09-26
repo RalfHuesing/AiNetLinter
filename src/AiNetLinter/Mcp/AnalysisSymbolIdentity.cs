@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -16,6 +17,7 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
     // serialized handoff ID, so the same path/content snapshot survives eviction and restart.
     internal string CanonicalPath { get; init; } = string.Empty;
     internal bool IsAssembly { get; init; } = true;
+    internal IReadOnlyDictionary<ProjectId, string>? SourceProjectMarkers { get; init; }
 
     internal string? Format(string? symbolId) =>
         symbolId is not null
@@ -32,7 +34,7 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
     internal string? Format(string? symbolId, ProjectId projectId) =>
         symbolId is null
             ? null
-            : Format($"{symbolId}~p:{projectId.Id:N}");
+            : Format($"{symbolId}~p:{(SourceProjectMarkers?.GetValueOrDefault(projectId) ?? projectId.Id.ToString("N"))}");
 
     internal string? FormatHandoff(ISymbol symbol)
     {
@@ -88,12 +90,22 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
             IsAssembly = true,
         };
 
-    internal static AnalysisSymbolIdentity ForSource(string canonicalPath, string snapshotHash) =>
+    internal static AnalysisSymbolIdentity ForSource(string canonicalPath, string snapshotHash, Solution? solution = null) =>
         new(snapshotHash, 0)
         {
             CanonicalPath = canonicalPath,
             IsAssembly = false,
+            SourceProjectMarkers = solution?.Projects.ToDictionary(project => project.Id, GetStableProjectMarker),
         };
+
+    internal static string GetStableProjectMarker(Project project)
+    {
+        if (project.FilePath is not { Length: > 0 } projectPath) return project.Id.Id.ToString("N");
+        var canonicalPath = Path.GetFullPath(projectPath);
+        if (OperatingSystem.IsWindows()) canonicalPath = canonicalPath.ToUpperInvariant();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonicalPath));
+        return Convert.ToHexString(hash.AsSpan(0, 16)).ToLowerInvariant();
+    }
 
     internal static string CreateSourceSnapshotHash(
         string canonicalPath,

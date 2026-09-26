@@ -137,7 +137,8 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
             var canonicalPath = Path.GetFullPath(solutionPath);
             return AnalysisSymbolIdentity.ForSource(
                 canonicalPath,
-                AnalysisSymbolIdentity.CreateSourceSnapshotHash(canonicalPath, _fileState));
+                AnalysisSymbolIdentity.CreateSourceSnapshotHash(canonicalPath, _fileState),
+                _catalog.Solution);
         }
     }
 
