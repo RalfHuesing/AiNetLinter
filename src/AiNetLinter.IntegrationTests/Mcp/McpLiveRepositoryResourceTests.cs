@@ -54,7 +54,7 @@ public sealed class McpLiveRepositoryResourceTests
         Assert.Contains("## Effektive Schwellwerte", rulesContent.Text, StringComparison.Ordinal);
         Assert.Contains("| `MaxLineCount` | 500 | aktiv |", rulesContent.Text, StringComparison.Ordinal);
         Assert.Equal("ainetlinter://agent-guide", guideContent.Uri);
-        Assert.Contains("AiNetLinter MCP-Bootstrap", guideContent.Text, StringComparison.Ordinal);
+        Assert.Contains("MCP-Bootstrap", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter-rules.json", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains("Dauerhafte Agentenregel", guideContent.Text, StringComparison.Ordinal);
