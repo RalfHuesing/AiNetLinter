@@ -38,7 +38,7 @@ Für C#-Semantik (Symbole, Aufrufe, Abhängigkeiten, Impact, Verstöße) und Ass
 
 ## Qualitätsprüfung
 
-Während Änderungen `verify(targetPath)` ohne zusätzliche Parameter nutzen. Zum Abschluss `verify(targetPath, scope: "solution")`; das Gate besteht nur bei `verdict=pass`, `score=10.0` und `violationCount=0`.
+Während Änderungen `verify(targetPath)` ohne zusätzliche Parameter nutzen. Zum Abschluss `verify(targetPath, scope: "solution")`; das Gate besteht nur bei `verdict=pass`, `score=10.0` und `violationCount=0`. Bei `Status: operation=running` denselben Aufruf mit identischen Argumenten und dem ausgegebenen `operationToken` fortsetzen, bis die fachliche Antwort vorliegt. Jeder einzelne Abruf wartet höchstens 15 Sekunden; der Token verfällt nach 30 Minuten ohne Abruf. Der Running-Status ist kein Gate-Ergebnis. Dies gilt auch für `find_duplicates`, `pattern_detect` und den initialen `get_verify_advisories`-Scan; dessen `continuationToken` ist erst für die Seiten nach dem vollständigen Scanergebnis zuständig.
 
 Für den Dead-Code-Teil gilt ohne Konfiguration `DeadCode.DefaultApiSurface=closed_solution`; auch extern sichtbare Symbole werden geprüft und als Kandidaten mit niedriger Confidence ausgegeben. Für Bibliotheken mit externen Nutzern `external_library` oder ein Projekt-Override verwenden. Gültig sind ausschließlich `closed_solution` und `external_library`; ein fehlender globaler Wert verwendet `closed_solution`, fehlende Projekt-Overrides erben ihn. Explizit ungültige Werte einschließlich `unknown` führen vor der Gate-Analyse zu `DEAD_CODE_API_SURFACE_NOT_CONFIGURED`. Die API-Einordnung bei `external_library` erfordert Projektwissen.
 

@@ -7,6 +7,7 @@ am Protokollflag und am kopierbaren Content-Status unterscheiden:
 |---|:---:|---|---|
 | Semantisches Ergebnis, auch eine definitive leere Treffermenge | false | Ergebnistext; gegebenenfalls `operation=ok` oder `completeness=empty` | Ergebnis verwenden |
 | Solution laedt noch | false | `Status: operation=retry, completeness=not_applicable` und `[INFO]` ohne Trefferinhalt | Kurz warten und denselben Aufruf wiederholen |
+| Langer Verify-, Advisory-, Duplikat- oder Pattern-Lauf | false | `Status: operation=running, completeness=not_applicable` und `operationToken` | Dasselbe Tool mit identischen Argumenten und Token erneut aufrufen; das Ergebnis folgt in einem späteren kurzen Aufruf |
 | Fehlgeschlagener Aufruf, auch bei korrigierbarer Eingabe | true | `[ERROR]` mit Code; zielgebunden zusaetzlich `operation=error` | Hint oder Recovery ausfuehren |
 
 `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT`,
@@ -22,3 +23,8 @@ leere Treffermenge bleibt hingegen ein erfolgreiches Ergebnis.
 nicht den Protokollstatus. `McpToolResults.Loading()` liefert `isError=false`
 mit explizitem Retry-Status. Alle Antworten bleiben content-only; ein
 `structuredContent`-Vertrag besteht nicht.
+
+`operation=running` ist ein laufender Hintergrundauftrag, keine fachliche Antwort.
+Jeder Aufruf wartet höchstens 15 Sekunden; nach 30 Minuten ohne Abruf wird ein
+laufender Auftrag abgebrochen. Ein fertiges Ergebnis bleibt 30 Minuten nach dem
+letzten Abruf verfügbar. Das Ergebnis selbst bleibt content-only und unverändert.

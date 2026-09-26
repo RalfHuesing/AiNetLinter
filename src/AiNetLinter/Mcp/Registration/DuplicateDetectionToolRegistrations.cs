@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
@@ -31,20 +32,21 @@ internal static class DuplicateDetectionToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
-                string? scopeType = "production",
+                string? scopeType = "production", string? operationToken = null,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                var input = new DuplicateDetectionInput(
+                    minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
+                return await LongRunningProjectToolCall.ExecuteRoutedAsync(
                     registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease =>
-                    {
-                        var input = new DuplicateDetectionInput(
-                            minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
-                        return DuplicateDetectionTool.ExecuteAsync(lease.Server, input, ct);
-                    });
+                    new LongRunningRegistryCallRequest(
+                        targetPath, "find_duplicates", JsonSerializer.Serialize(input), operationToken,
+                        lifetimeToken => ProjectAnalysisDispatcher.ExecuteAsync(
+                            registry, new AnalysisTargetRequest(targetPath),
+                            lease => DuplicateDetectionTool.ExecuteAsync(lease.Server, input, lifetimeToken))),
+                    ct);
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_duplicates", FindDuplicatesDescription)));
     }
@@ -55,5 +57,6 @@ internal static class DuplicateDetectionToolRegistrations
         "helperSymbol: Einzelwert, bei mode='refactoring-drift' Pflicht; bevorzugt h:… einer Methode aus vorheriger Toolantwort unverändert, sonst Doc-ID, Position oder Name. " +
         "similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), 'fuzzy' (>=0.65 [Default]). " +
         "minTokens: Mindest-Tokens (Default 30). normalizeIdentifiers: Variablenumbenennungen ignorieren (Default false). " +
-        "scopeDir: Verzeichnispfad. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Default 20.";
+        "scopeDir: Verzeichnispfad. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Default 20. " +
+        "Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 }

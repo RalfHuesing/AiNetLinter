@@ -57,6 +57,8 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         tickTask = Task.Run(() => MonitorLoopAsync(tickInterval));
     }
 
+    internal CancellationToken ShutdownToken => tickSource.Token;
+
     internal ProjectLeaseResult Lease(string solutionPath)
     {
         var key = Canonicalize(solutionPath);

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.ComponentModel;
 using System;
+using System.Text.Json;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Scope;
@@ -51,7 +52,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string category, string? continuationToken = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string category, string? continuationToken = null, string? operationToken = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -61,12 +62,23 @@ internal static class AnalysisToolRegistrations
                 }
                 if (!VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var targetError)) return VerifyResponseFormatter.Error(
                     targetError!.Code, targetError.Message, targetError.Recovery, "$.targetPath");
-                return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
-                    GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, ct, continuationToken));
+                if (continuationToken is not null)
+                {
+                    if (operationToken is not null) return McpToolResults.InvalidArgument(
+                        "continuationToken und operationToken dürfen nicht zusammen verwendet werden.",
+                        "Den operationToken bis zum Scanergebnis verwenden; danach mit continuationToken die nächste Seite abrufen.");
+                    return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
+                        GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, ct, continuationToken));
+                }
+                return await LongRunningProjectToolCall.ExecuteAsync(
+                    registry,
+                    new LongRunningProjectCallRequest(targetPath, GetVerifyAdvisoriesTool.ToolName, category,
+                        operationToken, (lease, lifetimeToken) => GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, lifetimeToken)),
+                    ct);
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 GetVerifyAdvisoriesTool.ToolName,
-                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Optional: continuationToken aus der vorherigen Seite unverändert übergeben; Folgeseiten verwenden denselben Scan-Snapshot (30 Minuten Leerlaufzeit). Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge. listCompleteness und truncatedBy nennen den Ausgabestatus. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
+                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Bei operation=running denselben Aufruf mit operationToken fortsetzen; danach optionale Folgeseiten mit continuationToken abrufen (Scan-Snapshot: 30 Minuten Leerlaufzeit). Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge. listCompleteness und truncatedBy nennen den Ausgabestatus. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
     }
 
     private static void AddVerify(
@@ -74,21 +86,24 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath = "", [Description("changes (Default) oder solution")] string? scope = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath = "", [Description("changes (Default) oder solution")] string? scope = null, string? operationToken = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return VerifyResponseFormatter.Error(
-                    "INVALID_ARGUMENT", "Der Request enthält ein unbekanntes Argument.", "Nur targetPath und scope verwenden.");
+                    "INVALID_ARGUMENT", "Der Request enthält ein unbekanntes Argument.", "Nur targetPath, scope und operationToken verwenden.");
                 if (!VerifyContract.TryParseScope(scope, out var parsedScope)) return VerifyResponseFormatter.Error(
                     "INVALID_ARGUMENT", "scope muss changes oder solution sein.", "scope auf changes oder solution setzen.", "$.scope");
                 if (!VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var targetError)) return VerifyResponseFormatter.Error(
                     targetError!.Code, targetError.Message, targetError.Recovery, "$.targetPath");
-                return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
-                    VerifyTool.ExecuteAsync(lease.Server, parsedScope, ct));
+                return await LongRunningProjectToolCall.ExecuteAsync(
+                    registry,
+                    new LongRunningProjectCallRequest(targetPath, VerifyContract.ToolName, parsedScope.ToString(),
+                        operationToken, (lease, lifetimeToken) => VerifyTool.ExecuteAsync(lease.Server, parsedScope, lifetimeToken)),
+                    ct);
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 VerifyContract.ToolName,
-                "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution.")));
+                "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution. Bei operation=running denselben Aufruf mit operationToken fortsetzen; das endgültige Gate-Ergebnis bleibt unverändert.")));
     }
 
     private static void AddSearchPattern(
@@ -194,20 +209,26 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, string? operationToken = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
+                var argumentsKey = JsonSerializer.Serialize(new { patterns, scopeFilter, maxResultsPerPattern });
+                return await LongRunningProjectToolCall.ExecuteRoutedAsync(
                     registry,
-                    new AnalysisTargetRequest(targetPath),
-                    lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter, maxResultsPerPattern, ct));
+                    new LongRunningRegistryCallRequest(
+                        targetPath, "pattern_detect", argumentsKey, operationToken,
+                        lifetimeToken => ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
+                            registry, new AnalysisTargetRequest(targetPath),
+                            lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter,
+                                maxResultsPerPattern, lifetimeToken))),
+                    ct);
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool("pattern_detect", PatternDetectDescription)));
     }
 
     private const string PatternDetectDescription =
-        "Solution-weite, nach Pattern gruppierte Heuristiken wie God-Class, async-void oder lange Methoden; kein Ersatz fuer Regelverstosse.";
+        "Solution-weite, nach Pattern gruppierte Heuristiken wie God-Class, async-void oder lange Methoden; kein Ersatz fuer Regelverstosse. Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,

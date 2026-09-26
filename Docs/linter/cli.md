@@ -152,6 +152,18 @@ ainetlinter --path ./MeinProjekt.slnx --remove-disable-all
 
 ### Verify-Advisories im MCP-Aufruf
 
+`verify`, `get_verify_advisories`, `find_duplicates` und `pattern_detect` geben bei längeren Analysen spätestens nach
+15 Sekunden `Status: operation=running` mit einem `operationToken` zurück. Der
+Client ruft dasselbe Tool mit denselben Argumenten und diesem Token erneut auf;
+jeder Abruf wartet höchstens 15 Sekunden und liefert entweder erneut den Status
+oder das unveränderte fachliche Endergebnis. `operation=running` ist noch kein
+Gate- oder Scanergebnis. Laufende Analysen werden nach 30 Minuten ohne Abruf
+abgebrochen; abgeschlossene Ergebnisse bleiben 30 Minuten ab dem letzten Abruf
+verfügbar. Bis zu vier lange Analysen laufen parallel. Bei
+`get_verify_advisories` wird `continuationToken` erst nach dem endgültigen
+Scanergebnis für weitere Ausgabeseiten verwendet. Der Server nutzt diesen
+Abrufvertrag unabhängig davon, ob ein Client MCP-Progress-Meldungen unterstützt.
+
 `verify(targetPath)` liefert Dead-Code-Advisories für geänderte produktive
 Quelldateien; `verify(targetPath, scope: "solution")` untersucht alle
 produktiven Quelldateien. Beide Scopes suchen Referenzen solutionweit. Die
