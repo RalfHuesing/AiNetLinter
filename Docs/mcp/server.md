@@ -35,7 +35,7 @@ Der Server-Handshake (`initialize` bzw. `server/discover`) antwortet **sofort**.
 | Zustand | Bedeutung | Verhalten bei Tool-Calls |
 | :--- | :--- | :--- |
 | `Loading` | Solution wird im Hintergrund geladen | Liefert `Status: operation=retry, completeness=not_applicable` und `[INFO]: Server laedt die Solution noch. ...` (`isError=false`, kein Trefferinhalt). Agent-Loops sollten kurz warten (z. B. 2–5 s) und erneut anfragen. |
-| `Loaded` | Solution erfolgreich geladen und indexiert | Alle zielgebundenen Tools liefern reguläre Ergebnisse. |
+| `Loaded` | Solution erfolgreich geladen und indexiert | Passende Tools liefern Ergebnisse gemäß Capability und Konfigurationsstatus. |
 | `LoadFailed` | Solution konnte nicht geladen werden (z. B. Syntaxfehler, fehlende Projekte) | Liefert strukturierte Diagnose mit Fehlerursache und Behebungshinweis. |
 
 ---
@@ -50,7 +50,7 @@ Der Server-Handshake (`initialize` bzw. `server/discover`) antwortet **sofort**.
 - ThinClient und detached `--daemon-start` verwenden dieselbe Instanz-ID.
 - MRU-State liegt ohne ID unter `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`, mit ID unter `daemon-state.<id>.json`.
 - Beide verwenden newline-delimited JSON-Objekte.
-- Der Pipe-Level-Handshake ist von der MCP-SDK-Interpretation getrennt. Der ThinClient akzeptiert nur einen Daemon mit passendem Discovery-Fingerprint. Meldet ein bestehender Daemon einen Mismatch, wird dieser als terminaler Fehler auf `stderr` (`DISCOVERY_FINGERPRINT_MISMATCH`) mit Exit-Code 2 beendet.
+- Der Pipe-Level-Handshake ist von der MCP-SDK-Interpretation getrennt. Der ThinClient akzeptiert nur einen Daemon mit passendem Discovery-Fingerprint. Meldet ein bestehender Daemon einen Mismatch, beendet der ThinClient den Verbindungsversuch mit `DISCOVERY_FINGERPRINT_MISMATCH` auf `stderr` und Exit-Code 2.
 
 ### Lebensdauer und Idle-Exit
 - Der Host beendet sich nach standardmäßig 10 Minuten (`--mcp-daemon-idle-exit-minutes`) ohne aktive Verbindungen, Loads oder Warmups.
@@ -124,7 +124,7 @@ Diagnostics werden während des Ladens ermittelt und im Cache gehalten. Sie werd
 Wird eine Quellcodedatei zwischen Tool-Aufrufen verändert:
 - Erkennt der Server die Dateiänderung über Dateisystem-Beobachtung / Hashes.
 - Aktualisiert den Roslyn-Syntaxbaum im Speicher atomar.
-- Nachfolgende Tool-Aufrufe spiegeln unmittelbar den neuen Stand wider.
+- Nach erfolgreichem Refresh arbeiten nachfolgende Tool-Aufrufe mit dem aktualisierten Snapshot; Frischehinweise der Antwort prüfen.
 - Schlägt ein Refresh fehl, liefert der Server den vorherigen Stand mit dem Hinweis `degraded=true`, `freshness="stale"`, `degradedReason="refresh-failed"`.
 
 ---
@@ -168,7 +168,7 @@ Bei aktiviertem `Logging:McpCallLogging` schreibt der Server nach jedem abgeschl
 - `CacheRoot`: Persistent gespeicherte Dekompilate (Default: `cache/asm`).
 - `DecompilationTimeoutSeconds`: Timeout für die Dekompilierung ganzer Assemblies (Default: 180 s).
 - `ResponseBudgetBytes`: Standardbudget serialisierter Assembly-Antworten (1–32768 Bytes).
-- Im MCP-/Daemon-Modus können die Settings über CLI-Overrides (`--mcp-external-max-disk-bytes`, `--mcp-external-max-memory-bytes`, `--mcp-external-max-parallel-operations`, `--mcp-external-max-resident-resources`, `--mcp-external-idle-ttl-minutes`) angepasst werden.
+- Ressourcenlimits werden im MCP-/Daemon-Modus über CLI-Overrides (`--mcp-external-max-disk-bytes`, `--mcp-external-max-memory-bytes`, `--mcp-external-max-parallel-operations`, `--mcp-external-max-resident-resources`, `--mcp-external-idle-ttl-minutes`) angepasst; diese Flags ersetzen nicht `CacheRoot`, `DecompilationTimeoutSeconds` oder `ResponseBudgetBytes`.
 
 ### Log-Format und Ablage
 Täglich rollende Dateien `ainetlinter-<yyyyMMdd>.log` im konfigurierten Verzeichnis:

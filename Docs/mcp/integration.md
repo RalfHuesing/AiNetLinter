@@ -1,35 +1,10 @@
-# AiNetLinter — MCP-Host-Integration
+# MCP-Host-Integration
 
-→ [MCP-Tools & Verträge](tools.md) | [MCP-Server & Daemon](server.md) | [MCP-Bootstrap](mcp-bootstrap.md) | [Linter-Projektintegration](../linter/integration.md) | [README](../../README.md)
+[Bootstrap](mcp-bootstrap.md) · [Toolverträge](tools.md) · [Daemon und Diagnose](server.md)
 
-AiNetLinter kann als **stdio-basierter MCP-Server** gestartet werden, um die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitzustellen (Claude Code, Cursor, eigene Agent-Loops). Vollständige Tool-Referenz, Trunkierungs-Format und Error-Codes: [MCP-Tools & Verträge](tools.md).
+## Registrierung
 
----
-
-## 1. Agent-Bootstrap für ein neues Projekt
-
-Bei einem Auftrag wie „Integriere AiNetLinter in dieses Projekt“ soll der Agent den Bootstrap genau einmal pro Projekt lesen:
-
-```text
-ainetlinter://agent-guide
-```
-
-Der Leitfaden enthält den vollständigen Ablauf für die konkrete Solution- oder Assembly-Datei, die optionale benachbarte Regeldatei, MCP-Registrierung und die dauerhafte `AiNetLinter-McpWorkflow.mdc`. Der Bootstrap ist auch offline verfügbar:
-
-```cmd
-ainetlinter.exe --docs mcp-bootstrap
-```
-
-Die dauerhafte Regeldatei kann offline separat mit `ainetlinter.exe --docs mcp-rule` ausgegeben werden.
-
-Nach erfolgreicher Einrichtung wird der Bootstrap nicht in jedem Arbeitskontext erneut ausgeführt. Die dauerhafte Regel enthält nur die bevorzugte MCP-Werkzeugwahl; die autarke CLI-Integration als Test-/CI-Quality-Gate bleibt davon getrennt und wird in der [Linter-Projektintegration](../linter/integration.md) beschrieben.
-
----
-
-## 2. Registrierung im MCP-Host
-
-### Claude Code / Cursor / Generic MCP Hosts
-Standard-`mcpServers`-Block (in `mcp.json`, `.cursor/mcp.json` oder Claude Desktop Config):
+Für Hosts mit `mcpServers`-Konfiguration:
 
 ```json
 {
@@ -42,103 +17,31 @@ Standard-`mcpServers`-Block (in `mcp.json`, `.cursor/mcp.json` oder Claude Deskt
 }
 ```
 
-Für eine zweite, vom Default getrennte Daemon-Instanz kann die sichere Instanz-ID direkt in den MCP-Args angegeben werden:
+Konfigurationsort und äußeres Dateiformat bestimmt der Host. Wenn die EXE nicht im PATH liegt, ihren absoluten Pfad einsetzen. `ainetlinter --docs mcp-bootstrap` bzw. `ainetlinter://agent-guide` hängen den tatsächlichen Laufzeitpfad an; bei Start über `dotnet` steht die AiNetLinter-DLL als erstes Argument im Laufzeitblock.
+
+Keine `--path`-/`--config`-Argumente: Sie sind im MCP-Modus ungültig. Das Host-cwd wählt kein Projekt aus; pro Aufruf gilt der absolute `targetPath` der konkreten Solution oder Assembly.
+
+## Erstaufruf und Resources
+
+| Bedarf | Resource/Aufruf |
+| --- | --- |
+| Einrichtung einmalig | `ainetlinter://agent-guide` |
+| Parameter der laufenden Version | `tools/list` |
+| Zielstatus | `ainetlinter://overview?targetPath=<URL-kodierter-absoluter-Pfad>` |
+| Effektive Source-Regeln | `ainetlinter://rules?targetPath=<URL-kodierter-absoluter-Solutionpfad>` |
+| Serverweite Kapazität | `get_server_health` ohne Target |
+| Einzelnes Target und Diagnosen | `get_server_health(targetPath, includeDiagnostics=true)` |
+
+Der Handshake wartet nicht auf das Solution-Laden. Während des Ladens liefern betroffene Tools `operation=retry` mit `isError=false`; danach denselben Aufruf wiederholen. Globale `ServerInstructions` sind leer; Bootstrap und Tool-Schemas werden gezielt abgerufen.
+
+## Getrennte Daemon-Instanz
 
 ```json
-{
-  "mcpServers": {
-    "ainetlinter-beta": {
-      "command": "ainetlinter",
-      "args": ["--mcp-server", "--daemon-instance", "beta"]
-    }
-  }
-}
+{"command":"ainetlinter","args":["--mcp-server","--daemon-instance","beta"]}
 ```
 
-Ohne `--daemon-instance` bleibt der Endpunkt `ainetlinter.analyzer.v1.<username>`. Mit `beta` wird er zu `ainetlinter.analyzer.v1.<username>.beta`; auch Startup-Gate und MRU-State werden pro Instanz getrennt. Die ID muss mit einem ASCII-Buchstaben beginnen, darf danach nur ASCII-Buchstaben, Ziffern, `.`, `_` und `-` enthalten und ist auf 32 Zeichen begrenzt. Sie wird invariant in Kleinbuchstaben normalisiert; `BETA` und `beta` verwenden deshalb denselben Endpunkt, dasselbe Startup-Gate und dieselbe MRU-State-Datei.
+Die ID beginnt mit einem ASCII-Buchstaben, enthält danach nur ASCII-Buchstaben, Ziffern, `.`, `_`, `-` und ist höchstens 32 Zeichen lang. Normalisierung in Kleinbuchstaben: `BETA` und `beta` adressieren dieselbe Instanz. Named Pipe, Startup-Gate und MRU-State sind pro Instanz getrennt. Details: [Daemon-Transport](server.md#3-daemon-transport--named-pipe-vertrag).
 
-Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen absoluten Pfad). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder zielgebundene Tool-Aufruf adressiert eine konkrete vorhandene `.sln`/`.slnx`/`.dll`/`.exe`-Datei über den absoluten `targetPath`.
+## Agenten-Loop
 
-Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und `ainetlinter --docs mcp-bootstrap` enthält zusätzlich einen `## Laufzeitpfad des MCP-Servers`-Block mit dem tatsächlich ermittelten `command`-Pfad. Verwende diesen Block, wenn der Host `ainetlinter` nicht über `PATH` findet. Wird AiNetLinter über `dotnet` gestartet, enthält der Block die AiNetLinter-DLL als erstes Argument.
-
----
-
-## 3. cwd-Verhalten & Start-Sequenzen
-
-### cwd-Verhalten
-Der MCP-Server benötigt für zielgebundene Aufrufe keinen Projektbezug im Host-`cwd`. Die konkrete vorhandene `.sln`/`.slnx`/`.dll`/`.exe`-Datei wird je Aufruf über den absoluten `targetPath` übergeben; die Endung bestimmt die Herkunft. Damit können mehrere Targets in einer Serverinstanz resident sein.
-
-### Start-Sequenzen: initialize und server/discover
-Der MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
-
-`server/discover` antwortet sofort mit Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Der globale Text enthält keinen vollständigen Bootstrap und bleibt unter dem Engineering-Budget von 1.200 Bytes.
-
-Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden `Status: operation=retry, completeness=not_applicable` und einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, `isError=false`, kein Trefferinhalt); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Fehlgeschlagene Aufrufe tragen `isError=true`. Details zu den drei Zuständen (`Loading` / `Loaded` / `LoadFailed`) siehe [MCP-Server & Daemon](server.md#2-drei-zustands-lifecycle-des-mcp-servers).
-
-### Projektauflösung im MCP-Modus
-Der MCP-Modus löst keine Solution aus dem Host-`cwd` auf und akzeptiert keine zusätzlichen Projektargumente. `--path` oder `--config` in der Registrierung führen zu einem deterministischen Startfehler. Stattdessen übergibt jeder Aufruf den absoluten `targetPath` der konkreten vorhandenen Datei. Unbekannte Tool-Properties werden gegen das aktuelle `tools/list`-Schema geprüft und als `invalid_argument` mit Feldnamen abgelehnt.
-
----
-
-## 4. Tool-vs-`rg`-Empfehlung für Agent-Loops
-
-Beginne bei physischer Discovery mit `get_file_tree`: Das read-only Tool liefert relative Pfade, Verzeichnis-/Extension-Aggregation und sichtbare Completeness-/Trunkierungsangaben auch für Dateien außerhalb des Roslyn-Solutionindexes. Für ein Assembly-Ziel nennt `inspect_assembly` den lokal lesbaren `decompileRoot`; anschließend verwendet der Agent diesen Root für `rg` oder `get_file_tree`. Fehlt der SourceRoot, ist die Capability explizit unsupported. Die direkte Dateisystemroute benötigt für Projekt-Ziele weiterhin keinen registrierten Projekt-Key. `view=files` eignet sich als Folgeaufruf, wenn Pfade an `search_pattern` oder `get_file_skeleton` weitergegeben werden sollen. Ein valider Projekt-Target-Block genügt auch während eines laufenden oder fehlgeschlagenen Solution-Loads, weil die Enumeration unabhängig vom Roslyn-Snapshot arbeitet.
-
-`get_file_tree` beschreibt eine physische Dateipopulation (`summary.scannedFileCount`), `get_index_scope` zusätzlich die Roslyn-Dokumentpopulation (`population.roslynDocumentCount`). Ausschluss- und Skip-Counts sind nach Ursache und Einheit getrennt und dürfen nicht zusammengezählt werden. Zielgebundene Antworten folgen Contract v2: `navigation.status.operation` und `navigation.status.completeness` sind getrennt; bei `RESPONSE_BUDGET_TOO_SMALL` den gemeldeten `minimumResponseBytes` mit identischem Request und Snapshot wiederholen. Ausschließlich der sichtbare Content zählt zum UTF-8-Budget.
-
-Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
-
-### Opaque Handoff-Handles
-
-Ein im Content markiertes `h:…` ist ein kopierbarer, opaquer Symbol-Handle und
-nicht selbst eine lesbare Symbolidentität. Nur während desselben MCP-Hostlaufs
-kann er unverändert an einen passenden Symbolparameter weitergegeben werden;
-die Antwort zeigt deshalb zusätzlich Symbolart, Signatur und Fundort. Nach
-Daemon- oder Stdio-Neustart sind frühere Handles bewusst ungültig
-(`HANDOFF_UNKNOWN`). Dann das Symbol mit den sichtbaren Angaben erneut über
-`find_symbol`, `get_file_skeleton` oder einen passenden Producer ermitteln.
-Nur `h:…` wird als Handoff-Handle interpretiert; andere Eingaben folgen dem
-jeweiligen Symbolparameter-Vertrag.
-
-Beim Folgeaufruf bleibt `targetPath` derselbe absolute Zielpfad. Einen
-verfügbaren `h:…` direkt für `symbolIdentifier`, `symbolIdentifiers`,
-`helperSymbol` oder `typeName` verwenden; Namen, Doc-IDs und Positionen sind
-nur Fallbacks. `symbolIdentifiers` bleibt ein Array, die übrigen genannten
-Felder nehmen jeweils einen Einzelwert.
-
-Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen `maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, den passenden Handle oder Typ ermitteln und erst danach Bodies, Referenzen oder weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
-
-1. **Zuerst** `get_file_tree(view: "summary")` für die Dateityp- und Routingübersicht, danach C#-Symbole mit `find_symbol` und den semantischen Folge-Tools. Das vermeidet, dass Nicht-C#-Dateien als leere C#-Symbolabfrage fehlinterpretiert werden.
-2. **Für Nicht-C# oder Textsuche** (z. B. `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit dem kanonischen `pattern` und `scopeType` (`production`, `tests` oder `all`); Include-/Exclude-Globs laufen über `includePatterns`/`excludePatterns`. Der Default ist `maxResults=20` und `maxResponseBytes=8192`; serverseitige Caps sind 2000 Treffer und 65536 Bytes. `completeness.totalCount`/`returnedCount`/`truncatedBy` sowie der eine `next`-Hinweis sind zu prüfen. Aliasfelder wie `query`, `searchPattern`, `fileFilter` und `includePattern` gehören nicht zum Vertrag. Bei `enrichCSharp=true` liefern eindeutig aufgelöste C#-Symbole ein kopierbares `handoffId: h:…`; Kommentare, Strings, Nicht-C# und nicht eindeutig auflösbare Treffer tragen stattdessen ihren expliziten `handoff`-Status. Der Default bleibt `false`.
-3. **Ergänzend** `rg` / `grep` für **C#-Symbole** nur dann, wenn eine semantische MCP-Abfrage nicht passt oder konkrete Text-/Dateiarbeit gefragt ist. Für reine Symbol-, Referenz- und Impact-Fragen bleibt MCP die bevorzugte Quelle.
-
-Konkret:
-
-- Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "h:…")`
-- Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "h:…")`
-- Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "class")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "class")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
-- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "h:…", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen. Eine Referenz-Handoff-ID mit `false` öffnet nur ihren Owner, nie Root, Geschwister oder eine Closure.
-- Bei `coverage: razor_markup_not_indexed` die ausgegebene `search_pattern`-Abfrage für `**/*.razor` ausführen; fehlende C#-Treffer decken Markup-Verwendungen nicht ab.
-- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: "h:…", depth: 2)`; den Content-Marker `completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. `includeReferences=false` bleibt root- beziehungsweise owner-only; `true` öffnet die bounded Referenz-Closure. Nur die im Content markierte Handoff-ID übernehmen.
-- Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
-- Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["h:…"])`
-- Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
-- TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
-- Text in einer externen Assembly suchen → `search_assembly(targetPath: "C:/libs/Library.dll", searchKind: "text", pattern: "Repository", maxResults: 20)`; für typische Persistenz-/Datenzugriffe `searchKind: "data_access"`, für HTTP/RPC/Socket/Prozessaufrufe `searchKind: "external_calls"`
-- Arbeitsänderungen prüfen → `verify(targetPath)`; `pass` bedeutet ausschließlich Score `10.0` und `violationCount=0`. Ein `incomplete`-Änderungskontext wird mit `verify(targetPath, scope: "solution")` vollständig geprüft.
-- `get_feature_context` und `get_impact` können Violations als kontextuelle Arbeitsevidenz zeigen, liefern aber weder Gate-Verdict noch Abschlussnachweis.
-- Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. Für Dateitypen und Pfade dient `get_file_tree(view: "summary")`.
-
----
-
-## 5. Erstorientierung: Resources
-
-Für eine neue Integration `ainetlinter://agent-guide` genau einmal ohne Target lesen. Danach liefert `ainetlinter://overview?targetPath=<url-encoded>` die Statuskarte des adressierten Solution-Keys. `ainetlinter://rules?targetPath=<url-encoded>` liefert zusätzlich die frisch aus dem effektiven Regel-Snapshot erzeugte Karte mit Herkunft, aktiven Regeln und Schwellwerten. Details: [MCP-Tools & Verträge](tools.md).
-
----
-
-## 6. Mehrere parallele Server-Instanzen
-
-Mehrere Daemon-Instanzen sind mit einem gemeinsamen Cache grundsätzlich unterstützt. Der konfigurierte Cache-Stamm wird mit einem stabilen Daemon-Profil deterministisch als Suffix versehen, etwa `cache.codex`. Gleiche Profile verwenden denselben prozesssicher gelockten Cache; Generationen werden über Writer-/Reader-Leases und Retention geschützt. Unterschiedliche Profile, etwa `codex-a` und `codex-b`, erzeugen getrennte Cache-Stämme und sind für bewusst isolierte Instanzen zu verwenden. Prozess-IDs sind keine Cache-Identität. Health und Assembly-Antworten zeigen keine Profil-, Generations-, Lock-, Lease- oder Cleanup-Details; private Repository-URLs und Credentials werden nicht ausgegeben. Bei stale oder nicht löschbaren Artefakten bleibt der Zustand als Quarantäne mit Ursache, Besitzer und TTL sichtbar und wird nicht als gültiger Checkout wiederverwendet.
-
-Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache. Assembly-Suche und die anschließenden Assembly-Navigationstools bleiben read-only.
+Aufgabenspezifische Werkzeugwahl und kopierbare Beispiele stehen ausschließlich in [tools.md](tools.md). Die statische Testzuordnung von `get_test_context` und `get_impact` führt keine Tests aus. Ein Gate-Nachweis stammt aus einem abgeschlossenen `verify`; Kontext- und Advisory-Antworten ersetzen ihn nicht.

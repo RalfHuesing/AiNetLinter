@@ -1,5 +1,7 @@
 # Dead-Code-Prüfkandidaten
 
+[Aufrufvertrag](tools.md#gate-und-advisories) · [API-Policy und Budgetkonfiguration](../linter/configuration.md#dead-code-advisory)
+
 `verify` ergänzt sein Quality-Gate um einen begrenzten Advisory. Ein Kandidat
 ist eine Aufforderung zur Gegenprüfung, keine Löschfreigabe. Auch `private`
 und null statische Referenzen beweisen keine sichere Entfernbarkeit.
