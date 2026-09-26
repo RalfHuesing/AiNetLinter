@@ -19,15 +19,13 @@ internal static class DeadCodeFilters
 
     internal static bool MatchesKindFilter(ISymbol symbol, DeadCodeKindFilter kindFilter)
     {
-        if (kindFilter == DeadCodeKindFilter.All) return true;
+        if (kindFilter == DeadCodeKindFilter.All)
+            return symbol is INamedTypeSymbol || symbol is IMethodSymbol { MethodKind: MethodKind.Ordinary };
 
         return symbol switch
         {
             INamedTypeSymbol named => MatchesNamedTypeKind(named, kindFilter),
-            IMethodSymbol => kindFilter is DeadCodeKindFilter.Method,
-            IPropertySymbol => kindFilter is DeadCodeKindFilter.Property,
-            IFieldSymbol => kindFilter is DeadCodeKindFilter.Field,
-            IEventSymbol => kindFilter is DeadCodeKindFilter.Event,
+            IMethodSymbol { MethodKind: MethodKind.Ordinary } => kindFilter is DeadCodeKindFilter.Method,
             _ => false
         };
     }
@@ -42,9 +40,7 @@ internal static class DeadCodeFilters
 
     internal static bool ShouldCheckMemberKind(ISymbol member, DeadCodeKindFilter kindFilter)
     {
-        if (member is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.ExplicitInterfaceImplementation })
-            return MatchesKindFilter(member, kindFilter);
-        if (member is IPropertySymbol { IsIndexer: false } || member is IFieldSymbol { ContainingType.TypeKind: not TypeKind.Enum })
+        if (member is IMethodSymbol { MethodKind: MethodKind.Ordinary })
             return MatchesKindFilter(member, kindFilter);
         return false;
     }

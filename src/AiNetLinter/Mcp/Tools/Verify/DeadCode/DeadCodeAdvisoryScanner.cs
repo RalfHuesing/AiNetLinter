@@ -107,10 +107,7 @@ internal static partial class DeadCodeAdvisoryScanner
             }
         }
 
-        if (context.Args.Mode is DeadCodeMode.Locals or DeadCodeMode.Both)
-        {
-            await DeadCodeAdvisoryDiagnosticsScanner.ScanProjectDiagnosticsAsync(documents, compilation, context, ct);
-        }
+        // Dead-code candidates are deliberately limited to explicit types and ordinary methods.
     }
 
     private static async Task ScanDocumentAsync(
@@ -287,7 +284,7 @@ internal static partial class DeadCodeAdvisoryScanner
         var analyses = references.Select(reference => context.UsageIndex.Analyze(reference,
             symbol is INamedTypeSymbol ? DeadCodeUsageIndex.Key(symbol) : null)).ToArray();
         return await Task.FromResult(new SymbolReferenceAnalysis(
-            analyses.Any(analysis => analysis.Production),
+            analyses.Any(analysis => analysis.HasKnownReference),
             analyses.Any(analysis => analysis.Unknown),
             analyses.Sum(analysis => analysis.Tests),
             analyses.Sum(analysis => analysis.Writes)));
@@ -318,10 +315,10 @@ internal static partial class DeadCodeAdvisoryScanner
         }
     }
 
-    private readonly record struct SymbolReferenceAnalysis(bool HasProductionReference, bool HasUnknownReference, int TestReferenceCount, int WriteReferenceCount = 0)
+    private readonly record struct SymbolReferenceAnalysis(bool HasKnownReference, bool HasUnknownReference, int TestReferenceCount, int WriteReferenceCount = 0)
     {
-        public bool IsUndecidable => !HasProductionReference && HasUnknownReference;
-        public bool IsDeadCandidate => !HasProductionReference && !HasUnknownReference;
+        public bool IsUndecidable => HasUnknownReference;
+        public bool IsDeadCandidate => !HasKnownReference && !HasUnknownReference;
     }
 
     private static IEnumerable<ISymbol> GetImplementedInterfaceMembers(ISymbol symbol)
@@ -410,7 +407,7 @@ internal static partial class DeadCodeAdvisoryScanner
 
     private static bool ShouldScanProject(Project project, DeadCodeAdvisoryOptions args)
     {
-        return project.SupportsCompilation && (args.IncludeTests || DeadCodeProjectRole.Resolve(project, args.Config) != "test");
+        return project.SupportsCompilation && DeadCodeProjectRole.Resolve(project, args.Config) == "production";
     }
 
     private static void AddCandidateDocuments(

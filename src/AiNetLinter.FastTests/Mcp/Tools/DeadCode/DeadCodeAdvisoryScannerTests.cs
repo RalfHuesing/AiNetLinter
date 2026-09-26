@@ -105,7 +105,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
-    public async Task ScanAsync_DeadCodeSuppressionWithReason_HidesCompilerDiagnosticCandidate()
+    public async Task ScanAsync_DeadCodeSuppressionWithReason_DataFieldsAreNotCandidates()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -123,7 +123,7 @@ public sealed class DeadCodeAdvisoryScannerTests
             CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "_serializedValue");
-        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "_unusedValue");
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "_unusedValue");
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
-    public async Task ScanAsync_ModeLocals_CollectsUnusedFieldDiagnostics()
+    public async Task ScanAsync_ModeLocals_DoesNotCollectDataMemberCandidates()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -283,15 +283,11 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
-        var dead = Assert.Single(result.DeadSymbols);
-        Assert.Equal("_unusedValue", dead.SymbolName);
-        Assert.Equal("field", dead.Kind);
-        Assert.Equal("high", dead.Confidence);
-        Assert.Contains("CS0169", dead.Reason);
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task ScanAsync_ModeBoth_CombinesAndDeduplicates()
+    public async Task ScanAsync_ModeBothKeepsOrdinaryMethodsAndOmitsFields()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -311,7 +307,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
-        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "_unusedValue");
+        Assert.DoesNotContain(result.DeadSymbols, d => d.SymbolName == "_unusedValue");
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod");
     }
 

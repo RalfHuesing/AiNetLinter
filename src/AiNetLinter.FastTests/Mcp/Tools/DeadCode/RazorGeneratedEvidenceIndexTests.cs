@@ -122,7 +122,7 @@ public sealed class RazorGeneratedEvidenceIndexTests
     [Theory]
     [InlineData("locals")]
     [InlineData("both")]
-    public async Task ScanAsync_UnavailableRazorEvidenceLowersDiagnosticCandidatesInLocalsAndBoth(string mode)
+    public async Task ScanAsync_UnavailableRazorEvidenceDoesNotProduceFieldCandidatesInLocalsOrBoth(string mode)
     {
         using var tempDirectory = TestTempDirectory.Create("dead-code-razor-diagnostics-");
         using var testSolution = CreateUnavailableSolution(tempDirectory, diagnostics: true);
@@ -136,14 +136,8 @@ public sealed class RazorGeneratedEvidenceIndexTests
             CancellationToken.None);
 
         Assert.Equal(2, result.Summary.DocumentsInScope);
-        var codeBehindField = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_unusedCodeBehind");
-        var regularField = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_unusedRegular");
-        Assert.Equal(mode == "locals" ? "low" : "high", codeBehindField.Confidence);
-        Assert.Equal(mode == "locals", codeBehindField.Reason.Contains("Razor", StringComparison.Ordinal));
-        Assert.Equal("high", regularField.Confidence);
-        Assert.Equal(mode == "locals" ? 1 : 0, result.Summary.Low);
-        Assert.Equal(mode == "locals" ? 1 : 2, result.Summary.High);
-        Assert.Equal(2, result.Summary.TotalDead);
+        Assert.Empty(result.DeadSymbols);
+        Assert.Equal(0, result.Summary.TotalDead);
     }
 
     [Fact]

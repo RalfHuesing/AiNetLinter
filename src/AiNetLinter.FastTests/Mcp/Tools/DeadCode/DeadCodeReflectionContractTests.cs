@@ -49,8 +49,7 @@ public sealed class DeadCodeReflectionContractTests
             }
             """);
         var result = await Scan(fixture);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Value");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
@@ -70,8 +69,8 @@ public sealed class DeadCodeReflectionContractTests
             }
             """);
         var result = await Scan(fixture);
-        Assert.Contains(result.UndecidableSymbols!, entry => entry.ContainerType == "Row" && entry.SymbolName == "Value");
-        Assert.Contains(result.DeadSymbols, entry => entry.ContainerType == "Other" && entry.SymbolName == "Value");
+        Assert.Empty(result.DeadSymbols);
+        Assert.Empty(result.UndecidableSymbols!);
     }
 
     private static RoslynTestSolution Create(string source) =>

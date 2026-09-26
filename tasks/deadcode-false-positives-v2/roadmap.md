@@ -2,7 +2,7 @@
 
 Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander bearbeiten. Jeder Umsetzungspunkt umfasst seine passenden xUnit-v3-Tests, das nach `.agents/rules/AiNetLinter-Richtlinien.mdc` fällige Incremental Gate, das Abhaken und einen eigenen Commit. Belegte Bugs zuerst mit einem isolierten Rot-Test reproduzieren. Keine Planner-Dateien ändern und keine Integrations- oder Stresstests ohne ausdrücklichen Auftrag starten.
 
-- [ ] **1 — Kandidaten auf Typen und gewöhnliche Methoden verengen**
+- [x] **1 — Kandidaten auf Typen und gewöhnliche Methoden verengen**
   - Intention: Die breite Liste ungelesener Daten-Member und `test_only`-Meldungen aus der Standardanalyse entfernen.
   - Scope: In `DeadCodeAdvisoryScanner`, `DeadCodeFilters`, `DeadCodeUsageIndex` und zugehörigen FastTests nur explizite Typen und gewöhnliche Methoden aus produktiven Projekten als Kandidaten zulassen. Testreferenzen als Nutzung zählen; unbekannte Projekt-/Referenzrollen unterdrücken Kandidaten. Ganze tote Typen weiter nur einmal melden. Bestehende `closed_solution`-/`external_library`-Policy und Solution-weite Referenzprüfung erhalten.
   - Nicht: Feld-/Property-Leserkennung verbessern, Testprojekt-Deklarationen melden oder Ausgabeformate bereits umstellen.

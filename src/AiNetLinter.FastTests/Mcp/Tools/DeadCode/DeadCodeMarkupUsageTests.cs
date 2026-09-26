@@ -13,7 +13,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class DeadCodeMarkupUsageTests
 {
     [Fact]
-    public async Task XamlDataContextBindsPropertyAndKeepsUnboundNeighbour()
+    public async Task XamlDataMembersAreNotCandidates()
     {
         using var fixture = Create("""
             namespace Ui;
@@ -26,12 +26,11 @@ public sealed class DeadCodeMarkupUsageTests
             </Window>
             """).Project.Solution;
         var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Label");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task UnresolvedBindingIsUncertainOnlyForMatchingMembers()
+    public async Task UnresolvedBindingDoesNotCreateDataMemberCandidates()
     {
         using var fixture = Create("""
             namespace Ui;
@@ -41,9 +40,8 @@ public sealed class DeadCodeMarkupUsageTests
             <Window><TextBlock Text="{Binding Label}" /></Window>
             """).Project.Solution;
         var result = await DeadCodeAdvisoryScanner.ScanAsync(solution, new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Label");
-        Assert.Equal(1, result.Summary.Undecidable);
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
+        Assert.Equal(0, result.Summary.Undecidable);
     }
 
     [Fact]

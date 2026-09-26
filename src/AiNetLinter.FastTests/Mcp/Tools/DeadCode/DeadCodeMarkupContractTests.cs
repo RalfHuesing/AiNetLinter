@@ -47,7 +47,7 @@ public sealed class DeadCodeMarkupContractTests
     }
 
     [Fact]
-    public async Task RazorParameterBindingKeepsUnboundParameterAndMethod()
+    public async Task RazorParameterBindingKeepsMethodCandidatesAndOmitsProperties()
     {
         using var fixture = Create("""
             using Microsoft.AspNetCore.Components;
@@ -61,8 +61,7 @@ public sealed class DeadCodeMarkupContractTests
             """, MetadataReference.CreateFromFile(typeof(Microsoft.AspNetCore.Components.ComponentBase).Assembly.Location));
         var solution = fixture.Solution.Projects.Single().AddAdditionalDocument("Page.razor", "<Widget Value=\"1\" />").Project.Solution;
         var result = await Scan(solution);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Value" or "OnInitialized");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Unbound");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Value" or "Unbound" or "OnInitialized");
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
     }
 

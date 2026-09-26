@@ -13,7 +13,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class DeadCodeBoundaryTests
 {
     [Fact]
-    public async Task TestReadPreservesBothReferenceRoleAndMissingProductionRead()
+    public async Task TestReadCountsAsUseAndFieldsAreNotCandidates()
     {
         using var fixture = RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\Reads.slnx",
             new ProjectSpec("Host", [("Code.cs", "public sealed class State { public int Value; public int Orphan; }")]),
@@ -21,11 +21,7 @@ public sealed class DeadCodeBoundaryTests
         var config = TestHelper.CreateDefaultConfig() with { DeadCode = new DeadCodeConfig { ProjectRoles = new() { ["Checks"] = "test" } } };
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Field, Config: config));
-        var candidate = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Value");
-        Assert.Equal("test_only", candidate.Usage);
-        Assert.Contains("no_production_read", candidate.Reason);
-        Assert.Contains("testReads=1", candidate.Reason);
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
@@ -37,7 +33,7 @@ public sealed class DeadCodeBoundaryTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method, Config: config));
         Assert.Empty(result.DeadSymbols);
-        Assert.Contains(result.UndecidableSymbols!, entry => entry.SymbolName == "Work");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Work");
     }
 
     [Fact]
@@ -67,12 +63,12 @@ public sealed class DeadCodeBoundaryTests
                 ProjectReferences: ["Host"], AdditionalReferences: [MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Property));
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Value" && entry.Usage == "test_only");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Value");
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.ProjectName == "Checks");
     }
 
     [Fact]
-    public async Task ExternalContractImplementationIsProtectedButHiddenDetailIsNot()
+    public async Task ExternalContractImplementationIsProtectedAndExplicitSlotsAreNotCandidates()
     {
         using var fixture = RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\Api.slnx",
             new ProjectSpec("Library", [("Code.cs", """
@@ -86,7 +82,7 @@ public sealed class DeadCodeBoundaryTests
         Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
         var closed = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Method));
-        Assert.Contains(closed.DeadSymbols, entry => entry.ContainerType == "Api" && entry.SymbolName.Contains("Run", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(closed.DeadSymbols, entry => entry.ContainerType == "Api" && entry.SymbolName.Contains("Run", System.StringComparison.Ordinal));
     }
 
     [Fact]

@@ -136,6 +136,9 @@ internal sealed class DeadCodeUsageIndex
 }
 
 internal sealed record DeadCodeUsageDocument(Document Document, SemanticModel Model, SyntaxNode Root, string Role);
-internal readonly record struct DeadCodeUsageAnalysis(bool Production, bool Unknown, int Tests, int Writes);
+internal readonly record struct DeadCodeUsageAnalysis(bool Production, bool Unknown, int Tests, int Writes)
+{
+    internal bool HasKnownReference => Production || Tests > 0;
+}
 
 internal sealed record DeadCodeGenericBinding(INamedTypeSymbol Type, string Role);

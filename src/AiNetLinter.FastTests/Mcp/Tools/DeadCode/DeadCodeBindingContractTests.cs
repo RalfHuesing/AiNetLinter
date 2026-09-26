@@ -14,19 +14,18 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class DeadCodeBindingContractTests
 {
     [Fact]
-    public async Task RecordEqualityDoesNotReadComputedProperty()
+    public async Task RecordPropertiesAreNotCandidates()
     {
         using var fixture = Create("""
             public sealed record Key(int Id) { public int Orphan => 1; }
             public static class Runner { public static bool Equal(Key a, Key b) => a == b; }
             """);
         var result = await Scan(fixture, DeadCodeKindFilter.Property);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Id");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task ConfigurationBinderProtectsWritableContractOnly()
+    public async Task ConfigurationBoundPropertiesAreNotCandidates()
     {
         using var fixture = Create("""
             using Microsoft.Extensions.Configuration;
@@ -37,13 +36,11 @@ public sealed class DeadCodeBindingContractTests
             MetadataReference.CreateFromFile(typeof(Microsoft.Extensions.Configuration.IConfiguration).Assembly.Location),
             MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location));
         var result = await Scan(fixture, DeadCodeKindFilter.Property);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "Settings" && entry.SymbolName == "Port");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
-        Assert.Contains(result.DeadSymbols, entry => entry.ContainerType == "Other" && entry.SymbolName == "Port");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task ConditionalJsonIgnoreStillBindsProperty()
+    public async Task JsonIgnoredPropertiesAreNotCandidates()
     {
         using var fixture = Create("""
             using System.Text.Json;
@@ -57,12 +54,11 @@ public sealed class DeadCodeBindingContractTests
             """, MetadataReference.CreateFromFile(typeof(System.Text.Json.JsonSerializer).Assembly.Location),
             MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location));
         var result = await Scan(fixture, DeadCodeKindFilter.Property);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Value");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task SerializerBindsContractButNotUnrelatedOrIgnoredProperty()
+    public async Task SerializerBoundPropertiesAreNotCandidates()
     {
         using var fixture = Create("""
             using System.Text.Json;
@@ -80,9 +76,7 @@ public sealed class DeadCodeBindingContractTests
             """, MetadataReference.CreateFromFile(typeof(System.Text.Json.JsonSerializer).Assembly.Location),
             MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location));
         var result = await Scan(fixture, DeadCodeKindFilter.Property);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "Payload" && entry.SymbolName == "Value");
-        Assert.Contains(result.DeadSymbols, entry => entry.ContainerType == "Other" && entry.SymbolName == "Value");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Ignored");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
@@ -139,7 +133,7 @@ public sealed class DeadCodeBindingContractTests
     }
 
     [Fact]
-    public async Task RecordEqualityReadsNonPositionalPropertiesButConstructionDoesNot()
+    public async Task RecordPropertiesAreNotCandidatesRegardlessOfReads()
     {
         using var fixture = Create("""
             public sealed record Key(int Id) { public int Extra { get; init; } }
@@ -151,13 +145,11 @@ public sealed class DeadCodeBindingContractTests
             }
             """);
         var result = await Scan(fixture, DeadCodeKindFilter.Property);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "Key");
-        Assert.Contains(result.DeadSymbols, entry => entry.ContainerType == "Written" && entry.SymbolName == "Id");
-        Assert.Contains(result.DeadSymbols, entry => entry.ContainerType == "Written" && entry.SymbolName == "Extra");
+        Assert.Empty(result.DeadSymbols);
     }
 
     [Fact]
-    public async Task XamlStaticBindingProtectsOnlyResolvedMember()
+    public async Task XamlBoundFieldsAreNotCandidates()
     {
         using var fixture = Create("""
             namespace Ui;
@@ -171,8 +163,7 @@ public sealed class DeadCodeBindingContractTests
             """).Project.Solution;
         var result = await DeadCodeAdvisoryScanner.ScanAsync(withMarkup,
             new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.Field));
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Back");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Orphan");
+        Assert.Empty(result.DeadSymbols);
     }
 
     private static RoslynTestSolution Create(string source, params MetadataReference[] references) =>

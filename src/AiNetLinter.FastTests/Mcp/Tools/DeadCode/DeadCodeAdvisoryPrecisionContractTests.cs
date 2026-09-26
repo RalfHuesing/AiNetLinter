@@ -51,7 +51,63 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
     }
 
     [Fact]
-    public async Task ScanAsync_WriteOnlyPropertyReferenceIsNotReportedAsUnreferenced()
+    public async Task ScanAsync_ReportsOnlyDeadTypesAndOrdinaryMethodsAndTreatsTestReferencesAsUse()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("Candidates.cs", """
+                namespace Product;
+                public sealed class UnreferencedType { }
+                public sealed class UsedByTest { public void Run() { } }
+                public sealed class Service
+                {
+                    public void Convert(int value) { }
+                    public void Convert(string value) { }
+                    public void Keep(int value) => Convert(value);
+                    public string Wire { get; set; } = "";
+                    public const int Constant = 1;
+                    private int _state;
+                }
+                public sealed class ServiceCaller { public void Call() => new Service().Keep(1); }
+                """)], VirtualProjectDirectory: "src/Product"),
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
+                ("ServiceTests.cs", "namespace ProductTests; public sealed class ServiceTests { public void Run() => new Product.UsedByTest().Run(); }")],
+                ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
+
+        var result = await ScanAllAsync(testSolution.Solution);
+
+        Assert.Contains(result.DeadSymbols, entry => entry.Kind == "class" && entry.SymbolName == "UnreferencedType");
+        Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Convert");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Wire" or "Constant" or "_state" or "UsedByTest");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Usage == "test_only");
+    }
+
+    [Fact]
+    public async Task ScanAsync_TestSupportProjectIsNeverASourceOfCandidates()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("Service.cs", "namespace Product; public sealed class Service { public void Execute() { } }")],
+                VirtualProjectDirectory: "src/Product"),
+            new ProjectSpec("Tests.Support", [
+                ("Fixture.cs", "namespace Tests.Support; public sealed class Fixture { public void Helper() { } }")],
+                VirtualProjectDirectory: "tests/Support"));
+        var config = TestHelper.CreateDefaultConfig() with
+        {
+            DeadCode = new AiNetLinter.Configuration.DeadCodeConfig
+            {
+                ProjectRoles = new System.Collections.Generic.Dictionary<string, string> { ["Tests.Support"] = "test" }
+            }
+        };
+
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution,
+            new(Accessibility: DeadCodeAccessibilityFilter.All, Kind: DeadCodeKindFilter.All, Config: config));
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ProjectName == "Tests.Support");
+    }
+
+    [Fact]
+    public async Task ScanAsync_DataMembersAreNeverReportedAsDeadCodeCandidates()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("TestApp", [("Models.cs", """
@@ -69,14 +125,12 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
 
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "WrittenOnly" && entry.Reason.Contains("no_production_read"));
-        var candidate = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "NeverTouched");
-        Assert.Equal("unreferenced", candidate.Usage);
+        Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
     }
 
     [Fact]
-    public async Task ScanAsync_AssignedOnlyPrivateFieldIsReportedByDiagnosticWhileWriteOnlyPropertyStaysUnclassified()
+    public async Task ScanAsync_PrivateFieldsAndPropertiesAreNotAdvisoryCandidates()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [("State.cs", """
@@ -105,14 +159,12 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
                 Mode: DeadCodeMode.Both),
             CancellationToken.None);
 
-        var field = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_assignedOnly");
-        Assert.Equal("field", field.Kind);
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "AssignedOnlyProperty" && entry.Reason.Contains("no_production_read"));
+        Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
     }
 
     [Fact]
-    public async Task ScanAsync_PublicPropertyUsedOnlyBySerializerRemainsAnUncertainSameSymbolCandidate()
+    public async Task ScanAsync_PublicWirePropertyIsNotAnAdvisoryCandidate()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [("Payload.cs", """
@@ -131,11 +183,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
 
-        var property = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Value");
-        Assert.Equal("unreferenced", property.Usage);
-        Assert.Equal("low", property.Confidence);
-        Assert.Contains("jsonSerializer", property.LimitsApplies);
-        Assert.Contains("reflection", property.LimitsApplies);
+        Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
     }
 
@@ -167,7 +215,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
     }
 
     [Fact]
-    public async Task ScanAsync_TestOnlyInterfaceCallKeepsImplementationTestOnlyAndReportsInterfaceBoundary()
+    public async Task ScanAsync_TestOnlyInterfaceCallSuppressesProductionCandidates()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [
@@ -185,11 +233,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAllAsync(testSolution.Solution);
 
-        var implementation = Assert.Single(result.DeadSymbols, entry =>
-            entry.Kind == "class" && entry.SymbolName == "Processor");
-        Assert.Equal("test_only", implementation.Usage);
-        Assert.Equal(1, implementation.TestReferences);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "Product.Processor");
+        Assert.Empty(result.DeadSymbols);
         Assert.False(result.DeletionClaim);
     }
 
