@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ internal static class GetVerifyAdvisoriesTool
     internal const string DeadCodeCategory = "dead_code";
     internal const int ResponseBudgetBytes = 65_536;
     private const int UnboundedCandidateLimit = int.MaxValue;
+    private static readonly ConditionalWeakTable<McpCodeGraphServer, VerifyAdvisoryPageStore> PageStores = new();
 
     internal static CallToolResult InvalidCategory(string? category) => VerifyResponseFormatter.Error(
         "INVALID_ARGUMENT",
@@ -28,8 +30,10 @@ internal static class GetVerifyAdvisoriesTool
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer server,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? continuationToken = null)
     {
+        if (continuationToken is not null) return PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Continue(continuationToken);
         if (server.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = server.GetCurrentSolution();
         if (solution is null) return VerifyResponseFormatter.Error(
@@ -68,12 +72,14 @@ internal static class GetVerifyAdvisoriesTool
                 $"Ursache: {exception.GetType().Name}. Scan nach Behebung erneut starten.");
         }
 
-        return Render(scan);
+        return PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Start(scan);
     }
 
-    internal static CallToolResult Render(DeadCodeScanResult scan)
+    internal static CallToolResult Render(DeadCodeScanResult scan) => new VerifyAdvisoryPageStore().Start(scan);
+
+    internal static DeadCodeEntry[] SortCandidates(DeadCodeScanResult scan)
     {
-        var candidates = scan.DeadSymbols
+        return scan.DeadSymbols
             .OrderBy(entry => entry.Confidence == "high" ? 0 : 1)
             .ThenBy(entry => entry.ProjectName, StringComparer.Ordinal)
             .ThenBy(entry => entry.File, StringComparer.OrdinalIgnoreCase)
@@ -81,20 +87,27 @@ internal static class GetVerifyAdvisoriesTool
             .ThenBy(entry => entry.Line)
             .ThenBy(entry => entry.InternalSymbolIdentifier, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    internal static CallToolResult RenderPage(
+        DeadCodeScanResult scan,
+        IReadOnlyList<DeadCodeEntry> candidates,
+        int offset,
+        Guid snapshotId)
+    {
         var candidateCount = scan.Summary.TotalDead;
         var selected = new List<DeadCodeEntry>();
 
-        foreach (var candidate in candidates)
+        foreach (var candidate in candidates.Skip(offset))
         {
             var trial = selected.Append(candidate).ToArray();
-            var rendered = RenderText(scan, trial, candidateCount - trial.Length);
+            var rendered = RenderText(scan, trial, offset, candidateCount, snapshotId, candidates.Count);
             if (Encoding.UTF8.GetByteCount(rendered) > ResponseBudgetBytes) break;
             selected.Add(candidate);
         }
 
-        var omitted = candidateCount - selected.Count;
-        var text = RenderText(scan, selected, omitted);
-        if (Encoding.UTF8.GetByteCount(text) > ResponseBudgetBytes || (candidateCount > 0 && selected.Count == 0))
+        var text = RenderText(scan, selected, offset, candidateCount, snapshotId, candidates.Count);
+        if (Encoding.UTF8.GetByteCount(text) > ResponseBudgetBytes || (offset < candidates.Count && selected.Count == 0))
         {
             return VerifyResponseFormatter.Error(
                 "RESPONSE_TOO_LARGE",
@@ -105,16 +118,15 @@ internal static class GetVerifyAdvisoriesTool
         return McpToolResults.Text(text);
     }
 
-    private static string RenderText(DeadCodeScanResult scan, IReadOnlyList<DeadCodeEntry> entries, int truncatedBy)
+    private static string RenderText(
+        DeadCodeScanResult scan,
+        IReadOnlyList<DeadCodeEntry> entries,
+        int offset,
+        int candidateCount,
+        Guid snapshotId,
+        int scannedCount)
     {
-        var summary = scan.Summary;
-        var status = summary.Undecidable > 0 || scan.IsTruncated ? "partial" : "complete";
-        var lines = new List<string>
-        {
-            $"status={status}; candidates={summary.TotalDead}; testOnly={scan.DeadSymbols.Count(entry => entry.Usage == "test_only")}; unreferenced={scan.DeadSymbols.Count(entry => entry.Usage == "unreferenced")}; apiProtected={summary.ApiProtected}; undecidable={summary.Undecidable}; shown={entries.Count}; truncatedBy={truncatedBy}",
-            "columns: line | symbol | symbolIdentifier | usage | confidence",
-        };
-        if (truncatedBy > 0) lines.Add("truncated: weitere Kandidaten werden wegen des 65.536-Byte-Limits nicht angezeigt.");
+        var lines = CreateHeader(scan, entries.Count, offset, candidateCount, snapshotId, scannedCount);
 
         string? currentProject = null;
         string? currentFile = null;
@@ -144,6 +156,33 @@ internal static class GetVerifyAdvisoriesTool
         }
 
         return string.Join('\n', lines);
+    }
+
+    private static List<string> CreateHeader(
+        DeadCodeScanResult scan,
+        int shown,
+        int offset,
+        int candidateCount,
+        Guid snapshotId,
+        int scannedCount)
+    {
+        var summary = scan.Summary;
+        var status = summary.Undecidable > 0 || scan.IsTruncated ? "partial" : "complete";
+        var end = offset + shown;
+        var truncatedBy = Math.Max(0, candidateCount - end);
+        var hasNext = end < scannedCount;
+        var listCompleteness = hasNext || status == "partial" ? "partial" : "complete";
+        var continuationToken = hasNext ? $"{snapshotId:N}:{end}" : "none";
+        var lines = new List<string>
+        {
+            $"status={status}; candidates={summary.TotalDead}; testOnly={scan.DeadSymbols.Count(entry => entry.Usage == "test_only")}; unreferenced={scan.DeadSymbols.Count(entry => entry.Usage == "unreferenced")}; apiProtected={summary.ApiProtected}; undecidable={summary.Undecidable}; shown={shown}; truncatedBy={truncatedBy}; offset={offset}; listCompleteness={listCompleteness}",
+            $"continuationToken={continuationToken}",
+            "columns: line | symbol | symbolIdentifier | usage | confidence",
+        };
+        if (truncatedBy > 0) lines.Add(hasNext
+            ? "truncated: weitere Kandidaten mit continuationToken abrufen."
+            : "truncated: der Scan selbst ist partiell; erneute Analyse erforderlich.");
+        return lines;
     }
 
     private static string Clean(string value) => value.Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ');

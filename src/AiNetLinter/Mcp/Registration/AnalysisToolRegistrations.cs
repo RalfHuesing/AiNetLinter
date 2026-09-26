@@ -51,7 +51,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string category, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string category, string? continuationToken = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -62,11 +62,11 @@ internal static class AnalysisToolRegistrations
                 if (!VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var targetError)) return VerifyResponseFormatter.Error(
                     targetError!.Code, targetError.Message, targetError.Recovery, "$.targetPath");
                 return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
-                    GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, ct));
+                    GetVerifyAdvisoriesTool.ExecuteAsync(lease.Server, ct, continuationToken));
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 GetVerifyAdvisoriesTool.ToolName,
-                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge; truncatedBy nennt Auslassungen. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
+                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Optional: continuationToken aus der vorherigen Seite unverändert übergeben; Folgeseiten verwenden denselben Scan-Snapshot (30 Minuten Leerlaufzeit). Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge. listCompleteness und truncatedBy nennen den Ausgabestatus. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
     }
 
     private static void AddVerify(

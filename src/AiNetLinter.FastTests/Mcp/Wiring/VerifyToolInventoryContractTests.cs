@@ -38,6 +38,7 @@ public sealed class VerifyToolInventoryContractTests
 
         var advisories = Assert.Single(tools.Where(pair => pair.Key == "get_verify_advisories")).Value.ProtocolTool;
         Assert.Contains("category", advisories.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("continuationToken", advisories.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("dead_code", advisories.Description, StringComparison.Ordinal);
         Assert.Contains("64 KiB", advisories.Description, StringComparison.Ordinal);
 

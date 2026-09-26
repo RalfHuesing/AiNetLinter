@@ -26,6 +26,63 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 public sealed class VerifyAdvisoryProjectorTests
 {
     [Fact]
+    public void GetVerifyAdvisories_ContinuationCoversSnapshotWithoutDuplicateCandidates()
+    {
+        var entries = Enumerable.Range(1, 2000).Select(index => new DeadCodeEntry(
+            Id: $"candidate-{index}", Kind: "method", ContainerType: "Service",
+            SymbolName: $"Unused{index}", File: "Service.cs", Line: index,
+            Column: 1, Accessibility: "private", Confidence: "high",
+            Reason: "static scan", LimitsApplies: [], ProjectName: "TestApp",
+            InternalSymbolIdentifier: $"M:TestApp.Service.Unused{index}")).ToArray();
+        var scan = new DeadCodeScanResult(entries,
+            new DeadCodeSummary(1, 2000, 2000, 2000, 0, new Dictionary<string, int>()),
+            [], new DeadCodeRecommendedNextAction("countercheck", "prüfen"), false);
+        var pages = new VerifyAdvisoryPageStore();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var handles = new HashSet<string>(StringComparer.Ordinal);
+        var result = pages.Start(scan);
+        var pageCount = 0;
+
+        while (true)
+        {
+            Assert.False(result.IsError == true);
+            var content = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+            Assert.True(Encoding.UTF8.GetByteCount(content) <= 65_536);
+            foreach (var row in content.Split('\n').Where(line => Regex.IsMatch(line, @"^\d+ \|", RegexOptions.CultureInvariant)))
+            {
+                var fields = row.Split(" | ");
+                Assert.True(seen.Add(fields[1]));
+                Assert.StartsWith("h:", fields[2], StringComparison.Ordinal);
+                Assert.True(handles.Add(fields[2]));
+            }
+            pageCount++;
+            var token = content.Split('\n').Single(line => line.StartsWith("continuationToken=", StringComparison.Ordinal))["continuationToken=".Length..];
+            if (token == "none")
+            {
+                Assert.Contains("listCompleteness=complete", content, StringComparison.Ordinal);
+                break;
+            }
+            Assert.Contains("listCompleteness=partial", content, StringComparison.Ordinal);
+            if (pageCount == 1) entries[1999] = entries[0];
+            result = pages.Continue(token);
+        }
+
+        Assert.True(pageCount > 1);
+        Assert.Equal(2000, seen.Count);
+        Assert.Equal(2000, handles.Count);
+    }
+
+    [Fact]
+    public void GetVerifyAdvisories_UnknownContinuationTokenReturnsExplicitError()
+    {
+        var result = new VerifyAdvisoryPageStore().Continue("bad-token");
+
+        Assert.True(result.IsError);
+        var content = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_CONTINUATION_TOKEN", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GetVerifyAdvisories_EmptyScanReturnsContentOnlyWithoutClaimingClean()
     {
         var scan = new DeadCodeScanResult(
