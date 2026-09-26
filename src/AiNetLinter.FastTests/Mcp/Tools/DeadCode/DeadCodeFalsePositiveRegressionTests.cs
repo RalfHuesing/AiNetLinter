@@ -179,6 +179,42 @@ public sealed class DeadCodeFalsePositiveRegressionTests
     }
 
     [Fact]
+    public async Task ScanAsync_ReflectionDiscoveredClass_IsNotDead()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Program.cs", """
+            namespace Product;
+            public interface IPlugin
+            {
+                void Run();
+            }
+
+            public sealed class HiddenPlugin : IPlugin
+            {
+                public void Run() { }
+            }
+
+            public static class Program
+            {
+                public static void Main()
+                {
+                    foreach (var type in typeof(IPlugin).Assembly.GetTypes())
+                    {
+                        if (type.IsClass && typeof(IPlugin).IsAssignableFrom(type))
+                            ((IPlugin)System.Activator.CreateInstance(type)!).Run();
+                    }
+                }
+            }
+            """)], OutputKind: Microsoft.CodeAnalysis.OutputKind.ConsoleApplication,
+                VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Class);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry =>
+            entry.Kind == "class" && entry.SymbolName == "HiddenPlugin");
+    }
+
+    [Fact]
     public async Task ScanAsync_CompilerProvenUnreachableStatement_IsDeadCode()
     {
         using var testSolution = CreateSolution(

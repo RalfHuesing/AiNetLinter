@@ -18,6 +18,31 @@ würde nur einzelne Fälle heilen und neue dynamische Mapper weiter übersehen.
 Für das gewünschte Präzisionsziel muss die Menge der Meldungen kleiner
 werden, auch wenn dadurch wirklich toter Member-Code unerkannt bleibt.
 
+## Prüfung der vorgeschlagenen Typ-/Member-Grenze
+
+Die Beschränkung auf Klassen, Interfaces, Records und deren Funktionen
+verkleinert die Ergebnisliste, erhöht aber **nicht** die Beweiskraft eines
+fehlenden Roslyn-Aufrufs. Der zusätzliche Rot-Test `ReflectionDiscoveredClass`
+enthält einen produktiven `Program.Main`, der alle Assembly-Typen enumeriert,
+konkrete Implementierungen von `IPlugin` per `Activator.CreateInstance`
+erzeugt und ausführt. `HiddenPlugin` wird trotzdem als tote Klasse gemeldet.
+Sein Typname kommt nur in seiner Deklaration vor. Dasselbe Grundproblem gilt
+für per Namen oder Attribut gefundene Interfaces, Records, Structs, Enums
+und Delegates sowie deren Methoden, Konstruktoren und Properties.
+
+Der öffentliche API-Fall ist anders: Bei `external_library` ist ein
+öffentliches Symbol wegen möglicher externer Consumer **kein sicherer
+Fund**. Das ist eine richtige Ausschlussregel. Bei `closed_solution` dürfen
+öffentliche Symbole grundsätzlich geprüft werden, aber „closed“ schließt
+Reflection, `dynamic`, Mapper oder Konfiguration **innerhalb** der Solution
+nicht aus. Auch `private` ist kein Sicherheitsbeweis, wie der `GetField`-Test
+zeigt. Eine universelle Regel „nur Typen und ihre Member“ kann daher unter
+dem Präzisionsziel null solche Dead-Code-Meldungen liefern. Wenn die
+Produktoberfläche genau auf diese Symbole begrenzt bleiben soll, ist eine
+leere Dead-Code-Liste ehrlicher als unsichere Kandidaten. Ein optionales
+Werkzeug für **fehlende statische Referenzen** kann die Hinweise weiterhin
+bereitstellen, mit einem anderen Namen und Vertrag.
+
 ## Verbindliche Produktentscheidung für die nächste Implementierung
 
 1. **Keine symbolweiten Dead-Code-Advisories aus bloß fehlenden Referenzen.**
@@ -82,10 +107,10 @@ positive Nutzungskanten und für ein separates Referenzanalysewerkzeug.
 
 `src/AiNetLinter.FastTests/Mcp/Tools/DeadCode/DeadCodeFalsePositiveRegressionTests.cs`
 enthält kleine Roslyn-Solutions ohne Abhängigkeit vom fremden Repository.
-Der gefilterte FastTests-Lauf bestätigte sechs Fehlmeldungen und eine
-fehlende Meldung für den engen, beweisbaren Bereich:
+Die Tests belegen sieben Fehlmeldungen und eine fehlende Meldung für den
+engen, beweisbaren Bereich:
 
-| Test | Produktive Nutzung ohne direkte Referenz auf den gemeldeten Member |
+| Test | Erwartung und aktueller Fehler |
 | --- | --- |
 | `ProductionEntryPointUsesMemberUnderTestPath_IsProductionUse` | `Program.Main` ruft Code unter `Features/Test` auf; das Feld wird dort gelesen. |
 | `MetadataOverrideUsedByFramework_IsNotDead` | `Stream.CopyTo` ruft das konkrete `Read`-Override. |
@@ -93,18 +118,19 @@ fehlende Meldung für den engen, beweisbaren Bereich:
 | `RecordKeyEquality_UsesPositionalProperty` | `Dictionary<Key, int>` nutzt `Equals`/`GetHashCode` des Records. |
 | `GenericReflectionMapper_UsesPropertiesWithoutSymbolReferences` | Generischer Mapper enumeriert Properties mit `GetProperties()`; kein Membername steht am Aufruf. |
 | `PrivateFieldReadThroughReflection_IsNotDead` | `GetField` liest ein privates Feld; der Scanner meldet es sogar mit `confidence=high`. |
+| `ReflectionDiscoveredClass_IsNotDead` | `Program.Main` enumeriert Assembly-Typen und aktiviert `HiddenPlugin` über sein Interface; der Scanner meldet die Klasse als `unreferenced`. |
 | `CompilerProvenUnreachableStatement_IsDeadCode` | Die Compilation meldet `CS0162` für eine Anweisung nach `return`; der Scanner gibt dafür noch keinen Dead-Code-Eintrag aus. |
 
 Der vorherige Test zu `test_only` wurde entfernt: Er fixierte die heutige
 Member-Ausgabe, die nach der obigen Entscheidung gerade entfallen soll.
 Nach der letzten Teständerung war `dotnet build AiNetLinter.slnx`
 warnungsfrei; inkrementelles `verify` bestand mit Score 10.0 und 0
-Verstößen. Der gefilterte FastTests-Lauf endete mit **7 fehlgeschlagenen,
-0 erfolgreichen Tests**. Das Abschluss-`verify(scope: solution)` bestand
-mit Score 10.0 und 0 Verstößen; es zeigte dabei 468 bestehende
-Dead-Code-Kandidaten in AiNetLinter selbst. Der vollständige FastTests-Lauf
-endete mit **7 fehlgeschlagenen und 2771 erfolgreichen Tests**; alle sieben
-Fehler stammen aus der neuen Reproduktionsdatei. Die roten Tests sind als
+Verstößen. Der neue gezielte Test schlug wie erwartet fehl: `HiddenPlugin`
+wurde als `unreferenced` gemeldet. Der vollständige FastTests-Lauf endete
+mit **8 fehlgeschlagenen und 2771 erfolgreichen Tests**; alle acht Fehler
+stammen aus der Reproduktionsdatei. Das Abschluss-`verify(scope: solution)`
+bestand mit Score 10.0 und 0 Verstößen und zeigte 468 bestehende
+Dead-Code-Kandidaten in AiNetLinter selbst. Die roten Tests sind als
 Reproduktion für die nächste Implementierung vorgesehen; Produktionslogik
 wurde in diesem Schritt nicht geändert.
 
@@ -112,7 +138,7 @@ wurde in diesem Schritt nicht geändert.
 
 Als nächstes einen Gegenfall mit erreichbarem Code zum `CS0162`-Rot-Test
 ergänzen. Danach die Dead-Code-Ausgabe auf diesen beweisbaren Scope begrenzen
-und die sechs False-Positive-Tests grün machen. Bestehende Tests, die `low`-Advisories für
+und die sieben False-Positive-Tests grün machen. Bestehende Tests, die `low`-Advisories für
 Serializer/Callbacks oder `test_only`-Member erwarten, müssen an den neuen
 Vertrag angepasst werden; sie dokumentieren den jetzigen Zustand, keinen
 Beweis für toten Code.
