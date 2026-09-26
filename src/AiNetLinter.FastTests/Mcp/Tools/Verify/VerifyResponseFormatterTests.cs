@@ -86,7 +86,7 @@ public sealed class VerifyResponseFormatterTests
     }
 
     [Fact]
-    public void Success_AdvisoryUsesOneDirectReferenceWithoutRepeatedUncertaintyMetadata()
+    public void Success_DeadCodeUsesOnlyACompactSummaryAndRetrievalHint()
     {
         var advisory = new VerifyAdvisoryProjection(
             1,
@@ -105,16 +105,19 @@ public sealed class VerifyResponseFormatterTests
                 Usage: "test_only",
                 TestReferences: 2)],
             "complete",
-            new VerifyDeadCodeSummary("complete", 1, 1, 0, 0, 0));
+            new VerifyDeadCodeSummary("complete", 1, Coverage: new DeadCodeScanCoverage("solution", 0, 0, 0, "finished", true)));
 
         var text = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), advisory)));
 
-        Assert.Contains("advisories: count=1; completeness=complete; review_required; static_evidence", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("advisories: count=1", text, StringComparison.Ordinal);
         Assert.Contains("verdict: pass\ncompleteness: complete\nscore: 10.0\nviolationCount: 0", text, StringComparison.Ordinal);
-        Assert.Contains("deadCode: status=complete; candidates=1; testOnly=1; unreferenced=0; apiProtected=0; undecidable=0; shown=1; truncatedBy=0; next=review_now", text, StringComparison.Ordinal);
-        Assert.Contains("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.", text, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=complete; candidates=1; scanCompleteness=complete; requestedScope=solution; processedDocuments=0; stopReason=finished", text, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code)", text, StringComparison.Ordinal);
         Assert.DoesNotContain("deadCodeAdvisoryHint:", text, StringComparison.Ordinal);
-        Assert.Contains("- category=dead_code; symbolIdentifier=h:abc; ref=src/Probe.cs:42; usage=test_only; reason=Keine produktiven statischen Referenzen; 2 Testreferenz(en) gefunden.; testReferences=2; countercheck=Reflection", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("- category=dead_code", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("test_only", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("confidence", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("next=review_now", text, StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
         Assert.DoesNotContain("source:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("handoffId:", text, StringComparison.Ordinal);
@@ -125,25 +128,25 @@ public sealed class VerifyResponseFormatterTests
     public void Success_EvidenceSummaryNamesGateViolationsAndAllAdvisoryCategories()
     {
         var advisory = new VerifyAdvisoryProjection(
-            2,
+            1,
             [
-                new VerifyEvidenceEntry("advisory_candidate", "dead_code", "advisory", "src/Probe.cs", 10, "Keine produktiven statischen Referenzen.", "h:dead"),
                 new VerifyEvidenceEntry("advisory_candidate", "magic_value", "advisory", "src/Probe.cs", 20, "Literal prüfen.", "src/Probe.cs:20"),
             ],
             "complete",
-            new VerifyDeadCodeSummary("complete", 1, 0, 1, 0, 0));
+            new VerifyDeadCodeSummary("complete", 1));
 
         var text = GetText(VerifyResponseFormatter.Success(CreateParameters(
             CreateScore(CreateViolation("src/Probe.cs", 5, "ProbeRule", "Regelverstoß.")), advisory)));
 
-        Assert.Contains("evidence: returned=3/3; truncation=none; population=gate_violations+all_advisories", text, StringComparison.Ordinal);
+        Assert.Contains("evidence: returned=2/2; truncation=none; population=gate_violations+all_advisories", text, StringComparison.Ordinal);
         Assert.Contains("deadCode: status=complete; candidates=1", text, StringComparison.Ordinal);
         Assert.Contains("category=magic_value", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("- category=dead_code", text, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
     }
 
     [Fact]
-    public void Success_RazorAdvisoryReasonRemainsVisibleWithinTheFixedBudgetWithoutChangingVerdict()
+    public void Success_DeadCodeDetailsStayOutOfTheCompactSummary()
     {
         const string razorReason = "Razor-Referenzen nicht entscheidbar: generiertes C# fehlt oder ist nicht auswertbar; Razor-Generierung/Projektladung gegenprüfen.";
         var advisory = new VerifyAdvisoryProjection(
@@ -161,12 +164,14 @@ public sealed class VerifyResponseFormatterTests
                 EvidenceBoundary: "statisch",
                 CounterIndicators: ["Razor-Generierung/Projektladung"])],
             "complete",
-            new VerifyDeadCodeSummary("complete", 1, 0, 1, 0, 0));
+            new VerifyDeadCodeSummary("complete", 1));
 
         var text = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), advisory)));
 
         Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
-        Assert.Contains("razorEvidence=unavailable", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Razor", text, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=complete; candidates=1", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("- category=dead_code", text, StringComparison.Ordinal);
         Assert.Contains("verdict: pass\ncompleteness: complete\nscore: 10.0\nviolationCount: 0", text, StringComparison.Ordinal);
     }
 
@@ -187,21 +192,45 @@ public sealed class VerifyResponseFormatterTests
                 TestReferences: index < 2 ? 1 : 0))
             .ToList();
         var advisory = new VerifyAdvisoryProjection(
-            25,
+            0,
             entries,
             "complete",
-            new VerifyDeadCodeSummary("complete", 25, 2, 23, 1, 0));
+            new VerifyDeadCodeSummary("complete", 25, Coverage: new DeadCodeScanCoverage("solution", 100, 0, 10, "finished", true)));
 
         var text = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), advisory)));
         var summary = text.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
-        var shown = int.Parse(summary.Split(';').Single(value => value.TrimStart().StartsWith("shown=", StringComparison.Ordinal)).Split('=')[1]);
-        var truncatedBy = int.Parse(summary.Split(';').Single(value => value.TrimStart().StartsWith("truncatedBy=", StringComparison.Ordinal)).Split('=')[1]);
-
-        Assert.Contains("candidates=25; testOnly=2; unreferenced=23; apiProtected=1; undecidable=0", summary, StringComparison.Ordinal);
-        Assert.Equal(25, shown + truncatedBy);
-        Assert.True(shown < entries.Count);
+        Assert.Contains("candidates=25", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("testOnly", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("undecidable", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("shown=", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("truncatedBy=", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("- category=dead_code", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("evidence:", text, StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
-        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken=none)", text, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code)", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Success_ZeroObservedCandidatesKeepTheirStatusAndUseTheVerifySnapshotToken()
+    {
+        var advisory = new VerifyAdvisoryProjection(
+            1,
+            [new VerifyEvidenceEntry("advisory_candidate", "magic_value", "advisory", "src/Probe.cs", 20, "Literal prüfen.", "src/Probe.cs:20")],
+            "complete",
+            new VerifyDeadCodeSummary(
+                "complete",
+                0,
+                Coverage: new DeadCodeScanCoverage("solution", 100, 0, 10, "finished", true),
+                ContinuationToken: "snapshot-token"));
+
+        var text = GetText(VerifyResponseFormatter.Success(CreateParameters(
+            CreateScore(CreateViolation("src/Probe.cs", 5, "ProbeRule", "Regelverstoß.")), advisory)));
+
+        Assert.Contains("score: 7.0\nviolationCount: 1", text, StringComparison.Ordinal);
+        Assert.Contains("evidence: returned=2/2; truncation=none; population=gate_violations+all_advisories", text, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=complete; candidates=0; scanCompleteness=complete", text, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code, continuationToken=snapshot-token)", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("clean", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -211,20 +240,22 @@ public sealed class VerifyResponseFormatterTests
             0,
             [],
             "partial",
-            new VerifyDeadCodeSummary("partial", 0, 0, 0, 0, 3));
+            new VerifyDeadCodeSummary("partial", 0, Coverage: new DeadCodeScanCoverage("solution", 0, 0, 0, "budget", false)));
         var partialText = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), partial)));
-        Assert.Contains("deadCode: status=partial; candidates=0; testOnly=0; unreferenced=0; apiProtected=0; undecidable=3; shown=0; truncatedBy=0; next=review_now", partialText, StringComparison.Ordinal);
-        Assert.DoesNotContain("deadCodeHint:", partialText, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=partial; candidates=0; scanCompleteness=partial", partialText, StringComparison.Ordinal);
+        Assert.Contains("stopReason=", partialText, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code)", partialText, StringComparison.Ordinal);
+        Assert.DoesNotContain("undecidable", partialText, StringComparison.Ordinal);
 
         var unavailable = new VerifyAdvisoryProjection(
             0,
             [],
             "unavailable",
-            new VerifyDeadCodeSummary("unavailable", null, null, null, null, null, "IOException"));
+            new VerifyDeadCodeSummary("unavailable", null, "IOException"));
         var unavailableText = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), unavailable)));
-        Assert.Contains("deadCode: status=unavailable; candidates=unknown; testOnly=unknown; unreferenced=unknown; apiProtected=unknown; undecidable=unknown; shown=0; truncatedBy=unknown; next=none", unavailableText, StringComparison.Ordinal);
-        Assert.Contains("deadCodeCause: IOException", unavailableText, StringComparison.Ordinal);
-        Assert.DoesNotContain("deadCodeHint:", unavailableText, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=unavailable; candidates=unknown; cause=IOException", unavailableText, StringComparison.Ordinal);
+        Assert.Contains("cause=IOException", unavailableText, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code)", unavailableText, StringComparison.Ordinal);
         Assert.Contains("verdict: pass", unavailableText, StringComparison.Ordinal);
     }
 

@@ -20,7 +20,7 @@ Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander 
   - Nicht: Semantic Kernel, MudBlazor oder andere Drittanbieterattribute fest einbauen.
   - Abnahme: Tests belegen beide Defaults, ein konfiguriertes `Microsoft.SemanticKernel.KernelFunctionAttribute`, die additive Wirkung und ein gleichnamiges fremdes Attribut ohne Schutz. Incremental Gate grün.
 
-- [ ] **4 — `verify` auf Dead-Code-Kurzmeldung begrenzen**
+- [x] **4 — `verify` auf Dead-Code-Kurzmeldung begrenzen**
   - Intention: Das Quality-Gate auch bei vielen Kandidaten knapp und eindeutig halten.
   - Scope: Projektion/Formatter in `VerifyAdvisoryProjector` und `VerifyTool` so ändern, dass Dead Code nur Status, beobachtete Zahl, Abdeckung/Ursache und Abrufhinweis erhält. Keine Dead-Code-Einzelzeilen, `next=review_now`, Confidence- oder `test_only`-/`undecidable`-Zähler veröffentlichen. `evidence: returned=X/Y` zählt danach Gate-Verstöße und die weiterhin einzeln ausgegebenen anderen Advisories, keine Dead-Code-Kandidaten. Gate-Evidenz und andere Advisory-Kategorien einschließlich Budgetvorrang erhalten; relevante Formatter-FastTests und `Docs/mcp/tools.md` anpassen.
   - Nicht: Gate-Verdict, Score, `violationCount` oder andere Advisory-Kategorien fachlich ändern.

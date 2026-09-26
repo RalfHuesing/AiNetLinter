@@ -115,9 +115,9 @@ Bei Tools mit `includeReferences`: `false` beschränkt die Suche auf das Root; e
 
 `verify` ist ein Source-Linter-Gate; es führt keine Tests aus. Scope, Score und Verstoßzahl erst aus dem fertigen Ergebnis lesen. Ein unvollständiger Änderungskontext ist kein Nachweis für die ganze Solution; dazu `scope="solution"` verwenden.
 
-Dead-Code-Advisories ändern Verdict/Score/Verstoßzahl nicht. Standard: 10 Sekunden zusätzliches Scanbudget, bei explizitem Solution-Scan/neuem Advisory-Scan 60 Sekunden; maximal 20 Gruppen innerhalb von 8 KiB Standardcontent. `evidence: returned=X/Y` zählt Gate-Verstöße plus alle Advisory-Kategorien; für Dead-Code allein `deadCode.candidates`, `shown`, `truncatedBy` auswerten.
+Dead-Code-Advisories ändern Verdict/Score/Verstoßzahl nicht. `verify` gibt dafür nur `deadCode` mit Status, beobachteter Kandidatenzahl und Scanabdeckung oder Ursache aus. `deadCodeHint` nennt `get_verify_advisories(category=dead_code)`; wenn ein Verify-Snapshot vorliegt, enthält der Aufruf dessen `continuationToken`. Einzelne Dead-Code-Zeilen, Confidence, `test_only` und `undecidable` werden hier nicht ausgegeben. Standard: 10 Sekunden zusätzliches Scanbudget, bei explizitem Solution-Scan/neuem Advisory-Scan 60 Sekunden. `evidence: returned=X/Y` zählt Gate-Verstöße plus die einzeln ausgegebenen anderen Advisory-Kategorien; Dead-Code-Kandidaten zählen nicht dazu.
 
-`scanCompleteness` beschreibt Analyseabdeckung, `listCompleteness` nur gespeicherte Ausgabeseiten. Null Kandidaten bei partiellem Scan sind keine Entwarnung. `test_only`, `unreferenced`, `no_production_read` verlangen konkrete Gegenprüfung von Laufzeitbindung und externen Verträgen. [Nutzungsregeln und Grenzen](dead-code.md), [API-Policy und Budgets](../linter/configuration.md#dead-code-advisory).
+`scanCompleteness` beschreibt Analyseabdeckung, `listCompleteness` nur gespeicherte Ausgabeseiten. Null Kandidaten bei partiellem Scan sind keine Entwarnung. Der Detailabruf liefert Prüfkandidaten, die konkrete Gegenprüfung von Laufzeitbindung und externen Verträgen verlangen. [Nutzungsregeln und Grenzen](dead-code.md), [API-Policy und Budgets](../linter/configuration.md#dead-code-advisory).
 
 ## Populationen und Resources
 

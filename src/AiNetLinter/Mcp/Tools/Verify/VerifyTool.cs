@@ -364,7 +364,7 @@ internal static partial class VerifyResponseFormatter
         IReadOnlyList<VerifyEvidenceEntry> evidence,
         VerifyAdvisoryProjection advisory)
     {
-        AppendDeadCodeSummary(lines, evidence, advisory.DeadCode);
+        AppendDeadCodeSummary(lines, advisory.DeadCode);
         var advisories = evidence.Where(entry => entry.Kind == "advisory_candidate").ToList();
         if (advisories.Count == 0)
         {
@@ -375,36 +375,24 @@ internal static partial class VerifyResponseFormatter
         lines.Add($"advisories: count={advisories.Count}; completeness={advisory.Completeness}; review_required; static_evidence");
         foreach (var entry in advisories)
         {
-            if (entry.RuleOrCategory == "dead_code")
-            {
-                var razorStatus = entry.Reason.Contains("Razor-Referenzen nicht entscheidbar", StringComparison.Ordinal)
-                    ? " razorEvidence=unavailable;"
-                    : string.Empty;
-                lines.Add($"- category=dead_code; symbolIdentifier={entry.HandoffId}; ref={entry.SourcePath}:{entry.Line}; usage={entry.Usage}; reason={entry.Reason};{(entry.TestReferences is > 0 ? $" testReferences={entry.TestReferences};" : string.Empty)}{razorStatus} countercheck={string.Join(",", entry.CounterIndicators ?? [])}");
-            }
-            else
-            {
-                lines.Add($"- category={entry.RuleOrCategory}; ref={entry.HandoffId}; confidence={entry.Confidence}; reason={entry.Reason}");
-            }
+            lines.Add($"- category={entry.RuleOrCategory}; ref={entry.HandoffId}; confidence={entry.Confidence}; reason={entry.Reason}");
         }
     }
 
     private static void AppendDeadCodeSummary(
         List<string> lines,
-        IReadOnlyList<VerifyEvidenceEntry> evidence,
         VerifyDeadCodeSummary? summary)
     {
         if (summary is null) return;
-        var shown = evidence.Count(entry => entry.RuleOrCategory == "dead_code");
-        int? truncatedBy = summary.Candidates is int candidates ? Math.Max(0, candidates - shown) : null;
-        lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; testOnly={ToCount(summary.TestOnly)}; unreferenced={ToCount(summary.Unreferenced)}; apiProtected={ToCount(summary.ApiProtected)}; undecidable={ToCount(summary.Undecidable)}; shown={shown}; truncatedBy={ToCount(truncatedBy)}; next={(summary.Candidates is > 0 || summary.Undecidable is > 0 ? "review_now" : "none")}");
-        if (summary.UndecidableReasons is { Count: > 0 } reasons)
-            lines.Add($"deadCodeUncertain: {GetVerifyAdvisoriesTool.FormatReasons(reasons)}");
+        var cause = summary.Cause is null ? string.Empty : $"; cause={summary.Cause}";
         if (summary.Coverage is { } coverage)
-            lines.Add($"deadCodeScan: scanCompleteness={summary.Status}; requestedScope={coverage.RequestedScope}; processedDocuments={coverage.ProcessedDocuments}; openDocuments={coverage.OpenDocuments}; elapsedMs={coverage.ElapsedMilliseconds}; stopReason={coverage.StopReason}; changesBasis={coverage.ChangesBasis}; excludedKinds={coverage.ExcludedKinds}");
-        if (summary.Candidates is > 0) lines.Add("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.");
-        if (truncatedBy is > 0 || summary.Undecidable is > 0) lines.Add($"deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken={summary.ContinuationToken ?? "none"})");
-        if (summary.Cause is not null) lines.Add($"deadCodeCause: {summary.Cause}");
+            lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; scanCompleteness={summary.Status}; requestedScope={coverage.RequestedScope}; processedDocuments={coverage.ProcessedDocuments}; stopReason={coverage.StopReason}{cause}");
+        else
+            lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}{cause}");
+        var retrieval = summary.ContinuationToken is null
+            ? "get_verify_advisories(category=dead_code)"
+            : $"get_verify_advisories(category=dead_code, continuationToken={summary.ContinuationToken})";
+        lines.Add($"deadCodeHint: {retrieval}");
     }
 
     private static string ToCount(int? count) => count?.ToString(CultureInfo.InvariantCulture) ?? "unknown";

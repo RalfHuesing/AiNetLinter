@@ -50,9 +50,12 @@ internal static partial class VerifyResponseFormatter
             && score.TotalViolationCount == VerifyGateSummary.RequiredViolationCount
             ? VerifyVerdict.Pass
             : VerifyVerdict.Failed;
-        var candidates = gateEvidence.Concat(parameters.Advisory.Entries).ToList();
+        var otherAdvisories = parameters.Advisory.Entries
+            .Where(entry => entry.Kind != "advisory_candidate" || entry.RuleOrCategory != "dead_code")
+            .ToList();
+        var candidates = gateEvidence.Concat(otherAdvisories).ToList();
         var sourceTruncated = gateEvidence.Count < score.TotalViolationCount
-            || parameters.Advisory.Entries.Count < parameters.Advisory.TotalCount
+            || otherAdvisories.Count < parameters.Advisory.TotalCount
             || candidates.Count > VerifyTool.EvidenceLimit;
         var response = new VerifyResponse(
             verdict,

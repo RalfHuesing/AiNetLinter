@@ -207,18 +207,13 @@ public sealed class VerifyAdvisoryProjectorTests
         Assert.Equal("partial", result.Completeness);
         Assert.Equal("unavailable", result.DeadCode!.Coverage!.ChangesBasis);
         Assert.Equal(await CollectPerFileTotalAsync(testSolution.Solution, scopeFiles), result.TotalCount);
-        Assert.Contains(result.Entries, entry => entry.RuleOrCategory == "dead_code");
+        Assert.DoesNotContain(result.Entries, entry => entry.RuleOrCategory == "dead_code");
+        Assert.True(result.DeadCode.Candidates > 0);
         Assert.Contains(result.Entries, entry => entry.RuleOrCategory.StartsWith("magic_value:", StringComparison.Ordinal));
-        var deadCodeEntries = result.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToList();
-        var orderedEntries = result.Entries.ToList();
-        var lastDeadCodeIndex = orderedEntries.FindLastIndex(entry => entry.RuleOrCategory == "dead_code");
-        var firstMagicValueIndex = orderedEntries.FindIndex(entry => entry.RuleOrCategory.StartsWith("magic_value:", StringComparison.Ordinal));
-        Assert.True(lastDeadCodeIndex < firstMagicValueIndex);
-        Assert.Equal(deadCodeEntries.Count, deadCodeEntries.Select(entry => entry.HandoffId).Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]
-    public async Task CollectAsync_MultipleScopeFiles_PreservesThePerFileCandidatePopulation()
+    public async Task CollectAsync_MultipleScopeFiles_PreservesThePerFileAdvisoryPopulation()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\VerifyAdvisoryProjectorSemanticsTests.slnx",
@@ -242,7 +237,7 @@ public sealed class VerifyAdvisoryProjectorTests
     }
 
     [Fact]
-    public async Task CollectAsync_UnavailableRazorEvidence_ProjectsTheReasonAndLowConfidence()
+    public async Task CollectAsync_UnavailableRazorEvidenceKeepsOnlyTheCompactDeadCodeSummary()
     {
         using var tempDirectory = TestTempDirectory.Create("verify-razor-advisory-");
         tempDirectory.CreateFile("src/Foo.razor");
@@ -263,13 +258,9 @@ public sealed class VerifyAdvisoryProjectorTests
             CancellationToken.None,
             settings: new(Identity: CreateHandoffIdentity(testSolution.Solution)));
 
-        var razorEntries = result.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToList();
-        Assert.NotEmpty(razorEntries);
-        Assert.All(razorEntries, entry =>
-        {
-            Assert.Null(entry.Confidence);
-            Assert.DoesNotContain("Razor", entry.Reason, StringComparison.Ordinal);
-        });
+        Assert.DoesNotContain(result.Entries, entry => entry.RuleOrCategory == "dead_code");
+        Assert.True(result.DeadCode!.Candidates > 0);
+        Assert.NotNull(result.DeadCode.Coverage);
     }
 
     private static string ProbeSource(string typeName, string route) => $$"""
@@ -293,16 +284,6 @@ public sealed class VerifyAdvisoryProjectorTests
         foreach (var scopeFile in scopeFiles)
         {
             var fileScope = new HashSet<string>([scopeFile], StringComparer.OrdinalIgnoreCase);
-            var deadCode = await DeadCodeAdvisoryScanner.ScanAsync(
-                solution,
-                new DeadCodeAdvisoryOptions(
-                    Accessibility: DeadCodeAccessibilityFilter.All,
-                    Confidence: DeadCodeConfidenceFilter.Both,
-                    Kind: DeadCodeKindFilter.All,
-                    Mode: DeadCodeMode.Members,
-                    MaxResults: int.MaxValue,
-                    ScopeFiles: fileScope),
-                CancellationToken.None);
             var magicValues = await MagicValueAdvisoryScanner.ScanAsync(new MagicValueAdvisoryScannerParameters(
                 solution,
                 null,
@@ -316,7 +297,7 @@ public sealed class VerifyAdvisoryProjectorTests
                 ChangedOnly: false,
                 CancellationToken.None,
                 ScopeFiles: fileScope));
-            total += deadCode.Summary.TotalDead + magicValues.Payload!.Summary.Total;
+            total += magicValues.Payload!.Summary.Total;
         }
         return total;
     }
@@ -346,23 +327,8 @@ public sealed class VerifyAdvisoryProjectorTests
         var solution = await VerifyAdvisoryProjector.CollectAsync(testSolution.Solution, null, CancellationToken.None, settings: new(Identity: identity));
 
         Assert.Equal(changes.DeadCode?.Candidates, solution.DeadCode?.Candidates);
-        Assert.Equal(changes.DeadCode?.TestOnly, solution.DeadCode?.TestOnly);
         Assert.Equal("complete", solution.DeadCode?.Status);
-        var candidate = solution.Entries.First(entry => entry.RuleOrCategory == "dead_code");
-        Assert.StartsWith("h:", candidate.HandoffId, StringComparison.Ordinal);
-        var restored = HandoffHandleRegistry.Default.RestoreInternalHandoffForInput(candidate.HandoffId);
-        Assert.True(restored.IsSuccess);
-        Assert.StartsWith("i:0:", restored.Value, StringComparison.Ordinal);
-        var resolved = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
-            testSolution.Solution,
-            candidate.HandoffId,
-            CancellationToken.None,
-            identity);
-        Assert.NotNull(resolved.Symbol);
-        Assert.Null(resolved.Error);
-        Assert.Equal("unreferenced", candidate.Usage);
-        Assert.Equal(solution.Entries.Count(entry => entry.RuleOrCategory == "dead_code"),
-            solution.Entries.Where(entry => entry.RuleOrCategory == "dead_code").Select(entry => entry.HandoffId).Distinct(StringComparer.Ordinal).Count());
+        Assert.DoesNotContain(solution.Entries, entry => entry.RuleOrCategory == "dead_code");
     }
 
     [Fact]
@@ -418,23 +384,8 @@ public sealed class VerifyAdvisoryProjectorTests
             null,
             CancellationToken.None,
             settings: new(Identity: identity));
-        var candidates = result.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToList();
-
-        Assert.Equal(2, candidates.Count);
-        Assert.Equal(2, candidates.Select(entry => entry.HandoffId).Distinct(StringComparer.Ordinal).Count());
-        var resolvedAssemblies = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var candidate in candidates)
-        {
-            var resolved = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
-                testSolution.Solution,
-                candidate.HandoffId,
-                CancellationToken.None,
-                identity);
-            Assert.NotNull(resolved.Symbol);
-            Assert.Null(resolved.Error);
-            resolvedAssemblies.Add(resolved.Symbol!.ContainingAssembly.Name);
-        }
-        Assert.Equal(new[] { "First", "Second" }, resolvedAssemblies.OrderBy(name => name, StringComparer.Ordinal));
+        Assert.Equal(2, result.DeadCode!.Candidates);
+        Assert.DoesNotContain(result.Entries, entry => entry.RuleOrCategory == "dead_code");
     }
 
     private static AnalysisSymbolIdentity CreateHandoffIdentity(Microsoft.CodeAnalysis.Solution solution) =>

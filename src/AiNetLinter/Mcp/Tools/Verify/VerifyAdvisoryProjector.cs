@@ -27,20 +27,14 @@ internal sealed record VerifyAdvisoryProjection(
 internal sealed record VerifyDeadCodeSummary(
     string Status,
     int? Candidates,
-    int? TestOnly,
-    int? Unreferenced,
-    int? ApiProtected,
-    int? Undecidable,
     string? Cause = null,
     DeadCodeScanCoverage? Coverage = null,
-    string? ContinuationToken = null,
-    IReadOnlyDictionary<string, int>? UndecidableReasons = null);
+    string? ContinuationToken = null);
 
 internal static class VerifyAdvisoryProjector
 {
     private const string AdvisoryKind = "advisory_candidate";
     private const string AdvisorySeverity = "advisory";
-    private const string DeadCodeCategory = "dead_code";
     private const string MagicValueCategoryPrefix = "magic_value:";
     private const string MagicValueConfidence = "medium";
     private const int UnboundedCandidateLimit = int.MaxValue;
@@ -54,15 +48,14 @@ internal static class VerifyAdvisoryProjector
         var config = settings?.Config;
         var deadCode = await ScanDeadCodeAsync(solution, new(scopeFiles, config, settings?.Identity, settings?.SolutionBudget ?? scopeFiles is null), cancellationToken);
         var magicValues = await ScanMagicValuesAsync(solution, scopeFiles, cancellationToken);
-        var deadEntries = deadCode.Result?.DeadSymbols.Select(ToDeadCodeEvidence).ToList() ?? [];
         var deadSummary = BuildDeadCodeSummary(deadCode);
         var completeness = deadCode.Result is null ? "unavailable"
             : deadSummary.Status == "partial" || magicValues.Completeness != "complete" ? "partial"
             : "complete";
-        var entries = Rank(deadEntries.Take(Math.Clamp(config?.DeadCode.MaxCandidateGroups ?? 20, 1, 20)).Concat(magicValues.Entries));
+        var entries = Rank(magicValues.Entries);
 
         return new(
-            (deadCode.Result?.Summary.TotalDead ?? 0) + magicValues.Entries.Count,
+            magicValues.Entries.Count,
             entries,
             completeness,
             deadSummary, deadCode.Result, Math.Clamp(config?.DeadCode.MaxResponseBytes ?? 8192, 512, 8192));
@@ -132,50 +125,24 @@ internal static class VerifyAdvisoryProjector
     {
         if (attempt.Result is not { } result)
         {
-            return new("unavailable", null, null, null, null, null, attempt.Cause ?? "scan_failed");
+            return new("unavailable", null, attempt.Cause ?? "scan_failed");
         }
 
         return new(
             result.Summary.Status == "partial" ? "partial" : "complete",
             result.Summary.TotalDead,
-            result.DeadSymbols.Count(entry => entry.Usage == "test_only"),
-            result.DeadSymbols.Count(entry => entry.Usage == "unreferenced"),
-            result.Summary.ApiProtected,
-            result.Summary.Undecidable, Coverage: result.Summary.Coverage, UndecidableReasons: result.Summary.UndecidableReasons);
+            Coverage: result.Summary.Coverage);
     }
 
     private static IReadOnlyList<VerifyEvidenceEntry> Rank(IEnumerable<VerifyEvidenceEntry> entries) =>
         entries
-            .OrderBy(AdvisoryRank)
-            .ThenBy(entry => entry.ReviewPriority)
+            .OrderBy(entry => entry.ReviewPriority)
             .ThenBy(entry => entry.RuleOrCategory, StringComparer.Ordinal)
             .ThenBy(entry => entry.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Line)
             .ThenBy(entry => entry.HandoffId, StringComparer.Ordinal)
             .Take(VerifyTool.EvidenceLimit)
             .ToList();
-
-    private static int AdvisoryRank(VerifyEvidenceEntry entry) => entry.RuleOrCategory == DeadCodeCategory
-        ? 0
-        : 2;
-
-    private static VerifyEvidenceEntry ToDeadCodeEvidence(DeadCodeEntry entry) => new(
-        AdvisoryKind,
-        DeadCodeCategory,
-        AdvisorySeverity,
-        entry.File,
-        entry.Line,
-        entry.Reason,
-        entry.InternalSymbolIdentifier is null
-            ? string.Empty
-            : HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(entry.InternalSymbolIdentifier),
-        RequiresAgentJudgment: true,
-        Confidence: null,
-        EvidenceBoundary: entry.EvidenceBoundary,
-        CounterIndicators: entry.Countercheck,
-        Usage: entry.Usage,
-        TestReferences: entry.TestReferences,
-        ReviewPriority: entry.Priority);
 
     private static VerifyEvidenceEntry ToMagicValueEvidence(MagicValueEntry entry) => new(
         AdvisoryKind,
