@@ -20,14 +20,28 @@ internal static class DeadCodeFilters
     internal static bool MatchesKindFilter(ISymbol symbol, DeadCodeKindFilter kindFilter)
     {
         if (kindFilter == DeadCodeKindFilter.All)
-            return symbol is INamedTypeSymbol || symbol is IMethodSymbol { MethodKind: MethodKind.Ordinary };
+            return symbol is INamedTypeSymbol || symbol is IMethodSymbol { MethodKind: MethodKind.Ordinary } method && !IsContractMethod(method);
 
         return symbol switch
         {
             INamedTypeSymbol named => MatchesNamedTypeKind(named, kindFilter),
-            IMethodSymbol { MethodKind: MethodKind.Ordinary } => kindFilter is DeadCodeKindFilter.Method,
+            IMethodSymbol { MethodKind: MethodKind.Ordinary } method => kindFilter is DeadCodeKindFilter.Method && !IsContractMethod(method),
             _ => false
         };
+    }
+
+    private static bool IsContractMethod(IMethodSymbol method)
+    {
+        if (method.ContainingType.TypeKind == TypeKind.Interface
+            || method.IsAbstract
+            || method.IsOverride
+            || method.ExplicitInterfaceImplementations.Length > 0)
+            return true;
+
+        return method.ContainingType.AllInterfaces
+            .SelectMany(contract => contract.GetMembers().OfType<IMethodSymbol>())
+            .Any(contract => SymbolEqualityComparer.Default.Equals(
+                method.ContainingType.FindImplementationForInterfaceMember(contract), method));
     }
 
     private static bool MatchesNamedTypeKind(INamedTypeSymbol symbol, DeadCodeKindFilter kindFilter)

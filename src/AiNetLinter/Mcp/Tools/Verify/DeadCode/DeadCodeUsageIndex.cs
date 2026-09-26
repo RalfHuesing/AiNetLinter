@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
@@ -58,20 +59,38 @@ internal sealed class DeadCodeUsageIndex
         foreach (var name in source.Root.DescendantNodes().OfType<SimpleNameSyntax>())
         {
             ct.ThrowIfCancellationRequested();
-            var symbol = source.Model.GetSymbolInfo(name, ct).Symbol;
-            if (symbol is IMethodSymbol { ReducedFrom: { } reduced }) symbol = reduced;
-            if (symbol is not (INamedTypeSymbol or IMethodSymbol or IPropertySymbol or IFieldSymbol)) continue;
-            var owner = source.Model.GetEnclosingSymbol(name.SpanStart, ct);
-            var ownerType = owner as INamedTypeSymbol ?? owner?.ContainingType;
-            var write = IsWrite(name);
-            Add(symbol, source.Role, ownerType, write);
-            if (symbol.ContainingType is { } type && !SymbolEqualityComparer.Default.Equals(type, ownerType))
-                Add(type, source.Role, ownerType, false);
+            IndexNameReference(source, name, ct);
         }
         foreach (var creation in source.Root.DescendantNodes().OfType<BaseObjectCreationExpressionSyntax>())
             if (source.Model.GetSymbolInfo(creation, ct).Symbol is IMethodSymbol constructor)
                 Add(constructor, source.Role);
         IndexTypeArguments(source, ct);
+    }
+
+    private void IndexNameReference(DeadCodeUsageDocument source, SimpleNameSyntax name, CancellationToken ct)
+    {
+        var symbol = GetReferencedSymbol(source, name, ct);
+        if (symbol is null) return;
+        if (symbol is IMethodSymbol { ReducedFrom: { } reduced }) symbol = reduced;
+        if (symbol is not (INamedTypeSymbol or IMethodSymbol or IPropertySymbol or IFieldSymbol)) return;
+        var owner = source.Model.GetEnclosingSymbol(name.SpanStart, ct);
+        var ownerType = owner as INamedTypeSymbol ?? owner?.ContainingType;
+        Add(symbol, source.Role, ownerType, IsWrite(name));
+        if (symbol.ContainingType is { } type && !SymbolEqualityComparer.Default.Equals(type, ownerType))
+            Add(type, source.Role, ownerType, false);
+    }
+
+    private ISymbol? GetReferencedSymbol(DeadCodeUsageDocument source, SimpleNameSyntax name, CancellationToken ct)
+    {
+        var symbolInfo = source.Model.GetSymbolInfo(name, ct);
+        var symbol = symbolInfo.Symbol;
+        if (symbol is null && source.Model.GetOperation(name, ct) is IMethodReferenceOperation methodReference)
+            symbol = methodReference.Method;
+        if (symbol is not null || symbolInfo.CandidateReason == CandidateReason.None) return symbol;
+
+        foreach (var candidate in symbolInfo.CandidateSymbols.OfType<IMethodSymbol>())
+            MarkUnknown(candidate, "ambiguous_method_group_binding");
+        return null;
     }
 
     private void IndexUnknownDeclarations(DeadCodeUsageDocument source, CancellationToken ct)

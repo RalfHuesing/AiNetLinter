@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 using AiNetLinter.TestKit;
+using Microsoft.CodeAnalysis;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
@@ -11,6 +12,121 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 [Trait("Category", "Component")]
 public sealed class DeadCodeFalsePositiveRegressionTests
 {
+    [Fact]
+    public async Task ScanAsync_MapPostMethodGroup_IsNotDeadCode()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [
+                ("Endpoints.cs", """
+                using Microsoft.AspNetCore.Builder;
+                using Microsoft.AspNetCore.Http;
+                using Microsoft.AspNetCore.Routing;
+                public static class Endpoints
+                {
+                    public static IResult AuthJwtSigningDisabled() => Results.Ok();
+                    public static void Register(IEndpointRouteBuilder routes) =>
+                        routes.MapPost("/auth", AuthJwtSigningDisabled);
+                    public static void UnreferencedMethod() { }
+                }
+                """)], AdditionalReferences: [
+                    MetadataReference.CreateFromFile(typeof(Microsoft.AspNetCore.Builder.WebApplication).Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder).Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(Microsoft.AspNetCore.Http.IResult).Assembly.Location),
+                    MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location)
+                ], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "AuthJwtSigningDisabled");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnreferencedMethod");
+    }
+
+    [Fact]
+    public async Task ScanAsync_DelegateMethodGroup_ProtectsOnlyResolvedOverload()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Handlers.cs", """
+                using System;
+                public static class Handlers
+                {
+                    public static void Handle(int value) { }
+                    public static void Handle(string value) { }
+                    public static void Register()
+                    {
+                        Action<int> callback = Handle;
+                    }
+                }
+                """)], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Id == "Handlers.Handle(int)");
+        Assert.Contains(result.DeadSymbols, entry => entry.Id == "Handlers.Handle(string)");
+    }
+
+    [Fact]
+    public async Task ScanAsync_AmbiguousDelegateMethodGroup_DoesNotReportCandidateOverloads()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Handlers.cs", """
+                using System;
+                public static class Handlers
+                {
+                    public static void Handle(int value) { }
+                    public static void Handle(string value) { }
+                    public static void Register() { Delegate callback = Handle; }
+                }
+                """)], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Id.StartsWith("Handlers.Handle(", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ScanAsync_InterfaceSlotsAndOverrides_AreNotIndividualCandidates()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Contracts.cs", """
+                public interface IContract { void Implicit(); void Explicit(); }
+                public sealed class Contract : IContract
+                {
+                    public void Implicit() { }
+                    void IContract.Explicit() { }
+                }
+                public abstract class Base { public abstract void Override(); }
+                public sealed class Derived : Base { public override void Override() { } }
+                public sealed class Ordinary { public void Unreferenced() { } }
+                """)], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Implicit" or "Explicit" or "Override");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Unreferenced");
+    }
+
+    [Fact]
+    public async Task ScanAsync_JsonConverterOverrides_AreNotIndividualCandidates()
+    {
+        using var testSolution = CreateSolution(
+            new ProjectSpec("Product", [("Converter.cs", """
+                using System.Text.Json;
+                using System.Text.Json.Serialization;
+                public sealed class StringConverter : JsonConverter<string>
+                {
+                    public override string? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options) => reader.GetString();
+                    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) => writer.WriteStringValue(value);
+                }
+                """)], AdditionalReferences: [
+                    MetadataReference.CreateFromFile(typeof(System.Text.Json.JsonSerializer).Assembly.Location),
+                    MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("System.Runtime").Location)
+                ], VirtualProjectDirectory: "src/Product"));
+
+        var result = await ScanAsync(testSolution, DeadCodeKindFilter.Method);
+
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "StringConverter" && entry.SymbolName is "Read" or "Write");
+    }
+
     [Fact]
     public async Task ScanAsync_ProductionEntryPointUsesMemberUnderTestPath_IsProductionUse()
     {

@@ -8,7 +8,7 @@ Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander 
   - Nicht: Feld-/Property-Leserkennung verbessern, Testprojekt-Deklarationen melden oder Ausgabeformate bereits umstellen.
   - Abnahme: Tests belegen einen referenzlosen Typ und eine tote Überladung als Treffer; Tests.Support, nur aus Tests referenzierter Produktionscode, Wire-Properties, Konstanten und private Felder fehlen. Partielle Referenzabdeckung erzeugt keinen sicheren Negativbefund. Incremental Gate grün.
 
-- [ ] **2 — Methodengruppen und Kontraktmethoden richtig behandeln**
+- [x] **2 — Methodengruppen und Kontraktmethoden richtig behandeln**
   - Intention: Statisch gebundene Einstiege nicht für tot erklären und gefährliche Einzelhinweise zu Verträgen vermeiden.
   - Scope: Semantische Referenzerfassung in `DeadCodeUsageIndex` für aufgelöste Methodengruppen einschließlich Delegate-Konvertierung und Überladungen korrigieren. Interface-Member, implizite und explizite Implementierungen sowie Overrides aus der Einzelmethodenliste ausschließen. Benötigte konservative Schutzsignale aus `DeadCodeIndirectUsage` und verwandten Klassen für Typen/Methoden erhalten.
   - Nicht: `MapGet`-/`MapPost`-Namenslisten, Framework-Sonderfälle oder eine allgemeine Interprocedural-Analyse hinzufügen.
