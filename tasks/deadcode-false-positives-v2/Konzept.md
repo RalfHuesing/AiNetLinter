@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Dead-Code-Advisories mit kleinem, prüfbarem Signal
@@ -36,7 +36,3 @@ Der aktuelle Dead-Code-MCP-Vertrag veröffentlicht keine Confidence-Stufen. `hig
 - Isolierte xUnit-v3-Regressionen reproduzieren zuerst die belegten Fehlalarme. Danach belegen sie: lebendige Methodengruppen (`AuthJwtSigningDisabled`/`MapPost`), `JsonConverter.Read`/`Write`-Overrides, Interface-Slots, `JSInvokable` und konfiguriertes `KernelFunction` fehlen; ein wirklich unreferenzierter Typ und eine unreferenzierte Überladung bleiben; Testreferenzen und ungelesene Wire-Properties erscheinen nicht.
 - Vertragstests prüfen die reine Dead-Code-Kurzmeldung in `verify`, unveränderte Gate-Daten, Snapshot-Fortsetzung samt `h:`-IDs und Pagination sowie die ausdrückliche Teilabdeckung bei Zeitablauf. Ein frischer Detailabruf nach einem vollständigen Verify-Solution-Scan darf nicht erneut 60 Sekunden arbeiten und leer als scheinbar sauber enden.
 - Der große Planner-Snapshot wird lesend gegen die neue Fassung geprüft: Belegte unreferenzierte Methoden und Typen ohne Kontraktbindung wie `SqlDateTimeMapping` bleiben; die belegten Fehlalarmklassen verschwinden. Die Zahl ist eine Messgröße, kein starres Ziel. Build, MCP-Verify und Tests folgen den verbindlichen Repo-Gates erst während der späteren Umsetzung.
-
-## Arbeitsgedächtnis (nur Draft)
-
-Empfehlung zur Freigabe: den eng gefassten Scanner behalten. Ein vollständiges Streichen würde die belegten unreferenzierten Methoden und Typen verlieren. Die alternative Aufnahme privater Felder brächte vor allem `_persistence` zurück, erhöht aber Scope und Unsicherheit der Member-Analyse. Vor `status: ready` ist die ausdrückliche Freigabe dieses Scopes erforderlich.
