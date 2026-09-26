@@ -36,6 +36,7 @@ public sealed class DeadCodeAdvisoryScannerTests
                 public void DoWork() => System.Console.WriteLine("work");
                 private void UnusedHelper() => System.Console.WriteLine("dead");
             }
+            public sealed class Consumer { public void Run(Service service) => service.DoWork(); }
             """));
 
         var args = new DeadCodeAdvisoryOptions(
@@ -43,7 +44,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
-        var dead = Assert.Single(result.DeadSymbols);
+        var dead = Assert.Single(result.DeadSymbols, symbol => symbol.SymbolName == "UnusedHelper");
         Assert.Equal("UnusedHelper", dead.SymbolName);
         Assert.Equal("method", dead.Kind);
         Assert.Equal("private", dead.Accessibility);
@@ -59,6 +60,7 @@ public sealed class DeadCodeAdvisoryScannerTests
                 public void DoWork() => UsedHelper();
                 private void UsedHelper() => System.Console.WriteLine("used");
             }
+            public sealed class Consumer { public void Run(Service service) => service.DoWork(); }
             """));
 
         var args = new DeadCodeAdvisoryOptions(
@@ -66,7 +68,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
-        Assert.Empty(result.DeadSymbols);
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.ContainerType == "Service" && symbol.SymbolName == "UsedHelper");
     }
 
     [Fact]
@@ -84,6 +86,7 @@ public sealed class DeadCodeAdvisoryScannerTests
 
                 private void UnusedHelper() {}
             }
+            public sealed class Consumer { public void Run(Service service) { } }
             """));
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
@@ -198,7 +201,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
-    public async Task ScanAsync_TopDownContainerPruning_MarksContainerAndPrunesInner()
+    public async Task ScanAsync_UnreferencedTypeIsGroupedOnceAndPrunesInner()
     {
         using var testSolution = CreateSolution(
             ("Container.cs", """
@@ -220,12 +223,12 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
-        Assert.Equal("DeadNested", dead.SymbolName);
+        Assert.Equal("PublicOwner", dead.SymbolName);
         Assert.Equal("class", dead.Kind);
     }
 
     [Fact]
-    public async Task ScanAsync_FilterAccessibility_ReturnsOnlyRequestedAccessibility()
+    public async Task ScanAsync_UnreferencedTypeGroupsItsMethods()
     {
         using var testSolution = CreateSolution(
             ("Sample.cs", """
@@ -243,11 +246,12 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
-        Assert.Equal("DeadPrivate", dead.SymbolName);
+        Assert.Equal("Sample", dead.SymbolName);
+        Assert.Equal("class", dead.Kind);
     }
 
     [Fact]
-    public async Task ScanAsync_ModeLocals_DoesNotCollectDataMemberCandidates()
+    public async Task ScanAsync_DeadTypeDoesNotProduceDataMemberCandidates()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -263,11 +267,12 @@ public sealed class DeadCodeAdvisoryScannerTests
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
-        Assert.Empty(result.DeadSymbols);
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "Service" && symbol.Kind == "class");
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.Kind is "field" or "property" or "local");
     }
 
     [Fact]
-    public async Task ScanAsync_ModeBothKeepsOrdinaryMethodsAndOmitsFields()
+    public async Task ScanAsync_LiveTypeReportsOrdinaryMethodsAndOmitsFields()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -277,6 +282,7 @@ public sealed class DeadCodeAdvisoryScannerTests
                 private void DeadMethod() {}
                 public void DoWork() => System.Console.WriteLine("hi");
             }
+            public sealed class Consumer { public void Run(Service service) => service.DoWork(); }
             """));
 
         var args = new DeadCodeAdvisoryOptions(
@@ -285,21 +291,14 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, d => d.SymbolName == "_unusedValue");
-        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod");
+        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod" && d.Kind == "method");
     }
 
     [Fact]
     public async Task ScanAsync_WithMaxResults_TruncatesAndSetsFlag()
     {
         using var testSolution = CreateSolution(
-            ("Service.cs", """
-            public class Service
-            {
-                private void Dead1() {}
-                private void Dead2() {}
-                private void Dead3() {}
-            }
-            """));
+            ("Service.cs", "public sealed class ServiceOne {} public sealed class ServiceTwo {} public sealed class ServiceThree {}"));
 
         var args = new DeadCodeAdvisoryOptions(
             MaxResults: 2);
@@ -315,14 +314,14 @@ public sealed class DeadCodeAdvisoryScannerTests
     public async Task ScanAsync_NextActionsRecommendCountercheckOrContinueConsistently()
     {
         using var completeSolution = CreateSolution(
-            ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
+            ("Service.cs", "public class ServiceOne {} public sealed class ServiceTwo {}"));
         var complete = await DeadCodeAdvisoryScanner.ScanAsync(
             completeSolution.Solution,
             new DeadCodeAdvisoryOptions(),
             CancellationToken.None);
 
         using var truncatedSolution = CreateSolution(
-            ("Service.cs", "public class Service { private void DeadOne() { } private void DeadTwo() { } }"));
+            ("Service.cs", "public class ServiceOne {} public sealed class ServiceTwo {}"));
         var truncated = await DeadCodeAdvisoryScanner.ScanAsync(
             truncatedSolution.Solution,
             new DeadCodeAdvisoryOptions(MaxResults: 1),
@@ -337,7 +336,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     [Fact]
     public async Task ScanAsync_EmptyResult_PreservesExistingNextActions()
     {
-        using var testSolution = CreateSolution(("Service.cs", "public class Service { public void Work() { } }"));
+        using var testSolution = CreateSolution(("Service.cs", "// ainetlinter-disable DeadCode — wird anderweitig aktiviert\npublic class Service {\n    // ainetlinter-disable DeadCode — wird anderweitig aktiviert\n    public void Work() { }\n}"));
 
         var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
@@ -350,7 +349,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
-    public async Task ScanAsync_WithScopeFilter_LimitsToMatchingFiles()
+    public async Task ScanAsync_WithScopeFilter_LimitsToMatchingTypeCandidates()
     {
         using var testSolution = CreateSolution(
             ("Included.cs", """
@@ -372,7 +371,7 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
-        Assert.Equal("DeadIncluded", dead.SymbolName);
+        Assert.Equal("IncludedService", dead.SymbolName);
     }
 
     [Fact]
@@ -412,6 +411,7 @@ public sealed class DeadCodeAdvisoryScannerTests
                 private event System.Action? DeadEvent;
                 public void DoWork() => System.Console.WriteLine("hi");
             }
+            public sealed class Consumer { public void Run(Service service) => service.DoWork(); }
             """));
 
         var args = new DeadCodeAdvisoryOptions(

@@ -44,7 +44,7 @@ internal sealed class DeadCodeRazorUsage(DeadCodeUsageIndex index)
         {
             var pattern = "(?:@(?:on\\w+|bind-\\w+)\\s*=\\s*\"|@)" + Regex.Escape(member.Name) + @"\b";
             if (Regex.IsMatch(source.Text, pattern, RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
-                index.Add(member, unique ? source.Role : "unknown", type);
+                index.Add(member, unique ? source.Role : "unknown");
         }
     }
 

@@ -124,7 +124,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution);
 
-        Assert.Empty(result.DeadSymbols);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind is "field" or "property");
         Assert.False(result.DeletionClaim);
     }
 
@@ -155,7 +155,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
                 ),
             CancellationToken.None);
 
-        Assert.Empty(result.DeadSymbols);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind is "field" or "property");
         Assert.False(result.DeletionClaim);
     }
 
@@ -179,7 +179,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution);
 
-        Assert.Empty(result.DeadSymbols);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind == "property");
         Assert.False(result.DeletionClaim);
     }
 
@@ -201,10 +201,9 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution);
 
-        var callback = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Initialize");
+        var callback = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "CallbackTarget");
+        Assert.Equal("class", callback.Kind);
         Assert.Contains("publicApiSurface", callback.LimitsApplies);
-        Assert.Contains("reflection", callback.LimitsApplies);
-        Assert.Contains(callback.Countercheck!, check => check.Contains("Consumer", StringComparison.OrdinalIgnoreCase));
         Assert.False(result.DeletionClaim);
     }
 
@@ -232,7 +231,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
     }
 
     [Fact]
-    public async Task ScanAsync_DynamicAndStringBasedReflectionRemainAdvisoryCandidatesWithCounterchecks()
+    public async Task ScanAsync_DynamicAndStringBasedReflectionDoNotCreateMemberCandidates()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("TestApp", [("Targets.cs", """
@@ -259,15 +258,10 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution);
 
-        var dynamicCandidate = Assert.Single(result.DeadSymbols, entry =>
-            entry.ContainerType == "DynamicTarget" && entry.SymbolName == "Dispatch");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "DynamicTarget" && entry.Kind == "class");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Dispatch" or "Invoke");
         Assert.DoesNotContain(result.DeadSymbols, entry =>
-            entry.ContainerType == "ReflectedTarget" && entry.SymbolName == "Invoke");
-
-        Assert.Contains("reflection", dynamicCandidate.LimitsApplies);
-        Assert.Contains(dynamicCandidate.Countercheck!, item => item.Equals("Dynamic", StringComparison.OrdinalIgnoreCase));
-Assert.Contains("statische Referenzsuche", dynamicCandidate.EvidenceBoundary, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Reflection", result.RecommendedNextAction.Reason, StringComparison.OrdinalIgnoreCase);
+            entry.SymbolName == "ReflectedTarget");
         Assert.False(result.DeletionClaim);
     }
 

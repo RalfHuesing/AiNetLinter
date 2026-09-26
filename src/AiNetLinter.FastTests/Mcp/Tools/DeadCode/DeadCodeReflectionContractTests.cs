@@ -33,7 +33,7 @@ public sealed class DeadCodeReflectionContractTests
     }
 
     [Fact]
-    public async Task AttributeFilteredReflectionKeepsUnselectedProperty()
+    public async Task AttributeFilteredReflectionDoesNotCreatePropertyCandidates()
     {
         using var fixture = Create("""
             using System;
@@ -49,11 +49,11 @@ public sealed class DeadCodeReflectionContractTests
             }
             """);
         var result = await Scan(fixture);
-        Assert.Empty(result.DeadSymbols);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind == "property");
     }
 
     [Fact]
-    public async Task DynamicReflectionFilterIsBoundedUncertainty()
+    public async Task DynamicReflectionFilterDoesNotCreateDataMemberCandidates()
     {
         using var fixture = Create("""
             public sealed class Row { public int Value { get; set; } }
@@ -69,8 +69,9 @@ public sealed class DeadCodeReflectionContractTests
             }
             """);
         var result = await Scan(fixture);
-        Assert.Empty(result.DeadSymbols);
-}
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind is "field" or "property");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "Row");
+    }
 
     private static RoslynTestSolution Create(string source) =>
         RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\Reflection.slnx",

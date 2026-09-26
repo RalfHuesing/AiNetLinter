@@ -37,15 +37,16 @@ public sealed class DeadCodeBoundaryTests
     }
 
     [Fact]
-    public async Task PartialTypeKeepsUnreferencedMemberFromSecondDeclaration()
+    public async Task PartialTypeIsGroupedOnceAcrossDeclarations()
     {
         using var fixture = RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\Partial.slnx",
             new ProjectSpec("Host", [("One.cs", "public partial class Worker { public void First() { } }"),
                 ("Two.cs", "// A longer independent declaration must not be consumed while visiting the first syntax tree.\npublic partial class Worker { public void Second() { } }")]));
         var result = await DeadCodeAdvisoryScanner.ScanAsync(fixture.Solution,
             new());
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Second" && entry.File.EndsWith("Two.cs", System.StringComparison.Ordinal));
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "First");
+        var candidate = Assert.Single(result.DeadSymbols);
+        Assert.Equal("Worker", candidate.SymbolName);
+        Assert.Equal("class", candidate.Kind);
     }
 
     [Fact]

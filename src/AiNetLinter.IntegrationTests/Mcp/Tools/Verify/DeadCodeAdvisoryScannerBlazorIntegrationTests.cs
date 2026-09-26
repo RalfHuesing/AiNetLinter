@@ -85,7 +85,8 @@ public sealed class DeadCodeAdvisoryScannerBlazorIntegrationTests
             CancellationToken.None);
 
         Assert.True(scan.Summary.DocumentsInScope > 0);
-        Assert.Contains(scan.DeadSymbols, entry => entry.SymbolName == "UnboundHandler");
+        Assert.Contains(scan.DeadSymbols, entry => entry.SymbolName == "SiteView" && entry.Kind == "class");
+        Assert.DoesNotContain(scan.DeadSymbols, entry => entry.SymbolName == "UnboundHandler");
     }
 
     private static async Task AssertHasGeneratedReferenceAsync(

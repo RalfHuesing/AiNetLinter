@@ -39,8 +39,10 @@ public sealed class DeadCodeChangeScopeTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(current, new(
             ScopeFiles: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { caller.FilePath! },
             PreviousSolution: fixture.Solution));
-        var target = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Work");
+        var target = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "Service");
+        Assert.Equal("class", target.Kind);
         Assert.Equal(0, target.Priority);
+        Assert.Equal("Service", result.DeadSymbols[0].SymbolName);
         Assert.Equal("available", result.Summary.Coverage!.ChangesBasis);
     }
 }

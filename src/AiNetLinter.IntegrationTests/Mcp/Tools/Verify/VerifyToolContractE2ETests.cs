@@ -236,14 +236,14 @@ public sealed partial class VerifyToolContractE2ETests
             "deadCodeHint:",
             "category=dead_code",
             "category=magic_value:",
-            "symbolIdentifier=h:");
+            "ref=src/BaselineMini/AdvisoryProbe.cs:");
         var firstText = Assert.IsType<TextContentBlock>(Assert.Single(first.Content)).Text;
         Assert.Contains("population=gate_violations+all_advisories", firstText, StringComparison.Ordinal);
         Assert.True(
             firstText.IndexOf("category=dead_code", StringComparison.Ordinal)
             < firstText.IndexOf("category=magic_value:", StringComparison.Ordinal));
         var secondText = Assert.IsType<TextContentBlock>(Assert.Single(second.Content)).Text;
-        Assert.Equal(NormalizeElapsedMilliseconds(firstText), NormalizeElapsedMilliseconds(secondText));
+        Assert.Equal(NormalizeContinuationToken(firstText), NormalizeContinuationToken(secondText));
     }
 
     [Fact]
@@ -285,13 +285,9 @@ public sealed partial class VerifyToolContractE2ETests
         var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
         var verifyCandidates = ExtractSummaryCount(deadCodeSummary, "candidates");
         Assert.Equal(candidateCount, verifyCandidates);
-        var verifyShown = ExtractSummaryCount(deadCodeSummary, "shown");
-        var verifyTruncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
-        Assert.Equal(ExtractSymbolIdentifiers(verifyText).Count, verifyShown);
-        Assert.Equal(verifyCandidates - verifyShown, verifyTruncatedBy);
-        Assert.InRange(verifyShown, 1, verifyCandidates - 1);
-        Assert.Contains("next=review_now", deadCodeSummary, StringComparison.Ordinal);
-        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken=", verifyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("shown=", deadCodeSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("truncatedBy=", deadCodeSummary, StringComparison.Ordinal);
+        Assert.Contains("deadCodeHint: get_verify_advisories(category=dead_code, continuationToken=", verifyText, StringComparison.Ordinal);
 
         Assert.Null(advisoryAttempt.Error);
         var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
@@ -376,43 +372,11 @@ public sealed partial class VerifyToolContractE2ETests
         }
         """;
 
-    private static List<string> ExtractSymbolIdentifiers(string text)
-    {
-        var identifiers = new List<string>();
-        foreach (var line in text.Split('\n'))
-        {
-            const string marker = "symbolIdentifier=";
-            var start = line.IndexOf(marker, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                continue;
-            }
-
-            start += marker.Length;
-            var end = line.IndexOf(';', start);
-            var identifier = line[start..(end < 0 ? line.Length : end)].Trim();
-            if (identifier.Length > 0)
-            {
-                identifiers.Add(identifier);
-            }
-        }
-
-        return identifiers;
-    }
-
     private static List<string> ExtractHandoffIds(string text) =>
         Regex.Matches(text, @"\bh:[A-Za-z0-9_-]+\b", RegexOptions.CultureInvariant)
             .Cast<Match>()
             .Select(match => match.Value)
             .ToList();
-
-    private static string NormalizeElapsedMilliseconds(string text)
-    {
-        const string pattern = @"(?<=elapsedMs=)\d+";
-        var match = Assert.Single(Regex.Matches(text, pattern, RegexOptions.CultureInvariant).Cast<Match>());
-        Assert.True(long.TryParse(match.Value, out var elapsedMilliseconds) && elapsedMilliseconds >= 0);
-        return Regex.Replace(text, pattern, "<elapsed>", RegexOptions.CultureInvariant);
-    }
 
     private static int ExtractSummaryCount(string summary, string key)
     {
@@ -420,6 +384,9 @@ public sealed partial class VerifyToolContractE2ETests
         var value = field[(field.IndexOf('=') + 1)..].Trim();
         return int.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    private static string NormalizeContinuationToken(string text) =>
+        Regex.Replace(text, @"(?<=continuationToken=)[A-Fa-f0-9]{32}:\d+", "<continuation>", RegexOptions.CultureInvariant);
 
     private static string ExtractReference(CallToolResult result, string entryPrefix)
     {

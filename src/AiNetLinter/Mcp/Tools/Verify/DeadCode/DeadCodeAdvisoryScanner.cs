@@ -258,13 +258,18 @@ internal static partial class DeadCodeAdvisoryScanner
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (DeadCodeApiSurfacePolicy.HasMissingFriend(symbol, context.Solution))
-            context.UsageIndex.MarkUnknown(symbol);
         var references = symbol is INamedTypeSymbol type
-            ? GetRelatedReferenceSymbols(symbol).Concat(type.GetMembers().SelectMany(GetRelatedReferenceSymbols))
+            ? GetRelatedReferenceSymbols(symbol)
+                .Concat(type.GetMembers().SelectMany(GetRelatedReferenceSymbols))
+                .Concat(type.AllInterfaces.SelectMany(@interface => @interface.GetMembers()))
             : GetRelatedReferenceSymbols(symbol);
-        var analyses = references.Select(reference => context.UsageIndex.Analyze(reference,
-            symbol is INamedTypeSymbol ? DeadCodeUsageIndex.Key(symbol) : null)).ToArray();
+        var analyses = references.Select(reference =>
+        {
+            if (DeadCodeApiSurfacePolicy.HasMissingFriend(reference, context.Solution))
+                context.UsageIndex.MarkUnknown(reference);
+            return context.UsageIndex.Analyze(reference,
+                symbol is INamedTypeSymbol ? DeadCodeUsageIndex.Key(symbol) : null);
+        }).ToArray();
         return await Task.FromResult(new SymbolReferenceAnalysis(
             analyses.Any(analysis => analysis.HasKnownReference),
             analyses.Any(analysis => analysis.Unknown)));

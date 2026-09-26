@@ -121,10 +121,8 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = FindReferencesTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
+            async (string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = FindReferencesTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
-                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                if (unknownError is not null) return unknownError;
                 var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
                 if (scopeValidation.Error is not null) return scopeValidation.Error;
                 return await AnalysisToolCall.ExecuteRouted(

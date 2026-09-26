@@ -102,7 +102,8 @@ public sealed class DeadCodeFalsePositiveRegressionTests
         var result = await ScanAsync(testSolution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName is "Implicit" or "Explicit" or "Override");
-        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Unreferenced");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "Ordinary" && entry.Kind == "class");
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind == "method");
     }
 
     [Fact]

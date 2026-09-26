@@ -74,6 +74,15 @@ internal sealed class DeadCodeUsageIndex
         if (symbol is not (INamedTypeSymbol or IMethodSymbol or IPropertySymbol or IFieldSymbol)) return;
         var owner = source.Model.GetEnclosingSymbol(name.SpanStart, ct);
         var ownerType = owner as INamedTypeSymbol ?? owner?.ContainingType;
+        var convertedType = symbol is IMethodSymbol
+            ? source.Model.GetTypeInfo(name, ct).ConvertedType
+            : null;
+        if (convertedType is INamedTypeSymbol { TypeKind: TypeKind.Delegate }
+            || convertedType?.SpecialType is SpecialType.System_Delegate or SpecialType.System_MulticastDelegate)
+        {
+            ownerType = null;
+        }
+
         Add(symbol, source.Role, ownerType);
         if (symbol.ContainingType is { } type && !SymbolEqualityComparer.Default.Equals(type, ownerType))
             Add(type, source.Role, ownerType);

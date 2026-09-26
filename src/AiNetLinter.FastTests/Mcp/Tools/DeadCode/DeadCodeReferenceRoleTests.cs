@@ -137,6 +137,11 @@ public sealed class DeadCodeReferenceRoleTests
                 ("Consumer.cs", "namespace Consumer; public sealed class Consumer { public void Run(Product.IService service) => service.Execute(); }")],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "src/Consumer"));
 
+        var productCompilation = await testSolution.Solution.Projects.Single(project => project.Name == "Product").GetCompilationAsync();
+        var interfaceMethod = productCompilation!.GetTypeByMetadataName("Product.IService")!.GetMembers("Execute").Single();
+        var usageIndex = await DeadCodeUsageIndex.CreateAsync(testSolution.Solution, CancellationToken.None);
+        Assert.True(usageIndex.Analyze(interfaceMethod).Production);
+
         var result = await ScanMethodsAsync(testSolution.Solution);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol =>
@@ -144,7 +149,7 @@ public sealed class DeadCodeReferenceRoleTests
         var independentCandidate = Assert.Single(
             result.DeadSymbols,
             symbol => symbol.ContainerType == "Product.Service" && symbol.SymbolName == "IndependentUnused");
-        Assert.Contains("Keine relevante produktive Nutzung", independentCandidate.Reason, StringComparison.Ordinal);
+        Assert.Contains("Keine relevante statische Nutzung", independentCandidate.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
