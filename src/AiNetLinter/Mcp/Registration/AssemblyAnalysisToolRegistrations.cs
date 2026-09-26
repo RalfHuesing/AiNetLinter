@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Validation;
@@ -17,16 +18,18 @@ internal static class AssemblyAnalysisToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute)
     {
-        AddInspectAssembly(tools, assemblyRoute);
-        AddFindAssemblyExtensions(tools, assemblyRoute);
-        AddSearchAssembly(tools, assemblyRoute);
-        AddGetAssemblyContext(tools, assemblyRoute);
+        AddInspectAssembly(tools, registry, assemblyRoute);
+        AddFindAssemblyExtensions(tools, registry, assemblyRoute);
+        AddSearchAssembly(tools, registry, assemblyRoute);
+        AddGetAssemblyContext(tools, registry, assemblyRoute);
     }
 
     private static void AddSearchAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
@@ -44,12 +47,15 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? continuationToken = null,
                 bool declarationOnly = false,
                 string? kind = null,
+                string? operationToken = null,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
                 var effectiveCursor = continuationToken;
-                return await AnalysisToolCall.ExecuteRouted(
+                return await LongRunningAssemblyToolCall.ExecuteAsync(
+                    new LongRunningAssemblyCallRequest(registry, context, targetPath, "search_assembly",
+                        operationToken, lifetimeToken => AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
@@ -69,11 +75,11 @@ internal static class AssemblyAnalysisToolRegistrations
                                     continuationToken,
                                     declarationOnly,
                                     kind),
-                                ct),
+                                lifetimeToken),
                             MaxResponseBytes: maxResponseBytes,
                             Cursor: effectiveCursor,
                             ApplyAssemblyWireBudget: false),
-                        ct));
+                        lifetimeToken))), ct);
             },
             TargetPathToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
     }
@@ -85,10 +91,12 @@ internal static class AssemblyAnalysisToolRegistrations
         "declarationOnly: schliesst Kommentare/Strings/XML-Docs aus. " +
         "kind: 'method', 'type', 'property'; vollqualifizierte Typnamen aus inspect_assembly sind mit kind='type' suchbar. " +
         "Handoff-IDs direkt an get_symbol_body uebergeben. fileFilter: Glob oder Regex. " +
-        "maxResults (Default 50, Cap 1000), contextLines (0-5), maxResponseBytes, continuationToken.";
+        "maxResults (Default 50, Cap 1000), contextLines (0-5), maxResponseBytes, continuationToken. " +
+        "Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
@@ -107,9 +115,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? continuationToken = null,
+                string? operationToken = null,
                 CancellationToken ct = default) =>
                 ExecuteInspectAssemblyAsync(
                     context,
+                    registry,
                     assemblyRoute,
                     new InspectAssemblyExecutionParameters(
                         targetPath,
@@ -125,12 +135,14 @@ internal static class AssemblyAnalysisToolRegistrations
                         maxResponseBytes,
                         detailLevel,
                         continuationToken,
+                        operationToken,
                         ct)),
             TargetPathToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
 
     private static async Task<CallToolResult> ExecuteInspectAssemblyAsync(
         RequestContext<CallToolRequestParams> context,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute,
         InspectAssemblyExecutionParameters parameters)
     {
@@ -138,7 +150,9 @@ internal static class AssemblyAnalysisToolRegistrations
         if (unknownError is not null) return unknownError;
         if (AssemblyAnalysisResponseLimits.ValidateDetailLevel(parameters.DetailLevel) is { } detailLevelError) return detailLevelError;
         var includeReferences = parameters.IncludeReferences ?? ShouldIncludeReferences(parameters);
-        return await AnalysisToolCall.ExecuteRouted(
+        return await LongRunningAssemblyToolCall.ExecuteAsync(
+            new LongRunningAssemblyCallRequest(registry, context, parameters.TargetPath, "inspect_assembly",
+                parameters.OperationToken, lifetimeToken => AnalysisToolCall.ExecuteRouted(
             assemblyRoute,
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(parameters.TargetPath),
@@ -163,7 +177,7 @@ internal static class AssemblyAnalysisToolRegistrations
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
                     Cursor: parameters.ContinuationToken),
-                parameters.CancellationToken));
+                lifetimeToken))), parameters.CancellationToken);
     }
 
     private static bool ShouldIncludeReferences(InspectAssemblyExecutionParameters parameters) =>
@@ -186,6 +200,7 @@ internal static class AssemblyAnalysisToolRegistrations
         int MaxResponseBytes,
         string? DetailLevel,
         string? ContinuationToken,
+        string? OperationToken,
         CancellationToken CancellationToken);
 
     private static readonly string InspectAssemblyDescription =
@@ -194,10 +209,12 @@ internal static class AssemblyAnalysisToolRegistrations
         "publicOnly: Default true. " +
         "includeReferences: Referenzlisten/Sessions einbeziehen (Default: true ohne Type-/Member-Filter, sonst false). " +
         $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
-        "maxResults: Typen (Default 100, Max 1000). maxMembers: Member je Typ (Default 100, Max 1000).";
+        "maxResults: Typen (Default 100, Max 1000). maxMembers: Member je Typ (Default 100, Max 1000). " +
+        "Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
@@ -212,6 +229,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? continuationToken = null,
+                string? operationToken = null,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
@@ -219,7 +237,9 @@ internal static class AssemblyAnalysisToolRegistrations
                 var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(detailLevel);
                 if (detailLevelError is not null) return detailLevelError;
                 var effectiveCursor = continuationToken;
-                return await AnalysisToolCall.ExecuteRouted(
+                return await LongRunningAssemblyToolCall.ExecuteAsync(
+                    new LongRunningAssemblyCallRequest(registry, context, targetPath, "find_assembly_extensions",
+                        operationToken, lifetimeToken => AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
@@ -240,7 +260,7 @@ internal static class AssemblyAnalysisToolRegistrations
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
                             Cursor: effectiveCursor),
-                        ct));
+                        lifetimeToken))), ct);
             },
             TargetPathToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }
@@ -250,10 +270,12 @@ internal static class AssemblyAnalysisToolRegistrations
         "receiverType: Empfaengertyp. extensionName, namespace: Filter. " +
         "includeReferences (Default false): Referenz-Assemblies einbeziehen. " +
         $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
-        "maxResults: Default 100, Max 1000.";
+        "maxResults: Default 100, Max 1000. " +
+        "Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 
     private static void AddGetAssemblyContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
@@ -274,8 +296,10 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? continuationToken = null,
+                string? operationToken = null,
                 CancellationToken ct = default) => ExecuteGetAssemblyContextAsync(
                     context,
+                    registry,
                     assemblyRoute,
                     new AssemblyContextExecutionParameters(
                         targetPath,
@@ -294,12 +318,14 @@ internal static class AssemblyAnalysisToolRegistrations
                         maxResponseBytes,
                         detailLevel,
                         continuationToken,
+                        operationToken,
                         ct)),
             TargetPathToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
     }
 
     private static async Task<CallToolResult> ExecuteGetAssemblyContextAsync(
         RequestContext<CallToolRequestParams> context,
+        ProjectRegistry registry,
         AnalysisToolRoute assemblyRoute,
         AssemblyContextExecutionParameters parameters)
     {
@@ -307,7 +333,9 @@ internal static class AssemblyAnalysisToolRegistrations
         if (unknownError is not null) return unknownError;
         var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(parameters.DetailLevel);
         if (detailLevelError is not null) return detailLevelError;
-        return await AnalysisToolCall.ExecuteRouted(
+        return await LongRunningAssemblyToolCall.ExecuteAsync(
+            new LongRunningAssemblyCallRequest(registry, context, parameters.TargetPath, "get_assembly_context",
+                parameters.OperationToken, lifetimeToken => AnalysisToolCall.ExecuteRouted(
             assemblyRoute,
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(parameters.TargetPath),
@@ -330,12 +358,12 @@ internal static class AssemblyAnalysisToolRegistrations
                             parameters.MaxResponseBytes,
                             parameters.DetailLevel,
                             parameters.ContinuationToken),
-                        parameters.CancellationToken),
+                        lifetimeToken),
                     ExpandAssemblyReferences: parameters.IncludeReferences,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
                     Cursor: parameters.ContinuationToken),
-                parameters.CancellationToken));
+                lifetimeToken))), parameters.CancellationToken);
     }
 
     private sealed record AssemblyContextExecutionParameters(
@@ -355,6 +383,7 @@ internal static class AssemblyAnalysisToolRegistrations
         int MaxResponseBytes,
         string? DetailLevel,
         string? ContinuationToken,
+        string? OperationToken,
         CancellationToken CancellationToken);
 
     private static readonly string GetAssemblyContextDescription =
@@ -364,5 +393,6 @@ internal static class AssemblyAnalysisToolRegistrations
         "includeReferences (Default false): Referenz-Closure einbeziehen. " +
         "Flags: includeMetrics, includeReferences, includeCallers, includeImpact, includeBody, includeClassStructure. " +
         $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
-        "maxBodyLines (Cap 1000), maxCallers (Cap 200), depth (Cap 3), topN (Cap 200), maxResponseBytes, continuationToken.";
+        "maxBodyLines (Cap 1000), maxCallers (Cap 200), depth (Cap 3), topN (Cap 200), maxResponseBytes, continuationToken. " +
+        "Bei operation=running denselben Aufruf mit operationToken fortsetzen.";
 }

@@ -7,7 +7,7 @@ am Protokollflag und am kopierbaren Content-Status unterscheiden:
 |---|:---:|---|---|
 | Semantisches Ergebnis, auch eine definitive leere Treffermenge | false | Ergebnistext; gegebenenfalls `operation=ok` oder `completeness=empty` | Ergebnis verwenden |
 | Solution laedt noch | false | `Status: operation=retry, completeness=not_applicable` und `[INFO]` ohne Trefferinhalt | Kurz warten und denselben Aufruf wiederholen |
-| Langer Verify-, Advisory-, Duplikat- oder Pattern-Lauf | false | `Status: operation=running, completeness=not_applicable` und `operationToken` | Dasselbe Tool mit identischen Argumenten und Token erneut aufrufen; das Ergebnis folgt in einem späteren kurzen Aufruf |
+| Langer Verify-, Advisory-, Duplikat-, Pattern- oder Assembly-Lauf der vier dedizierten Assembly-Tools | false | `Status: operation=running, completeness=not_applicable` und `operationToken` | Dasselbe Tool mit identischen Argumenten und Token erneut aufrufen; das Ergebnis folgt in einem späteren kurzen Aufruf |
 | Fehlgeschlagener Aufruf, auch bei korrigierbarer Eingabe | true | `[ERROR]` mit Code; zielgebunden zusaetzlich `operation=error` | Hint oder Recovery ausfuehren |
 
 `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL`, `INVALID_ARGUMENT`,

@@ -19,6 +19,7 @@ internal static class McpServerToolCollectionFactory
         SymbolGraphToolRegistrations.Register(tools, targetRoute);
         AssemblyAnalysisToolRegistrations.Register(
             tools,
+            registry,
             AssemblyAnalysisDispatcher.CreateRoute(assemblyRegistry));
         FileStructureToolRegistrations.Register(tools, registry, targetRoute);
         AnalysisToolRegistrations.Register(tools, registry, targetRoute);

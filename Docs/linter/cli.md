@@ -152,7 +152,7 @@ ainetlinter --path ./MeinProjekt.slnx --remove-disable-all
 
 ### Verify-Advisories im MCP-Aufruf
 
-`verify`, `get_verify_advisories`, `find_duplicates` und `pattern_detect` geben bei längeren Analysen spätestens nach
+`verify`, `get_verify_advisories`, `find_duplicates`, `pattern_detect`, `search_assembly`, `inspect_assembly`, `find_assembly_extensions` und `get_assembly_context` geben bei längeren Analysen spätestens nach
 15 Sekunden `Status: operation=running` mit einem `operationToken` zurück. Der
 Client ruft dasselbe Tool mit denselben Argumenten und diesem Token erneut auf;
 jeder Abruf wartet höchstens 15 Sekunden und liefert entweder erneut den Status
