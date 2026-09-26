@@ -91,13 +91,14 @@ public sealed class MetadataConstructorHandoffTests
 
         var verify = await VerifyTool.ExecuteAsync(state, VerifyScope.Solution, CancellationToken.None);
         var verifyText = TextOf(verify);
-        var rows = verifyText.Split('\n').Where(line =>
-            line.Contains("category=dead_code", StringComparison.Ordinal)
-            && line.Contains("Primary.cs:4", StringComparison.Ordinal)).ToArray();
-        Assert.True(rows.Length > 0, verifyText);
-        var candidate = Assert.Single(rows);
-        var typeId = System.Text.RegularExpressions.Regex.Match(candidate, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)",
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Groups["id"].Value;
+        var token = System.Text.RegularExpressions.Regex.Match(verifyText, @"continuationToken=(?<token>[0-9a-f]{32}:0)",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Groups["token"].Value;
+        Assert.NotEmpty(token);
+        var details = await GetVerifyAdvisoriesTool.ExecuteAsync(state, CancellationToken.None, token);
+        var detailText = TextOf(details);
+        Assert.Contains("Primary.cs", detailText, StringComparison.Ordinal);
+        var candidate = detailText.Split('\n').Single(line => line.StartsWith("4 | ", StringComparison.Ordinal));
+        var typeId = candidate.Split(" | ")[2];
         Assert.NotEmpty(typeId);
         var handoffId = await ConstructorHandoffLifecycleTests.ConstructorFromTypeAsync(state, typeId, "PrimaryTarget.PrimaryTarget");
         var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
@@ -112,7 +113,6 @@ public sealed class MetadataConstructorHandoffTests
 
         Assert.False(references.IsError is true, TextOf(references));
         Assert.False(context.IsError is true, contextText);
-        Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
         Assert.Contains("PrimaryTarget.PrimaryTarget", constructorBodyText!, StringComparison.Ordinal);
         Assert.Contains("PrimaryTarget.PrimaryTarget", contextText, StringComparison.Ordinal);
     }

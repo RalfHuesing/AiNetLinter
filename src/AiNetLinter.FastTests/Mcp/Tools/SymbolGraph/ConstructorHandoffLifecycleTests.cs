@@ -154,18 +154,20 @@ public sealed class ConstructorHandoffLifecycleTests
 
         var verify = await VerifyTool.ExecuteAsync(state, VerifyScope.Solution, CancellationToken.None);
         var verifyText = TextOf(verify);
-        var candidate = verifyText.Split('\n').SingleOrDefault(line =>
-            line.Contains("category=dead_code", StringComparison.Ordinal)
-            && line.Contains("Constructors.cs:3", StringComparison.Ordinal));
-        Assert.True(candidate is not null, verifyText);
+        var token = Regex.Match(verifyText, @"continuationToken=(?<token>[0-9a-f]{32}:0)", RegexOptions.CultureInvariant)
+            .Groups["token"].Value;
+        Assert.NotEmpty(token);
+        var details = await GetVerifyAdvisoriesTool.ExecuteAsync(state, CancellationToken.None, token);
+        var detailText = TextOf(details);
+        Assert.Contains("Constructors.cs", detailText, StringComparison.Ordinal);
+        var candidate = detailText.Split('\n').SingleOrDefault(line => line.StartsWith("3 | ", StringComparison.Ordinal));
+        Assert.True(candidate is not null, detailText);
 
-        var typeId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
-            .Groups["id"].Value;
+        var typeId = candidate!.Split(" | ")[2];
         Assert.NotEmpty(typeId);
         Assert.DoesNotContain(verifyText.Split('\n'), row => row.Contains("category=dead_code", StringComparison.Ordinal) && row.Contains("Constructors.cs:5", StringComparison.Ordinal));
         var handoffId = await ConstructorHandoffLifecycleTests.ConstructorFromTypeAsync(state, typeId, "ParameterlessRecord.ParameterlessRecord()");
-        Assert.Contains("dead_code", candidate, StringComparison.Ordinal);
-        Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
+        Assert.StartsWith("h:", typeId, StringComparison.Ordinal);
 
         await AssertFollowUpToolsResolveConstructorAsync(
             state,

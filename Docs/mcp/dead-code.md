@@ -115,18 +115,22 @@ unbekannt. `processedDocuments`/`openDocuments`, `elapsedMs`, `stopReason`,
 sind keine geprüften `undecidable`-Symbole. Null Kandidaten bei partiellem Scan
 sind keine Entwarnung.
 
-Ein von Verify ausgegebener `continuationToken` öffnet denselben Snapshot
-über `get_verify_advisories(targetPath, category="dead_code", continuationToken=...)`.
-Ohne Token startet dieses Tool einen neuen Scan. Ein `operationToken` dient
-vor dem Endergebnis nur zum Abholen des laufenden Aufrufs; er ist kein Seitentoken.
+Ein von Verify ausgegebener `continuationToken` öffnet exakt dessen Snapshot
+über `get_verify_advisories(targetPath, category="dead_code", continuationToken=...)`,
+auch wenn sich Solution oder Konfiguration seitdem geändert haben. Ohne Token
+wird ein noch gültiger vollständiger Solution-Snapshot nur bei passender
+Solution-Version und Konfiguration wiederverwendet; andernfalls startet das
+Tool einen neuen Scan. Ein `operationToken` dient vor dem Endergebnis nur zum
+Abholen des laufenden Aufrufs; er ist kein Seitentoken.
 
-Detailseiten enthalten höchstens 64 KiB und führen Kandidaten plus
-`undecidable`-Details (`population=candidates+undecidable_details`) auf.
-`candidates` zählt nur Prüfkandidaten, `shown`/`offset`/`truncatedBy` die
-Seitenpopulation. `scanCompleteness=partial` bleibt auch auf der letzten
-Seite erhalten; `listCompleteness=complete` bedeutet ausschließlich, dass
-alle gespeicherten Einträge ausgegeben wurden. Pagination spart keine Scanzeit.
-Token verfallen nach 30 Minuten Leerlauf oder Server-Neustart. Dann verlangt
+Detailseiten enthalten höchstens 64 KiB und führen ausschließlich verbleibende
+Prüfkandidaten mit kopierbaren `h:`-IDs und Gegenprüfhinweis auf.
+`candidates` zählt Prüfkandidaten; `shown`/`offset`/`truncatedBy` beschreiben
+die aktuelle Seite. `scanCompleteness=partial` bleibt auch auf der letzten
+Seite erhalten; `listCompleteness=complete` bedeutet ausschließlich, dass alle
+gespeicherten Einträge ausgegeben wurden. Ein partieller Scan mit null Treffern
+bleibt als `partial` sichtbar. Pagination spart keine Scanzeit. Token verfallen
+nach 30 Minuten Leerlauf oder Server-Neustart. Dann verlangt
 `INVALID_CONTINUATION_TOKEN` einen neuen Scan.
 
 `symbolIdentifier=h:...` unverändert an `find_references`, `get_symbol_body`

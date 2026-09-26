@@ -68,7 +68,7 @@ public sealed partial class VerifyToolContractE2ETests
         {
             var pageText = Assert.IsType<TextContentBlock>(Assert.Single(page.Content)).Text;
             Assert.True(Encoding.UTF8.GetByteCount(pageText) <= 65_536);
-            Assert.Contains("columns: line | symbol | symbolIdentifier | usage | reason | countercheck", pageText, StringComparison.Ordinal);
+            Assert.Contains("columns: line | symbol | symbolIdentifier | countercheck", pageText, StringComparison.Ordinal);
             var header = pageText.Split('\n')[0];
             Assert.Equal(advisoryCandidates, ExtractSummaryCount(header, "candidates"));
             Assert.Equal(offset, ExtractSummaryCount(header, "offset"));

@@ -73,8 +73,9 @@ internal static class VerifyTool
             cancellationToken,
             new(config, server.HandoffSymbolIdentity, SolutionBudget: scope == VerifyScope.Solution));
 
-        if (advisory is { ScanSnapshot: { } snapshot, DeadCode: { } summary })
-            advisory = advisory with { DeadCode = summary with { ContinuationToken = GetVerifyAdvisoriesTool.Capture(server, snapshot) } };
+        advisory = CaptureDeadCodeSnapshot(server, advisory,
+            new VerifyAdvisorySnapshotContext(solution.Version, config,
+                scope == VerifyScope.Solution ? "solution" : "changes"));
 
         return VerifyResponseFormatter.Success(new VerifySuccessParameters(
             scope,
@@ -82,6 +83,21 @@ internal static class VerifyTool
             scoreResult.Score,
             projection.Exclusions,
             advisory));
+    }
+
+    private static VerifyAdvisoryProjection CaptureDeadCodeSnapshot(
+        McpCodeGraphServer server,
+        VerifyAdvisoryProjection advisory,
+        VerifyAdvisorySnapshotContext context)
+    {
+        if (advisory is not { ScanSnapshot: { } snapshot, DeadCode: { } summary }) return advisory;
+        return advisory with
+        {
+            DeadCode = summary with
+            {
+                ContinuationToken = GetVerifyAdvisoriesTool.Capture(server, snapshot, context)
+            }
+        };
     }
 }
 

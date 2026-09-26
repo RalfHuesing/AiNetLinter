@@ -26,7 +26,7 @@ Verbindlicher Zielvertrag: [Konzept.md](Konzept.md). Punkte strikt nacheinander 
   - Nicht: Gate-Verdict, Score, `violationCount` oder andere Advisory-Kategorien fachlich ändern.
   - Abnahme: Vertragstests prüfen die Kurzmeldung mit vorhandenem/fehlendem Snapshot, vollständigem/partiellem/nicht verfügbarem Scan und null beobachteten Kandidaten; Gate-Zahlen und andere Advisories bleiben korrekt. Incremental Gate grün.
 
-- [ ] **5 — Detailabruf und Snapshot-Fortsetzung sichern**
+- [x] **5 — Detailabruf und Snapshot-Fortsetzung sichern**
   - Intention: Details ohne erneuten teuren Scan aus einem passenden Verify-Snapshot abrufen und Teilscans ehrlich ausweisen.
   - Scope: `GetVerifyAdvisoriesTool` und `VerifyAdvisoryPageStore` so anpassen, dass ein Verify-Token exakt dessen Snapshot öffnet und ein tokenloser Solution-Abruf einen noch gültigen vollständigen Snapshot nur bei passender Solution-Version, Konfiguration und Scope wiederverwendet. Sonst neu scannen. Detailseiten auf verbleibende Kandidaten, kopierbare `h:`-IDs, Gegenprüfhinweis und Pagination begrenzen; `scanCompleteness`/`listCompleteness` getrennt halten. FastTests für Token, Staleness, Paging und partiellen Null-Treffer; MCP-Dokumentation aktualisieren.
   - Nicht: Teilscan als vollständig ausgeben oder für Pagination neu scannen.

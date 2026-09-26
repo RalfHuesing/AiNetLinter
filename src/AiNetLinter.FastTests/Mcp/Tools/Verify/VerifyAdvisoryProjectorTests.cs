@@ -96,7 +96,7 @@ public sealed class VerifyAdvisoryProjectorTests
 
         Assert.False(result.IsError == true);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("status=complete; candidates=0", text, StringComparison.Ordinal);
+        Assert.Contains("status=complete; scope=unknown; candidates=0", text, StringComparison.Ordinal);
         Assert.Contains("shown=0; truncatedBy=0", text, StringComparison.Ordinal);
         Assert.DoesNotContain("clean", text, StringComparison.OrdinalIgnoreCase);
     }
@@ -127,7 +127,7 @@ public sealed class VerifyAdvisoryProjectorTests
         var result = GetVerifyAdvisoriesTool.Render(scan);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("status=complete; candidates=2", text, StringComparison.Ordinal);
+        Assert.StartsWith("status=complete; scope=unknown; candidates=2", text, StringComparison.Ordinal);
         Assert.Contains("listCompleteness=partial", text, StringComparison.Ordinal);
         Assert.Contains("shown=1; truncatedBy=1", text, StringComparison.Ordinal);
     }
@@ -174,13 +174,13 @@ public sealed class VerifyAdvisoryProjectorTests
         var rows = text.Split('\n').Where(line => Regex.IsMatch(line, @"^\d+ \|", RegexOptions.CultureInvariant)).ToArray();
         Assert.Equal(
             [
-                "1 | Type.LowA |  | unreferenced | static scan | ",
-                "2 | Type.HighA |  | unreferenced | static scan | ",
-                "3 | Type.LowB |  | unreferenced | static scan | ",
-                "10 | Type.HighZ |  | unreferenced | static scan | ",
+                "1 | Type.LowA |  | ",
+                "2 | Type.HighA |  | ",
+                "3 | Type.LowB |  | ",
+                "10 | Type.HighZ |  | ",
             ],
             rows);
-        Assert.Equal(1, text.Split('\n').Count(line => line == "columns: line | symbol | symbolIdentifier | usage | reason | countercheck"));
+        Assert.Equal(1, text.Split('\n').Count(line => line == "columns: line | symbol | symbolIdentifier | countercheck"));
         Assert.Equal(1, text.Split('\n').Count(line => line == "project: A"));
     }
 

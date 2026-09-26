@@ -65,7 +65,7 @@ Alle folgenden Aufrufe erhalten zusätzlich `targetPath`. `S` = Source, `A` = As
 | `pattern_detect` | S | Gruppierte Heuristiken; `patterns`, `scopeFilter`, `maxResultsPerPattern`. Keine Gate-Verstöße. |
 | `find_duplicates` | S | `mode="clone"`/`refactoring-drift`/`structural`; Drift benötigt `helperSymbol`. `scopeType="production"`, `scopeDir`, `minTokens=30`, `normalizeIdentifiers=false`, `maxResults=20`. |
 | `verify` | S | Festes Gate; `scope="changes"` (Default) oder `solution`. Fertiges `pass` nur bei Score `10.0` und `violationCount=0`. |
-| `get_verify_advisories` | S | `category="dead_code"`; ohne Seitentoken neuer Scan, mit `continuationToken` denselben Snapshot weiterlesen. |
+| `get_verify_advisories` | S | `category="dead_code"`; Verify-Token öffnet dessen Snapshot, ohne Token wird ein passender vollständiger Solution-Snapshot wiederverwendet oder neu gescannt. |
 | `inspect_assembly` | A | API/Metadaten: `namespace`, `typeName`, `exactTypeName`, `memberName`/`memberNames`, `publicOnly=true`, `maxResults=100`, `maxMembers=100`. |
 | `search_assembly` | A | Dekompilat: `searchKind="text"` mit `pattern`, alternativ `data_access`/`external_calls`; `declarationOnly`, `kind`, `fileFilter`, `maxResults=50`, `contextLines` bis 5. |
 | `find_assembly_extensions` | A | Extensions nach `receiverType`, `extensionName`, `namespace`; `includeReferences=false`, `maxResults=100`. |

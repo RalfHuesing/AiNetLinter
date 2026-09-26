@@ -45,6 +45,11 @@ internal static class GetVerifyAdvisoriesTool
         if (configSnapshot.Config is not Config config) return VerifyResponseFormatter.Error(
             "ANALYSIS_FAILURE", "Die Dead-Code-Konfiguration konnte nicht gelesen werden.", "Konfiguration neu laden und den identischen Aufruf wiederholen.");
 
+        var pages = PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore());
+        var snapshotContext = new VerifyAdvisorySnapshotContext(solution.Version, config, "solution");
+        var reusable = pages.TryReuse(snapshotContext);
+        if (reusable is not null) return reusable;
+
         var apiSurfaceIssues = DeadCodeAdvisoryScanner.ValidateApiSurface(solution, null, config);
         if (apiSurfaceIssues.Count > 0) return VerifyResponseFormatter.ApiSurfaceNotConfigured(apiSurfaceIssues);
 
@@ -73,17 +78,21 @@ internal static class GetVerifyAdvisoriesTool
                 $"Ursache: {exception.GetType().Name}. Scan nach Behebung erneut starten.");
         }
 
-        return PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Start(scan);
+        return pages.Start(scan, snapshotContext);
     }
 
-    internal static string Capture(McpCodeGraphServer server, DeadCodeScanResult scan) =>
-        PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Capture(scan);
+    internal static string Capture(
+        McpCodeGraphServer server,
+        DeadCodeScanResult scan,
+        VerifyAdvisorySnapshotContext context) =>
+        PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore())
+            .Capture(scan, context);
 
     internal static CallToolResult Render(DeadCodeScanResult scan) => new VerifyAdvisoryPageStore().Start(scan);
 
     internal static DeadCodeEntry[] SortCandidates(DeadCodeScanResult scan)
     {
-        return scan.DeadSymbols.Concat(scan.UndecidableSymbols ?? [])
+        return scan.DeadSymbols
             .OrderBy(entry => entry.Priority)
             .ThenBy(entry => entry.ProjectName, StringComparer.Ordinal)
             .ThenBy(entry => entry.File, StringComparer.OrdinalIgnoreCase)
@@ -99,7 +108,7 @@ internal static class GetVerifyAdvisoriesTool
         int offset,
         Guid snapshotId)
     {
-        var candidateCount = scan.Summary.TotalDead + scan.Summary.Undecidable;
+        var candidateCount = scan.Summary.TotalDead;
         var selected = new List<DeadCodeEntry>();
 
         foreach (var candidate in candidates.Skip(offset))
@@ -156,7 +165,7 @@ internal static class GetVerifyAdvisoriesTool
             var identifier = entry.InternalSymbolIdentifier is { Length: > 0 } internalIdentifier
                 ? HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalIdentifier)
                 : string.Empty;
-            lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {entry.Usage} | {Clean(entry.Reason)} | {Clean(string.Join(",", entry.Countercheck ?? []))}");
+            lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {Clean(string.Join(",", entry.Countercheck ?? []))}");
         }
 
         return string.Join('\n', lines);
@@ -179,12 +188,11 @@ internal static class GetVerifyAdvisoriesTool
         var continuationToken = hasNext ? $"{snapshotId:N}:{end}" : "none";
         var lines = new List<string>
         {
-            $"status={status}; candidates={summary.TotalDead}; testOnly={scan.DeadSymbols.Count(entry => entry.Usage == "test_only")}; unreferenced={scan.DeadSymbols.Count(entry => entry.Usage == "unreferenced")}; apiProtected={summary.ApiProtected}; undecidable={summary.Undecidable}; shown={shown}; truncatedBy={truncatedBy}; offset={offset}; listCompleteness={listCompleteness}",
+            $"status={status}; scope={summary.Coverage?.RequestedScope ?? "unknown"}; candidates={summary.TotalDead}; shown={shown}; truncatedBy={truncatedBy}; offset={offset}; listCompleteness={listCompleteness}",
             $"scanCompleteness={status}; requestedScope={summary.Coverage?.RequestedScope ?? "unknown"}; processedDocuments={summary.Coverage?.ProcessedDocuments}; openDocuments={summary.Coverage?.OpenDocuments}; elapsedMs={summary.Coverage?.ElapsedMilliseconds}; stopReason={summary.Coverage?.StopReason ?? "unknown"}; changesBasis={summary.Coverage?.ChangesBasis ?? "unknown"}",
-            $"undecidableReasons={FormatReasons(summary.UndecidableReasons)}; population=candidates+undecidable_details",
-            $"excludedKinds={summary.Coverage?.ExcludedKinds ?? "unknown"}",
             $"continuationToken={continuationToken}",
-            "columns: line | symbol | symbolIdentifier | usage | reason | countercheck",
+            "countercheck: Kandidaten vor jeder Bewertung gegen Referenzen und Laufzeitbindungen prüfen.",
+            "columns: line | symbol | symbolIdentifier | countercheck",
         };
         if (truncatedBy > 0) lines.Add(hasNext
             ? "truncated: weitere Kandidaten mit continuationToken abrufen."
