@@ -320,7 +320,12 @@
     }
   },
   "DeadCode": {
-    "DefaultApiSurface": "closed_solution"
+    "DefaultApiSurface": "closed_solution",
+    "VerifyBudgetSeconds": 10,
+    "SolutionBudgetSeconds": 60,
+    "MaxCandidateGroups": 20,
+    "MaxResponseBytes": 8192,
+    "ProjectRoles": {}
   },
   "RuleMetadata": {},
   "ForbiddenNamespaceDependencies": [],
