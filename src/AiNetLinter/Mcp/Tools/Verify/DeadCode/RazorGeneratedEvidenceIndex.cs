@@ -71,6 +71,23 @@ internal sealed class RazorGeneratedEvidenceIndex
         return new(statuses, statusesByDocument);
     }
 
+    internal static bool HasMatchingGeneratedDeclaration(INamedTypeSymbol type, string componentPath, Project project)
+    {
+        var projectDirectory = GetProjectDirectory(project);
+        var expectedPath = NormalizeRelativePath(projectDirectory, componentPath);
+        foreach (var reference in type.DeclaringSyntaxReferences)
+        {
+            var declaration = reference.GetSyntax();
+            if (declaration is not TypeDeclarationSyntax typeDeclaration
+                || !typeDeclaration.Modifiers.Any(SyntaxKind.PartialKeyword)) continue;
+            var generatedPath = GetComponentPath(declaration.SyntaxTree.GetRoot());
+            if (generatedPath is not null
+                && NormalizeRelativePath(projectDirectory, generatedPath).Equals(expectedPath, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
     private static async Task IndexGeneratedDocumentAsync(
         Document generatedDocument,
         string projectDirectory,

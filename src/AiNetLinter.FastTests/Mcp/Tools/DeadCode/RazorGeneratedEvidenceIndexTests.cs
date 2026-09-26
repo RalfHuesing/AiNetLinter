@@ -229,7 +229,7 @@ public sealed class RazorGeneratedEvidenceIndexTests
             ? "namespace RazorEvidence; public sealed partial class Foo { private void BoundHandler() { } private void UnboundMember() { } }"
             : "namespace RazorEvidence; public sealed partial class Foo { private void UnusedMember() { } }";
         var markup = includeGeneratedHandlerCall
-            ? "<button @onclick=\"BoundHandler\">Open</button>"
+            ? "<button @onclick=\"BoundHandler\">Open</button><button @onclick=\"UnboundMember\">Save</button>"
             : "";
         var generatedTypeBody = includeGeneratedHandlerCall
             ? "public sealed partial class Foo { private void InvokeGeneratedHandler() => BoundHandler(); }"

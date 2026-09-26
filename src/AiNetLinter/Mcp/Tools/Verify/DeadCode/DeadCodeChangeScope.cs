@@ -72,13 +72,14 @@ internal static class DeadCodeChangeScope
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true,
-            UseShellExecute = false, CreateNoWindow = true
+            RedirectStandardInput = true, UseShellExecute = false, CreateNoWindow = true
         };
         start.ArgumentList.Add(command);
         start.ArgumentList.Add(argument);
         if (last is not null) start.ArgumentList.Add(last);
         using var process = Process.Start(start);
         if (process is null) return null;
+        process.StandardInput.Close();
         using var registration = ct.Register(() => { if (!process.HasExited) process.Kill(entireProcessTree: true); });
         var output = process.StandardOutput.ReadToEndAsync(ct);
         var error = process.StandardError.ReadToEndAsync(ct);

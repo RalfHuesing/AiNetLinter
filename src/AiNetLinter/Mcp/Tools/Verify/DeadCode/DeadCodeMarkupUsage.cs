@@ -28,7 +28,7 @@ internal sealed class DeadCodeMarkupUsage(DeadCodeUsageIndex index)
             foreach (var document in project.AdditionalDocuments.Concat<TextDocument>(project.Documents).Where(document => IsMarkup(document.Name)))
             {
                 var text = await document.GetTextAsync(ct);
-                Collect(new(compilation, role, document.FilePath ?? document.Name, text.ToString()));
+                Collect(new(compilation, role, document.FilePath ?? document.Name, text.ToString(), project));
             }
             await ReadProjectFilesAsync(new(project, compilation, role), ct);
         }
@@ -50,7 +50,7 @@ internal sealed class DeadCodeMarkupUsage(DeadCodeUsageIndex index)
                     return;
                 }
                 var text = await File.ReadAllTextAsync(path, ct);
-                Collect(new(context.Compilation, context.Role, path, text));
+                Collect(new(context.Compilation, context.Role, path, text, context.Project));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -94,4 +94,4 @@ internal sealed class DeadCodeMarkupUsage(DeadCodeUsageIndex index)
     private sealed record MarkupProject(Project Project, Compilation Compilation, string Role);
 }
 
-internal sealed record DeadCodeMarkupDocument(Compilation Compilation, string Role, string Path, string Text);
+internal sealed record DeadCodeMarkupDocument(Compilation Compilation, string Role, string Path, string Text, Project Project);

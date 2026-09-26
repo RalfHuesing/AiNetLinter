@@ -39,6 +39,7 @@ internal sealed class DeadCodeRazorUsage(DeadCodeUsageIndex index)
     private void BindLocalMembers(DeadCodeMarkupDocument source, INamedTypeSymbol type, bool unique)
     {
         if (source.Text.Contains("@page ", StringComparison.Ordinal)) BindComponent(type, source.Role);
+        if (RazorGeneratedEvidenceIndex.HasMatchingGeneratedDeclaration(type, source.Path, source.Project)) return;
         foreach (var member in type.GetMembers())
         {
             var pattern = "(?:@(?:on\\w+|bind-\\w+)\\s*=\\s*\"|@)" + Regex.Escape(member.Name) + @"\b";

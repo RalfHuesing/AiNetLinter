@@ -125,6 +125,7 @@ internal static class VerifyScopeProjector
             var changedPaths = SplitPaths(diff)
                 .Concat(SplitPaths(untracked))
                 .Select(path => path.Replace('/', Path.DirectorySeparatorChar))
+                .Where(path => !SourceFileCatalog.IsGeneratedPath(Path.GetFullPath(Path.Combine(root, path))))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToList();

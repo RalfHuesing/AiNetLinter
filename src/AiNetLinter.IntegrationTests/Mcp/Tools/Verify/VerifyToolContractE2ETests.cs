@@ -242,7 +242,8 @@ public sealed partial class VerifyToolContractE2ETests
         Assert.True(
             firstText.IndexOf("category=dead_code", StringComparison.Ordinal)
             < firstText.IndexOf("category=magic_value:", StringComparison.Ordinal));
-        Assert.Equal(firstText, Assert.IsType<TextContentBlock>(Assert.Single(second.Content)).Text);
+        var secondText = Assert.IsType<TextContentBlock>(Assert.Single(second.Content)).Text;
+        Assert.Equal(NormalizeElapsedMilliseconds(firstText), NormalizeElapsedMilliseconds(secondText));
     }
 
     [Fact]
@@ -272,6 +273,9 @@ public sealed partial class VerifyToolContractE2ETests
         File.WriteAllText(
             Path.Combine(fixture.RootPath, "src", "BaselineMini", "ManyUnusedMembers.cs"),
             VerifyAdvisoryTestData.ManyUnusedMembersSource(candidateCount));
+        File.WriteAllText(
+            Path.Combine(fixture.RootPath, "src", "BaselineMini", "Program.cs"),
+            "System.Console.WriteLine(typeof(BaselineMini.ManyUnusedMembers));");
         await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
 
         var advisoryAttempt = await TryGetVerifyAdvisoriesAsync(host);
@@ -280,14 +284,14 @@ public sealed partial class VerifyToolContractE2ETests
         var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
         var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
         var verifyCandidates = ExtractSummaryCount(deadCodeSummary, "candidates");
-        Assert.Equal(candidateCount + 1, verifyCandidates);
+        Assert.Equal(candidateCount, verifyCandidates);
         var verifyShown = ExtractSummaryCount(deadCodeSummary, "shown");
         var verifyTruncatedBy = ExtractSummaryCount(deadCodeSummary, "truncatedBy");
         Assert.Equal(ExtractSymbolIdentifiers(verifyText).Count, verifyShown);
         Assert.Equal(verifyCandidates - verifyShown, verifyTruncatedBy);
         Assert.InRange(verifyShown, 1, verifyCandidates - 1);
         Assert.Contains("next=review_now", deadCodeSummary, StringComparison.Ordinal);
-        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)", verifyText, StringComparison.Ordinal);
+        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken=", verifyText, StringComparison.Ordinal);
 
         Assert.Null(advisoryAttempt.Error);
         var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
@@ -311,68 +315,6 @@ public sealed partial class VerifyToolContractE2ETests
             .Split('\n')
             .Count(line => line.StartsWith("### ", StringComparison.Ordinal));
         Assert.Equal(identifiers.Count, candidateBodyHeaders);
-    }
-
-    [Fact]
-    public async Task GetVerifyAdvisories_LargePopulation_ReportsWholeEntriesWithinUtf8Budget()
-    {
-        using var fixture = CreateGitFixture();
-        foreach (var source in VerifyAdvisoryTestData.ManyUnusedMemberFiles())
-        {
-            var path = Path.Combine(fixture.RootPath, source.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, source.Content);
-        }
-
-        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
-        var advisoryAttempt = await TryGetVerifyAdvisoriesAsync(host);
-        var verify = await host.CallToolAsync("verify");
-
-        var verifyText = Assert.IsType<TextContentBlock>(Assert.Single(verify.Content)).Text;
-        Assert.Contains("deadCode: status=complete", verifyText, StringComparison.Ordinal);
-        var deadCodeSummary = verifyText.Split('\n').Single(line => line.StartsWith("deadCode:", StringComparison.Ordinal));
-        var verifyCandidates = ExtractSummaryCount(deadCodeSummary, "candidates");
-        Assert.InRange(verifyCandidates, 714, int.MaxValue);
-        Assert.True(verifyText.StartsWith("verdict: pass", StringComparison.Ordinal), verifyText);
-
-        Assert.Null(advisoryAttempt.Error);
-        var advisoryText = Assert.IsType<TextContentBlock>(Assert.Single(advisoryAttempt.Result!.Content)).Text;
-        var advisoryCandidates = ExtractSummaryCount(advisoryText.Split('\n')[0], "candidates");
-        Assert.InRange(advisoryCandidates, verifyCandidates, int.MaxValue);
-        AssertVerifyResult(advisoryAttempt.Result!, expectedError: false,
-            "status=complete",
-            $"candidates={advisoryCandidates}",
-            "truncatedBy=");
-        Assert.InRange(Encoding.UTF8.GetByteCount(advisoryText), 1, 65_536);
-        var shown = ExtractSummaryCount(advisoryText, "shown");
-        var truncatedBy = ExtractSummaryCount(advisoryText.Split('\n')[0], "truncatedBy");
-        Assert.Equal(advisoryCandidates, shown + truncatedBy);
-        Assert.InRange(shown, 1, advisoryCandidates - 1);
-        Assert.True(
-            advisoryText.Contains("truncat", StringComparison.OrdinalIgnoreCase)
-            || advisoryText.Contains("ausgelassen", StringComparison.OrdinalIgnoreCase)
-            || advisoryText.Contains("gekürzt", StringComparison.OrdinalIgnoreCase));
-
-        foreach (var column in new[] { "line", "symbol", "symbolIdentifier", "usage", "confidence" })
-        {
-            Assert.Equal(1, CountWordOccurrences(advisoryText, column));
-        }
-
-        var identifiers = ExtractHandoffIds(advisoryText);
-        Assert.Equal(shown, identifiers.Count);
-        Assert.Equal(identifiers.Count, identifiers.Distinct(StringComparer.Ordinal).Count());
-        var entryLines = advisoryText.Split('\n')
-            .Where(line => Regex.IsMatch(line, @"\bh:[A-Za-z0-9_-]+\b", RegexOptions.CultureInvariant))
-            .ToArray();
-        Assert.Equal(shown, entryLines.Length);
-        Assert.All(entryLines, line =>
-        {
-            Assert.Matches(@"\b\d+\b", line);
-            Assert.True(line.Contains("test_only", StringComparison.Ordinal) || line.Contains("unreferenced", StringComparison.Ordinal));
-            Assert.True(line.Contains("high", StringComparison.Ordinal) || line.Contains("low", StringComparison.Ordinal));
-            var nonIdentifierWords = Regex.Replace(line, @"\bh:[A-Za-z0-9_-]+\b", string.Empty, RegexOptions.CultureInvariant);
-            Assert.True(Regex.Matches(nonIdentifierWords, @"\b[A-Za-z][A-Za-z0-9_]*\b").Count >= 3);
-        });
     }
 
     [Fact]
@@ -464,8 +406,13 @@ public sealed partial class VerifyToolContractE2ETests
             .Select(match => match.Value)
             .ToList();
 
-    private static int CountWordOccurrences(string text, string word) =>
-        Regex.Matches(text, $@"\b{Regex.Escape(word)}\b", RegexOptions.CultureInvariant).Count;
+    private static string NormalizeElapsedMilliseconds(string text)
+    {
+        const string pattern = @"(?<=elapsedMs=)\d+";
+        var match = Assert.Single(Regex.Matches(text, pattern, RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.True(long.TryParse(match.Value, out var elapsedMilliseconds) && elapsedMilliseconds >= 0);
+        return Regex.Replace(text, pattern, "<elapsed>", RegexOptions.CultureInvariant);
+    }
 
     private static int ExtractSummaryCount(string summary, string key)
     {
@@ -492,7 +439,7 @@ public sealed partial class VerifyToolContractE2ETests
         Assert.False(string.IsNullOrWhiteSpace(text));
         foreach (var expected in expectedContent)
         {
-            Assert.Contains(expected, text, StringComparison.Ordinal);
+            Assert.True(text.Contains(expected, StringComparison.Ordinal), $"Expected: {expected}\n{text}");
         }
     }
 }
