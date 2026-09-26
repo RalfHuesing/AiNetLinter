@@ -18,7 +18,7 @@ internal sealed class VerifyAdvisoryPageStore
     internal CallToolResult Start(DeadCodeScanResult scan)
     {
         var candidates = GetVerifyAdvisoriesTool.SortCandidates(scan);
-        var snapshotScan = scan with { DeadSymbols = candidates };
+        var snapshotScan = scan with { DeadSymbols = candidates, UndecidableSymbols = [] };
         var id = Guid.NewGuid();
         var page = GetVerifyAdvisoriesTool.RenderPage(snapshotScan, candidates, 0, id);
         if (page.IsError == true || candidates.Length == 0) return page;
@@ -29,6 +29,18 @@ internal sealed class VerifyAdvisoryPageStore
             snapshots.Add(id, new Snapshot(snapshotScan, candidates, DateTimeOffset.UtcNow));
         }
         return page;
+    }
+
+    internal string Capture(DeadCodeScanResult scan)
+    {
+        var candidates = GetVerifyAdvisoriesTool.SortCandidates(scan);
+        var id = Guid.NewGuid();
+        lock (gate)
+        {
+            RemoveExpired();
+            snapshots.Add(id, new Snapshot(scan with { DeadSymbols = candidates, UndecidableSymbols = [] }, candidates, DateTimeOffset.UtcNow));
+        }
+        return $"{id:N}:0";
     }
 
     internal CallToolResult Continue(string continuationToken)
@@ -44,7 +56,7 @@ internal sealed class VerifyAdvisoryPageStore
         {
             RemoveExpired();
             if (!snapshots.TryGetValue(id, out var snapshot)
-                || offset <= 0 || offset >= snapshot.Candidates.Length)
+                || offset < 0 || offset >= snapshot.Candidates.Length)
             {
                 return InvalidToken();
             }

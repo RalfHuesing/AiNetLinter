@@ -61,7 +61,8 @@ internal static class GetVerifyAdvisoriesTool
                     Mode: DeadCodeMode.Members,
                     MaxResults: UnboundedCandidateLimit,
                     Config: config,
-                    HandoffIdentity: server.HandoffSymbolIdentity),
+                    HandoffIdentity: server.HandoffSymbolIdentity,
+                    SolutionBudget: true),
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -75,12 +76,15 @@ internal static class GetVerifyAdvisoriesTool
         return PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Start(scan);
     }
 
+    internal static string Capture(McpCodeGraphServer server, DeadCodeScanResult scan) =>
+        PageStores.GetValue(server, _ => new VerifyAdvisoryPageStore()).Capture(scan);
+
     internal static CallToolResult Render(DeadCodeScanResult scan) => new VerifyAdvisoryPageStore().Start(scan);
 
     internal static DeadCodeEntry[] SortCandidates(DeadCodeScanResult scan)
     {
-        return scan.DeadSymbols
-            .OrderBy(entry => entry.Confidence == "high" ? 0 : 1)
+        return scan.DeadSymbols.Concat(scan.UndecidableSymbols ?? [])
+            .OrderBy(entry => entry.Priority)
             .ThenBy(entry => entry.ProjectName, StringComparer.Ordinal)
             .ThenBy(entry => entry.File, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.File, StringComparer.Ordinal)
@@ -95,7 +99,7 @@ internal static class GetVerifyAdvisoriesTool
         int offset,
         Guid snapshotId)
     {
-        var candidateCount = scan.Summary.TotalDead;
+        var candidateCount = scan.Summary.TotalDead + scan.Summary.Undecidable;
         var selected = new List<DeadCodeEntry>();
 
         foreach (var candidate in candidates.Skip(offset))
@@ -152,7 +156,7 @@ internal static class GetVerifyAdvisoriesTool
             var identifier = entry.InternalSymbolIdentifier is { Length: > 0 } internalIdentifier
                 ? HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(internalIdentifier)
                 : string.Empty;
-            lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {entry.Usage} | {entry.Confidence}");
+            lines.Add($"{entry.Line} | {Clean(symbol)} | {identifier} | {entry.Usage} | {Clean(entry.Reason)} | {Clean(string.Join(",", entry.Countercheck ?? []))}");
         }
 
         return string.Join('\n', lines);
@@ -167,23 +171,29 @@ internal static class GetVerifyAdvisoriesTool
         int scannedCount)
     {
         var summary = scan.Summary;
-        var status = summary.Undecidable > 0 || scan.IsTruncated ? "partial" : "complete";
+        var status = summary.Status == "partial" ? "partial" : "complete";
         var end = offset + shown;
         var truncatedBy = Math.Max(0, candidateCount - end);
         var hasNext = end < scannedCount;
-        var listCompleteness = hasNext || status == "partial" ? "partial" : "complete";
+        var listCompleteness = hasNext || scan.IsTruncated ? "partial" : "complete";
         var continuationToken = hasNext ? $"{snapshotId:N}:{end}" : "none";
         var lines = new List<string>
         {
             $"status={status}; candidates={summary.TotalDead}; testOnly={scan.DeadSymbols.Count(entry => entry.Usage == "test_only")}; unreferenced={scan.DeadSymbols.Count(entry => entry.Usage == "unreferenced")}; apiProtected={summary.ApiProtected}; undecidable={summary.Undecidable}; shown={shown}; truncatedBy={truncatedBy}; offset={offset}; listCompleteness={listCompleteness}",
+            $"scanCompleteness={status}; requestedScope={summary.Coverage?.RequestedScope ?? "unknown"}; processedDocuments={summary.Coverage?.ProcessedDocuments}; openDocuments={summary.Coverage?.OpenDocuments}; elapsedMs={summary.Coverage?.ElapsedMilliseconds}; stopReason={summary.Coverage?.StopReason ?? "unknown"}; changesBasis={summary.Coverage?.ChangesBasis ?? "unknown"}",
+            $"undecidableReasons={FormatReasons(summary.UndecidableReasons)}; population=candidates+undecidable_details",
+            $"excludedKinds={summary.Coverage?.ExcludedKinds ?? "unknown"}",
             $"continuationToken={continuationToken}",
-            "columns: line | symbol | symbolIdentifier | usage | confidence",
+            "columns: line | symbol | symbolIdentifier | usage | reason | countercheck",
         };
         if (truncatedBy > 0) lines.Add(hasNext
             ? "truncated: weitere Kandidaten mit continuationToken abrufen."
-            : "truncated: der Scan selbst ist partiell; erneute Analyse erforderlich.");
+            : "truncated: weitere Eintraege wurden nicht im Snapshot gespeichert; erneute Analyse erforderlich.");
         return lines;
     }
+
+    internal static string FormatReasons(IReadOnlyDictionary<string, int>? reasons) =>
+        string.Join(",", (reasons ?? new Dictionary<string, int>()).OrderBy(pair => pair.Key).Select(pair => pair.Key + ":" + pair.Value));
 
     private static string Clean(string value) => value.Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ');
 

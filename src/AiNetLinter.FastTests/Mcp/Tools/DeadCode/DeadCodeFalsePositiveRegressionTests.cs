@@ -22,6 +22,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
                 {
                     private int _generation;
                     public int Next() => ++_generation;
+                    private int Orphan() => 42;
                 }
                 """),
                 ("Program.cs", """
@@ -215,7 +216,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
     }
 
     [Fact]
-    public async Task ScanAsync_CompilerProvenUnreachableStatement_IsDeadCode()
+    public async Task ScanAsync_CompilerProvenUnreachableStatement_IsOutsideAdvisoryScope()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [("Program.cs", """
@@ -236,7 +237,7 @@ public sealed class DeadCodeFalsePositiveRegressionTests
 
         var result = await ScanAsync(testSolution, DeadCodeKindFilter.All, DeadCodeMode.Both);
 
-        Assert.Contains(result.DeadSymbols, entry =>
+        Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.Reason.Contains("CS0162", StringComparison.Ordinal));
     }
 

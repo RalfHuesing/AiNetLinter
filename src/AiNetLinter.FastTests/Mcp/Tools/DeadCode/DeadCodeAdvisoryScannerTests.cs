@@ -437,7 +437,7 @@ public sealed class DeadCodeAdvisoryScannerTests
     }
 
     [Fact]
-    public async Task ScanAsync_UnusedEventAndDelegate_DetectedAsDeadCode()
+    public async Task ScanAsync_UnusedDelegateIsCandidateAndEventIsOutsideScope()
     {
         using var testSolution = CreateSolution(
             ("Service.cs", """
@@ -457,7 +457,7 @@ public sealed class DeadCodeAdvisoryScannerTests
         var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadCallback" && d.Kind == "delegate");
-        Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadEvent" && d.Kind == "event");
+        Assert.DoesNotContain(result.DeadSymbols, d => d.SymbolName == "DeadEvent");
     }
 
     private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>

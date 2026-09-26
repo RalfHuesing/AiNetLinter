@@ -95,27 +95,14 @@ public sealed class MetadataConstructorHandoffTests
             line.Contains("category=dead_code", StringComparison.Ordinal)
             && line.Contains("Primary.cs:4", StringComparison.Ordinal)).ToArray();
         Assert.True(rows.Length > 0, verifyText);
-        string? handoffId = null;
-        string? constructorBodyText = null;
-        string? constructorCandidate = null;
-        foreach (var row in rows)
-        {
-            var candidateId = System.Text.RegularExpressions.Regex.Match(
-                row, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant)
-                .Groups["id"].Value;
-            if (candidateId.Length == 0) continue;
-
-            var candidateBody = await GetSymbolBodyTool.ExecuteAsync(state, [candidateId], 80, CancellationToken.None);
-            var candidateBodyText = TextOf(candidateBody);
-            if (!candidateBodyText.Contains("PrimaryTarget.PrimaryTarget", StringComparison.Ordinal)) continue;
-
-            handoffId = candidateId;
-            constructorBodyText = candidateBodyText;
-            constructorCandidate = row;
-            break;
-        }
-        Assert.NotNull(handoffId);
-        Assert.NotNull(constructorCandidate);
+        var candidate = Assert.Single(rows);
+        var typeId = System.Text.RegularExpressions.Regex.Match(candidate, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Groups["id"].Value;
+        Assert.NotEmpty(typeId);
+        var handoffId = await ConstructorHandoffLifecycleTests.ConstructorFromTypeAsync(state, typeId, "PrimaryTarget.PrimaryTarget");
+        var body = await GetSymbolBodyTool.ExecuteAsync(state, [handoffId], 80, CancellationToken.None);
+        var constructorBodyText = TextOf(body);
+        Assert.False(body.IsError is true, constructorBodyText);
 
         var references = await FindReferencesTool.ExecuteAsync(
             state, new FindReferencesRequest(handoffId!, MaxResults: 20, Depth: 1), CancellationToken.None);
@@ -125,7 +112,7 @@ public sealed class MetadataConstructorHandoffTests
 
         Assert.False(references.IsError is true, TextOf(references));
         Assert.False(context.IsError is true, contextText);
-        Assert.Contains("usage=unreferenced", constructorCandidate!, StringComparison.Ordinal);
+        Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
         Assert.Contains("PrimaryTarget.PrimaryTarget", constructorBodyText!, StringComparison.Ordinal);
         Assert.Contains("PrimaryTarget.PrimaryTarget", contextText, StringComparison.Ordinal);
     }

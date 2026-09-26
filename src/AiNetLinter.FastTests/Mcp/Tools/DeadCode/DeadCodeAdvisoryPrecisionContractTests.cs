@@ -33,7 +33,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
                     public void Handle(Query query) { }
                 }
                 """)], VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("QueryTests.cs", """
                 namespace ProductTests;
                 public sealed class QueryTests
@@ -45,10 +45,8 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
         var result = await ScanAllAsync(testSolution.Solution);
 
         Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind == "class" && entry.SymbolName == "Query");
-        var constructor = Assert.Single(result.DeadSymbols, entry =>
-            entry.Kind == "constructor" && entry.ContainerType == "Product.Query");
-        Assert.Equal("test_only", constructor.Usage);
-        Assert.Equal(1, constructor.TestReferences);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.Kind == "constructor");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "QueryHandler");
         Assert.False(result.DeletionClaim);
     }
 
@@ -71,7 +69,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var result = await ScanAsync(testSolution.Solution, DeadCodeKindFilter.Property);
 
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "WrittenOnly");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "WrittenOnly" && entry.Reason.Contains("no_production_read"));
         var candidate = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "NeverTouched");
         Assert.Equal("unreferenced", candidate.Usage);
         Assert.False(result.DeletionClaim);
@@ -109,7 +107,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var field = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_assignedOnly");
         Assert.Equal("field", field.Kind);
-        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "AssignedOnlyProperty");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "AssignedOnlyProperty" && entry.Reason.Contains("no_production_read"));
         Assert.False(result.DeletionClaim);
     }
 
@@ -176,7 +174,7 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
                 ("IProcessor.cs", "namespace Product; public interface IProcessor { void Process(); }"),
                 ("Processor.cs", "namespace Product; public sealed class Processor : IProcessor { public void Process() { } }")],
                 VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("ProcessorTests.cs", """
                 namespace ProductTests;
                 public sealed class ProcessorTests
@@ -188,10 +186,10 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
         var result = await ScanAllAsync(testSolution.Solution);
 
         var implementation = Assert.Single(result.DeadSymbols, entry =>
-            entry.Kind == "method" && entry.ContainerType == "Product.Processor" && entry.SymbolName == "Process");
+            entry.Kind == "class" && entry.SymbolName == "Processor");
         Assert.Equal("test_only", implementation.Usage);
         Assert.Equal(1, implementation.TestReferences);
-        Assert.Contains("interfaceImplementation", implementation.LimitsApplies);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.ContainerType == "Product.Processor");
         Assert.False(result.DeletionClaim);
     }
 
@@ -225,17 +223,14 @@ public sealed class DeadCodeAdvisoryPrecisionContractTests
 
         var dynamicCandidate = Assert.Single(result.DeadSymbols, entry =>
             entry.ContainerType == "DynamicTarget" && entry.SymbolName == "Dispatch");
-        var reflectionCandidate = Assert.Single(result.DeadSymbols, entry =>
+        Assert.DoesNotContain(result.DeadSymbols, entry =>
             entry.ContainerType == "ReflectedTarget" && entry.SymbolName == "Invoke");
 
         Assert.Equal("unreferenced", dynamicCandidate.Usage);
-        Assert.Equal("unreferenced", reflectionCandidate.Usage);
         Assert.Equal("low", dynamicCandidate.Confidence);
-        Assert.Equal("low", reflectionCandidate.Confidence);
         Assert.Contains("reflection", dynamicCandidate.LimitsApplies);
-        Assert.Contains("reflection", reflectionCandidate.LimitsApplies);
         Assert.Contains(dynamicCandidate.Countercheck!, item => item.Equals("Dynamic", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(reflectionCandidate.Countercheck!, item => item.Equals("Reflection", StringComparison.OrdinalIgnoreCase));
+        Assert.True(result.Summary.Undecidable > 0);
         Assert.Contains("statische Referenzsuche", dynamicCandidate.EvidenceBoundary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Reflection", result.RecommendedNextAction.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.False(result.DeletionClaim);

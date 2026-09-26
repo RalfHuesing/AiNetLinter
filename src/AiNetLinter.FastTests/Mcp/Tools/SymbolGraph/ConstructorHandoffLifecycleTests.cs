@@ -23,6 +23,18 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 [Trait("Category", "Component")]
 public sealed class ConstructorHandoffLifecycleTests
 {
+    internal static async Task<string> ConstructorFromTypeAsync(McpCodeGraphServer state, string typeId, string signature)
+    {
+        var structure = await GetClassStructureTool.ExecuteAsync(state, typeId, "name", CancellationToken.None);
+        var text = TextOf(structure);
+        Assert.False(structure.IsError is true, text);
+        var row = Assert.Single(text.Split('\n'), line => line.StartsWith("| Constructor | .ctor |", StringComparison.Ordinal)
+            && line.Contains(signature, StringComparison.Ordinal));
+        var id = Regex.Match(row, @"handoffId: `(?<id>h:[^`]+)`", RegexOptions.CultureInvariant).Groups["id"].Value;
+        Assert.NotEmpty(id);
+        return id;
+    }
+
     [Theory]
     [InlineData("Overloaded", "Overloaded.Overloaded()", "Overloaded.Overloaded()", 21)]
     [InlineData("Overloaded", "Overloaded.Overloaded(string label)", "Overloaded.Overloaded(string)", 22)]
@@ -120,7 +132,7 @@ public sealed class ConstructorHandoffLifecycleTests
     }
 
     [Fact]
-    public async Task VerifyConstructorHandoff_IsReusableWithoutChangingItsIdentifier()
+    public async Task VerifyTypeGroup_ExposesReusableConstructorHandoffThroughStructure()
     {
         using var scenario = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\ConstructorVerifyHandoffLifecycle.slnx",
@@ -144,12 +156,14 @@ public sealed class ConstructorHandoffLifecycleTests
         var verifyText = TextOf(verify);
         var candidate = verifyText.Split('\n').SingleOrDefault(line =>
             line.Contains("category=dead_code", StringComparison.Ordinal)
-            && line.Contains("Constructors.cs:5", StringComparison.Ordinal));
+            && line.Contains("Constructors.cs:3", StringComparison.Ordinal));
         Assert.True(candidate is not null, verifyText);
 
-        var handoffId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
+        var typeId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
             .Groups["id"].Value;
-        Assert.NotEmpty(handoffId);
+        Assert.NotEmpty(typeId);
+        Assert.DoesNotContain(verifyText.Split('\n'), row => row.Contains("category=dead_code", StringComparison.Ordinal) && row.Contains("Constructors.cs:5", StringComparison.Ordinal));
+        var handoffId = await ConstructorHandoffLifecycleTests.ConstructorFromTypeAsync(state, typeId, "ParameterlessRecord.ParameterlessRecord()");
         Assert.Contains("dead_code", candidate, StringComparison.Ordinal);
         Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
 

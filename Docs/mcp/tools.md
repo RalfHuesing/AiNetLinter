@@ -184,7 +184,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `metrics_lookup` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array von Symbol-IDs/Namen fuer Batch in 1 Turn; auch fuer genau ein Symbol) | Punktgenaue Metriken (Netto-LOC, zyklomatische/kognitive Komplexität, effektive Parameteranzahl, AI-Context-Footprint, Member-Counts) und Schwellwert-Abgleich gegen aktive `ainetlinter-rules.json` für ein oder mehrere C#-Symbole; liefert lesbares Markdown mit Status-Badges (`[OK]`, `[WARN]`, `[VIOLATION]`). | ja | nein |
 | `get_feature_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht), `maxCallers?`, `maxTests?`, `maxResponseBytes?` | Composite-Kontext für Deklaration, Metriken, statischen Impact, Testevidenz und kontextuelle Violations. Der Content weist `callerId` und `callerLocation` für direkte Folgeaufrufe aus; Budget und Status benennen unvollständige Abschnitte. Diese Evidenz ist kein Gate, kein Verdict und kein Abschlussnachweis. | ja | ja |
 | `get_test_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht: Typname, Methode, Datei:Zeile oder DocCommentId), `maxResults?` (Default 30, Cap 100; mindestens 1, Werte über 100 liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`) | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zielgerichtet alle zugeordneten Testdateien, Testklassen, Testmethoden, Test-Kategorien (Unit/Integration), Zuordnungsgründe und direkt ausführbare `dotnet test` Filterbefehle im Content. | ja | ja |
-| `verify` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scope?` (`changes` Default oder `solution`) | Der einzige feste Source-Gate-Einstieg. `changes` prüft die vollständigen aktuellen geänderten Source-Dateien und kann nur nicht blockierende advisory-Kandidaten ergänzen; `solution` prüft vollständig ohne solche Kandidaten. Ein `pass` bedeutet immer `score=10.0` und `violationCount=0`. Die Antwort ist ohne Clientparameter auf 4 KiB UTF-8 begrenzt und projiziert nur vollständige Evidenzeinheiten. | ja | feste, serverseitige Projektion |
+| `verify` | `targetPath` (absoluter `.sln`-/`.slnx`-Pfad), `scope?` (`changes` Default oder `solution`) | Source-Gate: `pass` nur bei Score 10.0 und 0 Verstößen. Beide Scopes ergänzen nicht blockierende Prüfkandidaten. Standardantwort höchstens 8 KiB UTF-8 und 20 Evidenzeinträge; Dead-Code-Budget 10 s, bei explizitem Solution-Scan 60 s. | ja | feste, serverseitige Projektion |
 | `get_verify_advisories` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `category` (Pflicht; ausschließlich `dead_code`), `continuationToken?` (exakt aus dem Content der Vorseite) | Ohne Token neuer produktiver Dead-Code-Scan unabhängig von `verify`; mit Token nächste Seite desselben servergebundenen Scan-Snapshots, ohne erneuten Scan. Content-only, maximal 65.536 UTF-8-Bytes und nur vollständige Einträge. `offset`, `shown`, `truncatedBy`, `listCompleteness` und `continuationToken` beschreiben die Seite und den Fortsetzungsweg. Snapshot-Token verfallen nach 30 Minuten Inaktivität oder Server-Neustart. Symbol-Handles sind direkt für `find_references`, `get_symbol_body` und `get_feature_context` nutzbar; jeden Kandidaten vor Änderungen einzeln gegenprüfen. | ja | serverseitiger Scan-Snapshot mit Fortsetzung |
 | `pattern_detect` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Lint-Kandidaten nach Pattern-Kategorie. Leere Pattern werden als eine kompakte `Ohne Treffer`-Zeile zusammengefasst; `not_configured` und `not_decidable` bleiben mit ihrem konkreten nächsten Schritt sichtbar. Bewusst durch `FileFilters` ausgeschlossene Dokumente liegen außerhalb des effektiven Scopes und machen die verbleibenden Pattern-Kategorien nicht automatisch `not_decidable`. Heuristiktreffer tragen `handoff: not_applicable`, weil sie kein eindeutig aufgelöstes Symbol repräsentieren. | ja | ja (je Pattern) |
 | `get_symbol_body` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array von Handles/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator; der Content nennt pro Eintrag `requestedIdentifier`, opaques Handoff-Handle, relativen `filePath`, `startLine`, `bodyAvailability`, `contentMode`, Body und Trunkierungs-/Vollständigkeitsangaben. Bei dekompilierten Assembly-Targets stammen verfügbare Bodies aus dem eager WholeProjectDecompiler-Projekt-Snapshot; interne Materialisatpfade werden nicht projiziert. Der Header beschreibt als `snapshotStatus`/`snapshotCompleteness` die Snapshot-Gesundheit; `Assembly-Scope` beschreibt separat die konkrete Body-Abfrage. Interface- sowie abstract-/extern-Member bleiben `bodyAvailability=unavailable`. | ja | nein (Body) |
@@ -580,66 +580,19 @@ Scope und Recovery, aber keinen Score und keinen Violation-Count.
 Ungültige Requests, Assembly-Ziele und exogene Fehler sind `verdict=error` mit
 `isError=true`, Fehlercode, optionalem Feld und genau einer Recovery.
 
-Beide Scopes ergänzen Dead-Code-Advisories. `changes` begrenzt nur die
-untersuchten produktiven Deklarationen auf geänderte Quelldateien;
-`solution` untersucht alle produktiven Quelldateien. Die Referenzsuche bleibt
-in beiden Fällen solutionweit. Die Zeile `deadCode` nennt `status`, vollständige
-Zähler für Kandidaten, Test-only, unreferenziert, API-geschützt und unentscheidbar,
-die sichtbare Anzahl, `truncatedBy` sowie `next`. `partial` weist auf
-unentscheidbare Referenzstellen hin; `unavailable` enthält unbekannte Zähler und
-eine knappe Ursache. Auch bei gekürzten Einträgen bleibt diese Zusammenfassung
-erhalten. `deadCodeHint` erscheint genau einmal, wenn Kandidaten existieren.
+Beide Scopes ergänzen Dead-Code-Prüfkandidaten. `changes` umfasst geänderte Deklarationen und bisherige Ziele entfernter Referenzen; `solution` zusätzlich ältere Kandidaten. Referenzen bleiben solutionweit. Konfigurations-/Markupänderungen und entfernte Source-Dateien können den Umfang konservativ erweitern. Der API-Default `closed_solution` lässt öffentliche Kandidaten zu; `external_library` schützt effektiv externe API. Testrollen folgen Projektmetadaten oder expliziter Konfiguration, nicht Namen oder Pfaden.
 
-Die API-Policy ist standardmäßig `DeadCode.DefaultApiSurface=closed_solution`;
-damit werden auch extern sichtbare Symbole geprüft und bei fehlender produktiver
-statischer Referenz mit niedriger Confidence ausgegeben. `external_library`
-schützt extern sichtbare Typen und Member. Gültig sind ausschließlich
-`closed_solution` und `external_library`; ein fehlender globaler Wert verwendet
-`closed_solution`, ein nicht gesetzter Projekt-Override erbt diesen Wert.
-Explizit ungültige Werte, einschließlich `unknown`, erzeugen vor der
-Gate-Analyse `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` für die betroffenen
-produktiven Kandidatenprojekte.
+`deadCode.status` und `scanCompleteness` sind vom Ausgabestatus getrennt. Fachliche Unsicherheit erscheint in `undecidable` und gruppierten Gründen; unbearbeitete Arbeit in `openDocuments`. `elapsedMs`, `stopReason`, `changesBasis` und `excludedKinds` nennen die Scan-Grenzen. Zähler eines partiellen Scans sind beobachtete Ergebnisse, keine bekannte Gesamtmenge. Null Funde bei partiellem Scan sind keine Entwarnung. Ein Gate-`pass` bleibt davon unabhängig.
 
-Dead-Code-Einträge stehen vor Magic-Value-Advisories und enthalten einen
-`symbolIdentifier` im kanonischen `h:...`-Format für `find_references`, den
-Deklarationspfad mit Zeile, `usage=test_only|unreferenced`, Confidence und
-`reason=no_production_static_reference`. Test-only-Einträge nennen zusätzlich
-die Testreferenzzahl. Sie behaupten nicht, es gebe keinerlei Solution-Referenzen.
-Reflection, DI, Generatoren, `dynamic`, Markup/Konfiguration und externe
-Consumer müssen vor einer Entfernung gegengeprüft werden. Kandidaten ändern
-`verdict`, `score` und `violationCount` nicht.
+Dead-Code-Einträge enthalten `symbolIdentifier=h:...`, Ort, Nutzungsgrund und Gegenprüfhinweise. `test_only` bleibt ein Prüfkandidat. Bei Feld-/Property-Kandidaten nennt `reason` außerdem `no_production_read`, `writes` und `testReads`. Ganze verwaiste Typen werden gruppiert; Confidence-Stufen entfallen. Weder ein lebendes Delegationsziel noch identische Literale schützen ungenutzte Wrapper bzw. Konstanten.
 
-`get_verify_advisories(targetPath, category="dead_code")` berechnet einen neuen
-produktiven Dead-Code-Scan und startet keinen Verify-Gate-Lauf. Die Antwort
-enthält `continuationToken=<Wert|none>`. Bei einem Wert diesen mit demselben
-`targetPath` und `category` unverändert als optionales `continuationToken`
-zurückgeben. Folgeseiten verwenden denselben Scan-Snapshot; die sortierte
-Kandidatenfolge und ihre Handoff-IDs bleiben erhalten. Token verfallen nach
-30 Minuten Inaktivität oder Server-Neustart; ein ungültiges oder abgelaufenes
-Token liefert `INVALID_CONTINUATION_TOKEN` und verlangt einen neuen Scan.
-Die Content-only-Antwort ist auf 65.536 UTF-8-Bytes begrenzt und enthält nur
-vollständige Einträge. `candidates` zählt das Scanergebnis; `offset` ist der
-nullbasierte Anfang der aktuellen Seite, `shown` ihre Länge und `truncatedBy`
-die Zahl der nach dieser Seite noch nicht gezeigten Kandidaten. Bei
-`listCompleteness=partial` und einem Token sind weitere Seiten verfügbar;
-`listCompleteness=complete` und `continuationToken=none` kennzeichnen die
-vollständige Liste. `status=partial` beschreibt einen unvollständigen Scan;
-auch nach der letzten verfügbaren Seite bleibt `listCompleteness=partial`,
-wenn der Scan selbst partiell war. `symbolIdentifier` kann unverändert an `find_references`,
-`get_symbol_body` oder `get_feature_context` übergeben werden. Jeder sichtbare
-Kandidat ist einzeln gegen Code, Razor/Markup, Konfiguration sowie mögliche
-Reflection-, DI-, Generator-, `dynamic`- und externe Nutzung zu prüfen, bevor
-Änderungen erfolgen.
+`get_verify_advisories(targetPath, category="dead_code")` startet ohne Token einen neuen Scan mit standardmäßig 60 Sekunden Budget, ohne Verify-Gate-Lauf. Ein von Verify oder einer Detailseite ausgegebener `continuationToken` liest ausschließlich denselben gespeicherten Snapshot. Ein laufender Aufruf wird zuvor mit `operationToken` abgeholt. Beide Tokenarten dürfen nicht kombiniert werden.
 
-Die gemeinsame Advisory-Zeile markiert `review_required` und `static_evidence`;
-bei Magic-Value-Einträgen bleiben Kategorie, `ref`, Confidence und Grund sichtbar.
-Ein `.razor.cs`-Kandidat mit
-fehlender oder nicht auswertbarer Razor-Generierung trägt einen sichtbaren
-Razor-Unsicherheitsgrund und `confidence=low`; im vollständigen Ergebnis nennen
-`recommendedNextAction` und `summary.next` `countercheck`, bei Trunkierung beide
-`continue`. Die ausführliche Unsicherheits- und Gegenindikator-Policy wird nicht
-je Eintrag wiederholt. Advisorys sind weder Lösch- oder Änderungsanweisungen noch
-Teil des Gate-Entscheids.
+Detailseiten enthalten maximal 65.536 UTF-8-Bytes und nur vollständige Einträge. `population=candidates+undecidable_details` erläutert die Seitenpopulation: `candidates` zählt nur Prüfkandidaten, `shown`/`offset`/`truncatedBy` die ausgegebenen Einträge einschließlich Unsicherheitsdetails. `listCompleteness=complete` und `continuationToken=none` bedeuten, dass alle gespeicherten Einträge gezeigt sind; ein partieller Scan bleibt trotzdem `scanCompleteness=partial`. Token verfallen nach 30 Minuten Inaktivität oder Server-Neustart; `INVALID_CONTINUATION_TOKEN` verlangt einen neuen Scan. Ausgabelimits sparen keine Scanzeit.
+
+Die [Dead-Code-Regeln](dead-code.md) nennen pro Bindung das konkrete Signal, den verhinderten Fehlalarm sowie erhaltene Kandidaten und Grenzen. Fehlender Razor-Generatoroutput allein macht nicht alle Komponentenmember unentscheidbar: vorhandene generierte Referenzen und begrenzte Markup-/JS-Prüfung entscheiden. Vor einer Entfernung die jeweilige Bindung und externe Verträge gegenprüfen; eine Kandidatenzeile ist keine Löschfreigabe. `symbolIdentifier` unverändert an `find_references`, `get_symbol_body` oder `get_feature_context` übergeben.
+
+Magic-Value-Advisories behalten ihre eigene Confidence-/Kategorienprojektion. Beide Advisory-Arten stehen außerhalb des Gate-Entscheids.
 
 **`pattern_detect` — Content im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`) und `feature-envy` (`AvoidExcessiveMiddleMen`). Der Content nennt:
 

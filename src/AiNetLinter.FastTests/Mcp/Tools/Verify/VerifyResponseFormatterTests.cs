@@ -41,11 +41,11 @@ public sealed class VerifyResponseFormatterTests
     [Fact]
     public void Success_LongGateEvidence_UsesDeterministicWholeEntriesWithinFixedUtf8Budget()
     {
-        var firstReason = "Grund: " + new string('ü', 1_000);
+        var firstReason = "Grund: " + new string('ü', VerifyTool.ResponseBudgetBytes / 4);
         var parameters = CreateParameters(
             CreateScore(
                 CreateViolation("src/First.cs", 10, "FirstRule", firstReason),
-                CreateViolation("src/Second.cs", 20, "SecondRule", "Grund: " + new string('ü', 1_000))));
+                CreateViolation("src/Second.cs", 20, "SecondRule", "Grund: " + new string('ü', VerifyTool.ResponseBudgetBytes / 4))));
 
         var first = VerifyResponseFormatter.Success(parameters);
         var second = VerifyResponseFormatter.Success(parameters);
@@ -62,7 +62,7 @@ public sealed class VerifyResponseFormatterTests
     public void Success_GateEvidenceExceedingFixedBudget_ReturnsIncompleteInsteadOfAnUnactionableFailure()
     {
         var parameters = CreateParameters(CreateScore(CreateViolation(
-            "src/TooLarge.cs", 10, "TooLargeRule", "Grund: " + new string('ü', 3_000))));
+            "src/TooLarge.cs", 10, "TooLargeRule", "Grund: " + new string('ü', VerifyTool.ResponseBudgetBytes))));
 
         var result = VerifyResponseFormatter.Success(parameters);
 
@@ -114,7 +114,7 @@ public sealed class VerifyResponseFormatterTests
         Assert.Contains("deadCode: status=complete; candidates=1; testOnly=1; unreferenced=0; apiProtected=0; undecidable=0; shown=1; truncatedBy=0; next=review_now", text, StringComparison.Ordinal);
         Assert.Contains("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.", text, StringComparison.Ordinal);
         Assert.DoesNotContain("deadCodeAdvisoryHint:", text, StringComparison.Ordinal);
-        Assert.Contains("- category=dead_code; symbolIdentifier=h:abc; ref=src/Probe.cs:42; usage=test_only; confidence=low; reason=no_production_static_reference; testReferences=2; countercheck=reflection,DI,generators,dynamic,markup/config,external_consumers", text, StringComparison.Ordinal);
+        Assert.Contains("- category=dead_code; symbolIdentifier=h:abc; ref=src/Probe.cs:42; usage=test_only; reason=Keine produktiven statischen Referenzen; 2 Testreferenz(en) gefunden.; testReferences=2; countercheck=Reflection", text, StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
         Assert.DoesNotContain("source:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("handoffId:", text, StringComparison.Ordinal);
@@ -180,7 +180,7 @@ public sealed class VerifyResponseFormatterTests
                 "advisory",
                 $"src/Probe{index}.cs",
                 index + 1,
-                "Keine produktiven statischen Referenzen.",
+                "Keine produktiven statischen Referenzen. " + new string('x', 300),
                 $"h:{index}",
                 Confidence: "high",
                 Usage: index < 2 ? "test_only" : "unreferenced",
@@ -201,7 +201,7 @@ public sealed class VerifyResponseFormatterTests
         Assert.Equal(25, shown + truncatedBy);
         Assert.True(shown < entries.Count);
         Assert.Equal(1, CountOccurrences(text, "deadCodeHint:"));
-        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)", text, StringComparison.Ordinal);
+        Assert.Contains("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken=none)", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public sealed class VerifyResponseFormatterTests
             "partial",
             new VerifyDeadCodeSummary("partial", 0, 0, 0, 0, 3));
         var partialText = GetText(VerifyResponseFormatter.Success(CreateParameters(CreateScore(), partial)));
-        Assert.Contains("deadCode: status=partial; candidates=0; testOnly=0; unreferenced=0; apiProtected=0; undecidable=3; shown=0; truncatedBy=0; next=none", partialText, StringComparison.Ordinal);
+        Assert.Contains("deadCode: status=partial; candidates=0; testOnly=0; unreferenced=0; apiProtected=0; undecidable=3; shown=0; truncatedBy=0; next=review_now", partialText, StringComparison.Ordinal);
         Assert.DoesNotContain("deadCodeHint:", partialText, StringComparison.Ordinal);
 
         var unavailable = new VerifyAdvisoryProjection(
@@ -233,7 +233,7 @@ public sealed class VerifyResponseFormatterTests
     {
         var result = VerifyResponseFormatter.Error(
             "TEST_ERROR",
-            new string('ü', 3_000),
+            new string('ü', VerifyTool.ResponseBudgetBytes),
             "Erneut ausführen.");
 
         var text = GetText(result);

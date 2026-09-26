@@ -12,28 +12,6 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// </summary>
 internal static class DeadCodeWhitelist
 {
-    private static readonly HashSet<string> WhitelistedAttributeNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ModuleInitializerAttribute",
-        "DllImportAttribute",
-        "UnmanagedCallersOnlyAttribute",
-        "FactAttribute",
-        "TheoryAttribute",
-        "TestAttribute",
-        "TestMethodAttribute",
-        "McpServerToolAttribute",
-        "McpToolAttribute",
-        "ExportAttribute",
-        "ImportAttribute",
-        "JSInvokableAttribute",
-        "ParameterAttribute",
-        "InjectAttribute",
-        "JsonConstructorAttribute",
-        "JsonConstructor",
-        "BenchmarkAttribute",
-        "Benchmark"
-    };
-
     /// <summary>
     /// Prueft, ob ein Symbol gemaess Compiler-, Framework- und Konstruktor-Regeln gewhitelistet ist.
     /// </summary>
@@ -66,17 +44,13 @@ internal static class DeadCodeWhitelist
         return false;
     }
 
+    internal static bool IsCompilerRoot(ISymbol symbol) => symbol.GetAttributes().Any(attribute =>
+        attribute.AttributeClass?.ToDisplayString() == "System.Runtime.CompilerServices.ModuleInitializerAttribute"
+        && attribute.AttributeClass.Locations.All(location => !location.IsInSource));
+
     private static bool HasWhitelistedAttribute(ISymbol symbol)
     {
-        foreach (var attr in symbol.GetAttributes())
-        {
-            var attrName = attr.AttributeClass?.Name;
-            if (attrName != null && WhitelistedAttributeNames.Contains(attrName))
-            {
-                return true;
-            }
-        }
-        return false;
+        return IsCompilerRoot(symbol);
     }
 
     private static bool IsSpecialMethodKind(ISymbol symbol)

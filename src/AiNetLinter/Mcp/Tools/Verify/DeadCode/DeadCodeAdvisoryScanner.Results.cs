@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Output;
@@ -19,7 +20,7 @@ internal static partial class DeadCodeAdvisoryScanner
         var kindStr = GetSymbolKindString(symbol);
         var accessibilityStr = GetAccessibilityString(symbol.DeclaredAccessibility);
         var assessment = RazorGeneratedEvidenceIndex.AssessMember(
-            context.RazorEvidenceIndex.GetStatus(symbol, document),
+            RazorGeneratedEvidenceStatus.NotComponent,
             ClassifyConfidence(symbol, hasInternalsVisibleTo));
 
         if (context.Args.Confidence == DeadCodeConfidenceFilter.High && !assessment.Confidence.Equals("high", StringComparison.OrdinalIgnoreCase)) return;
@@ -50,20 +51,47 @@ internal static partial class DeadCodeAdvisoryScanner
             Column: column,
             Accessibility: accessibilityStr,
             Confidence: assessment.Confidence,
-            Reason: referenceAnalysis.TestReferenceCount > 0
-                ? $"Keine produktiven statischen Referenzen; {referenceAnalysis.TestReferenceCount} Testreferenz(en) gefunden."
-                : assessment.Reason,
+            Reason: DescribeUsage(referenceAnalysis, symbol),
             LimitsApplies: DetermineLimitsApplies(symbol, hasInternalsVisibleTo),
-            Countercheck: assessment.Countercheck,
+            Countercheck: Counterchecks(symbol),
             Usage: referenceAnalysis.TestReferenceCount > 0 ? "test_only" : "unreferenced",
             TestReferences: referenceAnalysis.TestReferenceCount,
             InternalSymbolIdentifier: context.Args.HandoffIdentity?.FormatHandoff(symbol, document.Project.Id),
-            ProjectName: document.Project.Name);
+            ProjectName: document.Project.Name,
+            Priority: ReviewPriority(symbol, context.Progress));
 
         context.DeadSymbols.Add(entry);
         if (context.ByKind.TryGetValue(kindStr, out var count)) context.ByKind[kindStr] = count + 1;
         else context.ByKind[kindStr] = 1;
     }
+
+    private static int ReviewPriority(ISymbol symbol, DeadCodeScanProgress progress)
+    {
+        if (progress.PriorTargets.Contains(DeadCodeUsageIndex.Key(symbol))) return 0;
+        return symbol is INamedTypeSymbol ? 1 : 2;
+    }
+
+    private static IReadOnlyList<string> Counterchecks(ISymbol symbol) => symbol switch
+    {
+        IFieldSymbol or IPropertySymbol => ["Produktive Leser/Schreibstellen", "Reflection-Auswahl und Daten-/Markupvertrag"],
+        INamedTypeSymbol => ["Nutzung enthaltener Member und Entfern-Gruppe", "Aktivierung/Registrierung und externe Consumer"],
+        _ => ["Aufrufer/Methodengruppen und Wrapper", "Vertragsdispatch, Registrierung und Reflection-Bindungen", "Dynamic", "Externe Consumer"]
+    };
+
+    private static string DescribeUsage(SymbolReferenceAnalysis usage, ISymbol symbol)
+    {
+        if (symbol is IFieldSymbol or IPropertySymbol)
+            return $"no_production_read; writes={usage.WriteReferenceCount}; testReads={usage.TestReferenceCount}";
+        return usage.TestReferenceCount > 0
+            ? $"Keine produktiven statischen Referenzen; {usage.TestReferenceCount} Testreferenz(en) gefunden."
+            : "Keine relevante produktive Nutzung im untersuchten Symbolumfang gefunden.";
+    }
+
+    private static DeadCodeScanCoverage BuildCoverage(DeadCodeScanContext context) => new(
+        context.Args.RequestedScope ?? (context.Args.ScopeFiles is null ? "solution" : "changes"), context.Progress.ProcessedDocuments,
+        context.DocumentsInScope - context.Progress.ProcessedDocuments, context.Progress.ElapsedMilliseconds,
+        context.Progress.BudgetExpired ? "budget" : context.Progress.ReferencesComplete ? "finished" : string.Join(",", context.UsageIndex.CoverageGaps), context.Progress.ReferencesComplete,
+        ChangesBasis: context.Progress.ChangesBasis);
 
     private static DeadCodeScanResult BuildScanResult(DeadCodeScanContext context)
     {
@@ -71,7 +99,8 @@ internal static partial class DeadCodeAdvisoryScanner
         var highCount = context.DeadSymbols.Count(s => s.Confidence.Equals("high", StringComparison.OrdinalIgnoreCase));
         var lowCount = context.DeadSymbols.Count(s => s.Confidence.Equals("low", StringComparison.OrdinalIgnoreCase));
         var isTruncated = totalDead > context.Args.MaxResults;
-        var paginatedSymbols = isTruncated ? context.DeadSymbols.Take(context.Args.MaxResults).ToList() : context.DeadSymbols;
+        var paginatedSymbols = context.DeadSymbols.OrderBy(entry => entry.Priority).ThenBy(entry => entry.File, StringComparer.Ordinal)
+            .ThenBy(entry => entry.Line).Take(context.Args.MaxResults).ToList();
         var action = isTruncated ? "continue" : "countercheck";
         var actionReason = isTruncated
             ? "maxResults erhoehen oder Scope verfeinern; Gegenpruefung nach dem vollstaendigen Ergebnis."
@@ -83,7 +112,7 @@ internal static partial class DeadCodeAdvisoryScanner
             High: highCount,
             Low: lowCount,
             ByKind: context.ByKind,
-            Status: isTruncated ? "truncated" : totalDead == 0 ? "empty" : "checked",
+            Status: !context.Progress.ReferencesComplete || context.Progress.BudgetExpired || context.Progress.ChangesBasis == "unavailable" ? "partial" : "complete",
             Cause: totalDead == 0
                 ? $"Keine Kandidaten in den {context.DocumentsInScope} Dokumenten des angeforderten Scopes; kein globaler Clean-Claim."
                 : "Statische Referenzsuche im angeforderten Scope.",
@@ -96,7 +125,10 @@ internal static partial class DeadCodeAdvisoryScanner
                     ? "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."
                     : actionReason),
             Undecidable: context.UndecidableCount,
-            ApiProtected: context.ApiProtectedCount);
+            ApiProtected: context.ApiProtectedCount,
+            Coverage: BuildCoverage(context),
+            UndecidableReasons: context.Progress.UncertainSymbols.Values.GroupBy(entry => entry.Reason)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal));
         var recommendedAction = totalDead == 0
             ? new DeadCodeRecommendedNextAction(
                 Action: "ask_user",
@@ -108,6 +140,25 @@ internal static partial class DeadCodeAdvisoryScanner
             Summary: summary,
             Limits: DeadCodeLimits.DefaultLimits,
             RecommendedNextAction: recommendedAction,
-            IsTruncated: isTruncated);
+            IsTruncated: isTruncated,
+            UndecidableSymbols: context.Progress.UncertainSymbols.Values.ToArray());
+    }
+    private static void RecordUncertainty(ISymbol symbol, Document document, DeadCodeScanContext context)
+    {
+        var key = DeadCodeUsageIndex.Key(symbol);
+        if (context.Progress.UncertainSymbols.ContainsKey(key)) return;
+        var reasons = context.UsageIndex.UnknownReasons.TryGetValue(key, out var values)
+            ? string.Join(",", values.Order(StringComparer.Ordinal)) : "reference_role_or_binding";
+        var location = symbol.Locations.FirstOrDefault(location => location.IsInSource)?.GetLineSpan();
+        var entry = new DeadCodeEntry(
+            symbol.ToDisplayString(), GetSymbolKindString(symbol), symbol.ContainingType?.ToDisplayString() ?? "",
+            symbol.Name, PathNormalizer.ToRelative(context.SolutionDir, document.FilePath ?? ""),
+            (location?.StartLinePosition.Line ?? 0) + 1, (location?.StartLinePosition.Character ?? 0) + 1,
+            GetAccessibilityString(symbol.DeclaredAccessibility), "", reasons, [], ResultType: "undecidable",
+            Countercheck: [reasons], Usage: "undecidable",
+            InternalSymbolIdentifier: context.Args.HandoffIdentity?.FormatHandoff(symbol, document.Project.Id),
+            ProjectName: document.Project.Name, Priority: 3);
+        context.Progress.UncertainSymbols.Add(key, entry);
+        context.UndecidableCount++;
     }
 }

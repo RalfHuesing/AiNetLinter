@@ -17,7 +17,9 @@ internal sealed record VerifyAdvisoryProjection(
     int TotalCount,
     IReadOnlyList<VerifyEvidenceEntry> Entries,
     string Completeness,
-    VerifyDeadCodeSummary? DeadCode = null)
+    VerifyDeadCodeSummary? DeadCode = null,
+    DeadCodeScanResult? ScanSnapshot = null,
+    int BudgetBytes = 8192)
 {
     internal static readonly VerifyAdvisoryProjection Empty = new(0, [], "not_requested");
 }
@@ -29,7 +31,10 @@ internal sealed record VerifyDeadCodeSummary(
     int? Unreferenced,
     int? ApiProtected,
     int? Undecidable,
-    string? Cause = null);
+    string? Cause = null,
+    DeadCodeScanCoverage? Coverage = null,
+    string? ContinuationToken = null,
+    IReadOnlyDictionary<string, int>? UndecidableReasons = null);
 
 internal static class VerifyAdvisoryProjector
 {
@@ -44,31 +49,29 @@ internal static class VerifyAdvisoryProjector
         Microsoft.CodeAnalysis.Solution solution,
         IReadOnlySet<string>? scopeFiles,
         CancellationToken cancellationToken,
-        Config? config = null,
-        AnalysisSymbolIdentity? handoffIdentity = null)
+        VerifyAdvisorySettings? settings = null)
     {
-        var deadCode = await ScanDeadCodeAsync(solution, scopeFiles, cancellationToken, config, handoffIdentity);
+        var config = settings?.Config;
+        var deadCode = await ScanDeadCodeAsync(solution, new(scopeFiles, config, settings?.Identity, settings?.SolutionBudget ?? scopeFiles is null), cancellationToken);
         var magicValues = await ScanMagicValuesAsync(solution, scopeFiles, cancellationToken);
         var deadEntries = deadCode.Result?.DeadSymbols.Select(ToDeadCodeEvidence).ToList() ?? [];
         var deadSummary = BuildDeadCodeSummary(deadCode);
         var completeness = deadCode.Result is null ? "unavailable"
             : deadSummary.Status == "partial" || magicValues.Completeness != "complete" ? "partial"
             : "complete";
-        var entries = Rank(deadEntries.Concat(magicValues.Entries));
+        var entries = Rank(deadEntries.Take(Math.Clamp(config?.DeadCode.MaxCandidateGroups ?? 20, 1, 20)).Concat(magicValues.Entries));
 
         return new(
             (deadCode.Result?.Summary.TotalDead ?? 0) + magicValues.Entries.Count,
             entries,
             completeness,
-            deadSummary);
+            deadSummary, deadCode.Result, Math.Clamp(config?.DeadCode.MaxResponseBytes ?? 8192, 512, 8192));
     }
 
     private static async Task<DeadCodeScanAttempt> ScanDeadCodeAsync(
         Microsoft.CodeAnalysis.Solution solution,
-        IReadOnlySet<string>? scopeFiles,
-        CancellationToken cancellationToken,
-        Config? config,
-        AnalysisSymbolIdentity? handoffIdentity)
+        ScanSettings settings,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -81,9 +84,11 @@ internal static class VerifyAdvisoryProjector
                     IncludeTests: false,
                     Mode: DeadCodeMode.Members,
                     MaxResults: UnboundedCandidateLimit,
-                    ScopeFiles: scopeFiles,
-                    Config: config,
-                    HandoffIdentity: handoffIdentity),
+                    ScopeFiles: settings.ScopeFiles,
+                    Config: settings.Config,
+                    HandoffIdentity: settings.Identity,
+                    SolutionBudget: settings.SolutionBudget,
+                    RequestedScope: settings.SolutionBudget ? "solution" : "changes"),
                 cancellationToken);
             return new(result, null);
         }
@@ -131,17 +136,18 @@ internal static class VerifyAdvisoryProjector
         }
 
         return new(
-            result.Summary.Undecidable > 0 ? "partial" : "complete",
+            result.Summary.Status == "partial" ? "partial" : "complete",
             result.Summary.TotalDead,
             result.DeadSymbols.Count(entry => entry.Usage == "test_only"),
             result.DeadSymbols.Count(entry => entry.Usage == "unreferenced"),
             result.Summary.ApiProtected,
-            result.Summary.Undecidable);
+            result.Summary.Undecidable, Coverage: result.Summary.Coverage, UndecidableReasons: result.Summary.UndecidableReasons);
     }
 
     private static IReadOnlyList<VerifyEvidenceEntry> Rank(IEnumerable<VerifyEvidenceEntry> entries) =>
         entries
             .OrderBy(AdvisoryRank)
+            .ThenBy(entry => entry.ReviewPriority)
             .ThenBy(entry => entry.RuleOrCategory, StringComparer.Ordinal)
             .ThenBy(entry => entry.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Line)
@@ -150,7 +156,7 @@ internal static class VerifyAdvisoryProjector
             .ToList();
 
     private static int AdvisoryRank(VerifyEvidenceEntry entry) => entry.RuleOrCategory == DeadCodeCategory
-        ? entry.Confidence == "high" ? 0 : 1
+        ? 0
         : 2;
 
     private static VerifyEvidenceEntry ToDeadCodeEvidence(DeadCodeEntry entry) => new(
@@ -164,11 +170,12 @@ internal static class VerifyAdvisoryProjector
             ? string.Empty
             : HandoffHandleRegistry.Default.GetOpaqueHandleForOutputOrThrow(entry.InternalSymbolIdentifier),
         RequiresAgentJudgment: true,
-        Confidence: entry.Confidence,
+        Confidence: null,
         EvidenceBoundary: entry.EvidenceBoundary,
         CounterIndicators: entry.Countercheck,
         Usage: entry.Usage,
-        TestReferences: entry.TestReferences);
+        TestReferences: entry.TestReferences,
+        ReviewPriority: entry.Priority);
 
     private static VerifyEvidenceEntry ToMagicValueEvidence(MagicValueEntry entry) => new(
         AdvisoryKind,
@@ -183,7 +190,11 @@ internal static class VerifyAdvisoryProjector
         EvidenceBoundary: entry.EvidenceBoundary,
         CounterIndicators: ["Fachliche Semantik", "Laufzeitkonfiguration"]);
 
+    private sealed record ScanSettings(IReadOnlySet<string>? ScopeFiles, Config? Config, AnalysisSymbolIdentity? Identity, bool SolutionBudget);
+
     private sealed record DeadCodeScanAttempt(DeadCodeScanResult? Result, string? Cause);
 
     private sealed record MagicValueScanAttempt(IReadOnlyList<VerifyEvidenceEntry> Entries, string Completeness);
 }
+
+internal sealed record VerifyAdvisorySettings(Config? Config = null, AnalysisSymbolIdentity? Identity = null, bool? SolutionBudget = null);

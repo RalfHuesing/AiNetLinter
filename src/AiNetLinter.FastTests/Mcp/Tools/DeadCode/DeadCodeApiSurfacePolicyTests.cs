@@ -87,7 +87,7 @@ public sealed class DeadCodeApiSurfacePolicyTests
             @"C:\ainetlinter-virtual\Preflight.slnx",
             new ProjectSpec("Zeta", [("Zeta.cs", "public sealed class Zeta { }")], VirtualProjectDirectory: "."),
             new ProjectSpec("Alpha", [("Alpha.cs", "public sealed class Alpha { }")], VirtualProjectDirectory: "."),
-            new ProjectSpec("AlphaTests", [("AlphaTests.cs", "public sealed class AlphaTests { }")], VirtualProjectDirectory: "."));
+            new ProjectSpec("AlphaTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [("AlphaTests.cs", "public sealed class AlphaTests { }")], VirtualProjectDirectory: "."));
 
         var issues = DeadCodeAdvisoryScanner.ValidateApiSurface(
             solution.Solution,
@@ -161,7 +161,7 @@ public sealed class DeadCodeApiSurfacePolicyTests
             @"C:\ainetlinter-virtual\VerifyApiSurface.slnx",
             new ProjectSpec("Zeta", [("Zeta.cs", "public sealed class Zeta { }")], VirtualProjectDirectory: "."),
             new ProjectSpec("Alpha", [("Alpha.cs", "public sealed class Alpha { }")], VirtualProjectDirectory: "."),
-            new ProjectSpec("AlphaTests", [("AlphaTests.cs", "public sealed class AlphaTests { }")], VirtualProjectDirectory: "."));
+            new ProjectSpec("AlphaTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [("AlphaTests.cs", "public sealed class AlphaTests { }")], VirtualProjectDirectory: "."));
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
                 null,

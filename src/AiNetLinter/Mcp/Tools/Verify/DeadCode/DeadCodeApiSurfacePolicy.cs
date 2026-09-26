@@ -30,7 +30,7 @@ internal static class DeadCodeApiSurfacePolicy
         Config config)
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
-        var options = new DeadCodeAdvisoryOptions(ScopeFiles: scopeFiles);
+        var options = new DeadCodeAdvisoryOptions(ScopeFiles: scopeFiles, Config: config);
         var projects = DeadCodeAdvisoryScanner.CollectCandidateDocumentsForPolicy(solution, solutionDir, options)
             .Select(document => document.Project)
             .DistinctBy(project => project.Id)
@@ -52,6 +52,15 @@ internal static class DeadCodeApiSurfacePolicy
         }
 
         return issues;
+    }
+
+    internal static bool HasMissingFriend(ISymbol symbol, Solution solution)
+    {
+        if (symbol.DeclaredAccessibility is not (Accessibility.Internal or Accessibility.ProtectedOrInternal)) return false;
+        var friends = symbol.ContainingAssembly.GetAttributes().Where(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == "System.Runtime.CompilerServices.InternalsVisibleToAttribute")
+            .Select(attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string).OfType<string>();
+        return friends.Any(friend => !solution.Projects.Any(project => project.AssemblyName == friend.Split(',')[0].Trim()));
     }
 
     private static bool IsTypeChainExternallyVisible(INamedTypeSymbol type)

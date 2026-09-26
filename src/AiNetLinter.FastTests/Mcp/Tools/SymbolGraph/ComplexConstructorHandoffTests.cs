@@ -168,7 +168,7 @@ public sealed class ComplexConstructorHandoffTests
     }
 
     [Fact]
-    public async Task VerifyComplexConstructorHandoff_IsReusableWithoutChangingItsIdentifier()
+    public async Task VerifyComplexTypeGroup_ExposesReusableConstructorHandoffThroughStructure()
     {
         using var scenario = RoslynTestSolutionFactory.CreateSolution(
             @"C:\ainetlinter-virtual\VerifyComplexConstructorHandoff.slnx",
@@ -198,12 +198,14 @@ public sealed class ComplexConstructorHandoffTests
         var verifyText = TextOf(verify);
         var candidate = verifyText.Split('\n').SingleOrDefault(line =>
             line.Contains("category=dead_code", StringComparison.Ordinal)
-            && line.Contains("Constructors.cs:7", StringComparison.Ordinal));
+            && line.Contains("Constructors.cs:5", StringComparison.Ordinal));
         Assert.True(candidate is not null, verifyText);
 
-        var handoffId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
+        var typeId = Regex.Match(candidate!, @"symbolIdentifier=(?<id>h:[A-Za-z0-9]+)", RegexOptions.CultureInvariant)
             .Groups["id"].Value;
-        Assert.NotEmpty(handoffId);
+        Assert.NotEmpty(typeId);
+        Assert.DoesNotContain(verifyText.Split('\n'), row => row.Contains("category=dead_code", StringComparison.Ordinal) && row.Contains("Constructors.cs:7", StringComparison.Ordinal));
+        var handoffId = await ConstructorHandoffLifecycleTests.ConstructorFromTypeAsync(state, typeId, "UnusedComplex.UnusedComplex");
         Assert.Contains("usage=unreferenced", candidate, StringComparison.Ordinal);
 
         await ConstructorHandoffLifecycleTests.AssertFollowUpToolsResolveConstructorAsync(

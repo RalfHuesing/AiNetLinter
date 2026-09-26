@@ -16,36 +16,18 @@ namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 public sealed class RazorGeneratedEvidenceIndexTests
 {
     [Fact]
-    public async Task ScanAsync_MissingGeneratedRazorDocuments_LowersEveryCodeBehindCandidateOnly()
+    public async Task ScanAsync_MissingGeneratorUsesMarkupAndKeepsUnboundMembers()
     {
         using var tempDirectory = TestTempDirectory.Create("dead-code-razor-evidence-");
         using var testSolution = CreateUnavailableSolution(tempDirectory);
-
-        var result = await DeadCodeAdvisoryScanner.ScanAsync(
-            testSolution.Solution,
-            new DeadCodeAdvisoryOptions(
-                Accessibility: DeadCodeAccessibilityFilter.Private,
-                Kind: DeadCodeKindFilter.Method),
-            CancellationToken.None);
-
-        Assert.True(
-            result.Summary.DocumentsInScope > 0,
-            $"Expected candidate documents. solution={testSolution.Solution.FilePath}; project={testSolution.Solution.Projects.Single().FilePath}; " +
-            $"documents={string.Join(", ", testSolution.Solution.Projects.Single().Documents.Select(document => document.FilePath))}");
-        Assert.Equal(2, result.Summary.DocumentsInScope);
-        Assert.Equal(2, result.Summary.Low);
-        Assert.Equal(1, result.Summary.High);
-        Assert.Equal(3, result.Summary.TotalDead);
-
-        var boundHandler = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "BoundHandler");
-        var unusedMember = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "UnusedMember");
-        var regularMember = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "UnusedRegularMember");
-
-        Assert.Equal("low", boundHandler.Confidence);
-        Assert.Equal("low", unusedMember.Confidence);
-        Assert.Contains("Razor-Referenzen nicht entscheidbar", boundHandler.Reason, StringComparison.Ordinal);
-        Assert.Contains("Razor-Referenzen nicht entscheidbar", unusedMember.Reason, StringComparison.Ordinal);
-        Assert.Equal("high", regularMember.Confidence);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution,
+            new(Accessibility: DeadCodeAccessibilityFilter.Private, Kind: DeadCodeKindFilter.Method));
+        Assert.Equal(2, result.Summary.TotalDead);
+        Assert.DoesNotContain(result.DeadSymbols, entry => entry.SymbolName == "BoundHandler");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnusedMember");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnusedRegularMember");
+        Assert.All(result.DeadSymbols, entry => Assert.DoesNotContain("Razor", entry.Reason, StringComparison.Ordinal));
+        Assert.Equal(0, result.Summary.Undecidable);
     }
 
     [Fact]
@@ -156,16 +138,16 @@ public sealed class RazorGeneratedEvidenceIndexTests
         Assert.Equal(2, result.Summary.DocumentsInScope);
         var codeBehindField = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_unusedCodeBehind");
         var regularField = Assert.Single(result.DeadSymbols, entry => entry.SymbolName == "_unusedRegular");
-        Assert.Equal("low", codeBehindField.Confidence);
-        Assert.Contains("Razor-Referenzen nicht entscheidbar", codeBehindField.Reason, StringComparison.Ordinal);
+        Assert.Equal(mode == "locals" ? "low" : "high", codeBehindField.Confidence);
+        Assert.Equal(mode == "locals", codeBehindField.Reason.Contains("Razor", StringComparison.Ordinal));
         Assert.Equal("high", regularField.Confidence);
-        Assert.Equal(1, result.Summary.Low);
-        Assert.Equal(1, result.Summary.High);
+        Assert.Equal(mode == "locals" ? 1 : 0, result.Summary.Low);
+        Assert.Equal(mode == "locals" ? 1 : 2, result.Summary.High);
         Assert.Equal(2, result.Summary.TotalDead);
     }
 
     [Fact]
-    public async Task ScanAsync_HighConfidenceFilterRunsAfterUnavailableEvidenceAdjustment()
+    public async Task ScanAsync_LegacyHighFilterDoesNotHideUnboundMarkupMembers()
     {
         using var tempDirectory = TestTempDirectory.Create("dead-code-razor-high-filter-");
         using var testSolution = CreateUnavailableSolution(tempDirectory);
@@ -178,11 +160,11 @@ public sealed class RazorGeneratedEvidenceIndexTests
                 Kind: DeadCodeKindFilter.Method),
             CancellationToken.None);
 
-        var regularMember = Assert.Single(result.DeadSymbols);
-        Assert.Equal("UnusedRegularMember", regularMember.SymbolName);
-        Assert.Equal(1, result.Summary.High);
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnusedRegularMember");
+        Assert.Contains(result.DeadSymbols, entry => entry.SymbolName == "UnusedMember");
+        Assert.Equal(2, result.Summary.High);
         Assert.Equal(0, result.Summary.Low);
-        Assert.Equal(1, result.Summary.TotalDead);
+        Assert.Equal(2, result.Summary.TotalDead);
     }
 
     private static RoslynTestSolution CreateUnavailableSolution(TestTempDirectory tempDirectory, bool diagnostics = false)

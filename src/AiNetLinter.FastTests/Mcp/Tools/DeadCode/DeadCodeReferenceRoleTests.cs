@@ -27,7 +27,7 @@ public sealed class DeadCodeReferenceRoleTests
                     public void BulletList(System.Collections.Generic.IEnumerable<string> items) { }
                 }
                 """)], VirtualProjectDirectory: "src/AiNetLinter"),
-            new ProjectSpec("AiNetLinter.FastTests", [
+            new ProjectSpec("AiNetLinter.FastTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("MarkdownBuilderTests.cs", """
                 namespace AiNetLinter.FastTests.Output;
                 public sealed class MarkdownBuilderTests
@@ -73,7 +73,7 @@ public sealed class DeadCodeReferenceRoleTests
                 ("AssemblyInfo.cs", "[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(\"ProductTests\")]") ,
                 ("Service.cs", "namespace Product; internal sealed class Service { internal void Execute() { } }")],
                 VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("ServiceTests.cs", "namespace ProductTests; public sealed class ServiceTests { public void Run() => new Product.Service().Execute(); }")],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
 
@@ -102,7 +102,7 @@ public sealed class DeadCodeReferenceRoleTests
     }
 
     [Fact]
-    public async Task ScanAsync_TestPathReference_DoesNotKeepProductionMemberLive()
+    public async Task ScanAsync_TestPathReference_RemainsProductionUse()
     {
         using var testSolution = CreateSolution(
             new ProjectSpec("Product", [
@@ -112,8 +112,7 @@ public sealed class DeadCodeReferenceRoleTests
 
         var result = await ScanMethodsAsync(testSolution.Solution);
 
-        var candidate = Assert.Single(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
-        Assert.Equal("test_only", candidate.Usage);
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
     }
 
     [Fact]
@@ -124,7 +123,7 @@ public sealed class DeadCodeReferenceRoleTests
                 ("IService.cs", "namespace Product; public interface IService { void Execute(); }") ,
                 ("Service.cs", "namespace Product; public sealed class Service : IService { public void Execute() { } }")],
                 VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("ServiceTests.cs", "namespace ProductTests; public sealed class ServiceTests { public void Run(Product.IService service) => service.Execute(); }")],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
 
@@ -158,7 +157,7 @@ public sealed class DeadCodeReferenceRoleTests
         Assert.Equal("unreferenced", independentCandidate.Usage);
         Assert.Equal(0, independentCandidate.TestReferences);
         Assert.Equal("high", independentCandidate.Confidence);
-        Assert.Contains("Keine Referenzen innerhalb der Solution gefunden", independentCandidate.Reason, StringComparison.Ordinal);
+        Assert.Contains("Keine relevante produktive Nutzung", independentCandidate.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -170,7 +169,7 @@ public sealed class DeadCodeReferenceRoleTests
                 ("IntermediateService.cs", "namespace Product; public class IntermediateService : BaseService { public override void Execute() { } }") ,
                 ("Service.cs", "namespace Product; public sealed class Service : IntermediateService { public override void Execute() { } }")],
                 VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [
                 ("ServiceTests.cs", "namespace ProductTests; public sealed class ServiceTests { public void Run(Product.BaseService service) => service.Execute(); }")],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
 
@@ -207,7 +206,7 @@ public sealed class DeadCodeReferenceRoleTests
             new ProjectSpec("Product", [
                 ("Service.cs", "namespace Product; public sealed class Service { public void Execute() { } }")],
                 VirtualProjectDirectory: "src/Product"),
-            new ProjectSpec("ProductTests", [], ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [], ProjectReferences: ["Product"], VirtualProjectDirectory: "tests/ProductTests"));
         var testProject = testSolution.Solution.Projects.Single(project => project.Name == "ProductTests");
         var testCaller = testProject.AddDocument(
             "UnmappedTestCaller.cs",
@@ -240,7 +239,9 @@ public sealed class DeadCodeReferenceRoleTests
                 Kind: DeadCodeKindFilter.All),
             CancellationToken.None);
 
-        Assert.Equal(2, result.Summary.Undecidable);
+        Assert.Equal(4, result.Summary.Undecidable);
+        Assert.Equal(4, result.UndecidableSymbols!.Select(entry => entry.Id).Distinct().Count());
+        Assert.Contains(result.UndecidableSymbols!, entry => entry.SymbolName == "Run" && entry.Reason == "declaration_role");
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "Execute");
     }
 
@@ -253,7 +254,7 @@ public sealed class DeadCodeReferenceRoleTests
             new ProjectSpec("Product", [
                 ("Service.cs", "namespace Product; public sealed class Service { public void Execute() { } }") ,
                 (linkedFile, caller)], VirtualProjectDirectory: "src/Linked"),
-            new ProjectSpec("ProductTests", [(linkedFile, caller)],
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [(linkedFile, caller)],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "src/Linked"));
 
         var result = await ScanMethodsAsync(testSolution.Solution);
@@ -278,7 +279,7 @@ public sealed class DeadCodeReferenceRoleTests
             new ProjectSpec("Product", [
                 ("Service.cs", "namespace Product; public sealed class Service { public void Execute() { } }") ,
                 (linkedFile, caller)], PreprocessorSymbols: ["PRODUCTION"], VirtualProjectDirectory: "src/Linked"),
-            new ProjectSpec("ProductTests", [(linkedFile, caller)],
+            new ProjectSpec("ProductTests", AdditionalReferences: [Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(FactAttribute).Assembly.Location)], Documents: [(linkedFile, caller)],
                 ProjectReferences: ["Product"], VirtualProjectDirectory: "src/Linked"));
 
         var result = await ScanMethodsAsync(testSolution.Solution);

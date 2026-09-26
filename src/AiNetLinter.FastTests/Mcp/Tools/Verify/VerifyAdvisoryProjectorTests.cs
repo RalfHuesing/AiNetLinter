@@ -102,7 +102,7 @@ public sealed class VerifyAdvisoryProjectorTests
     }
 
     [Fact]
-    public void GetVerifyAdvisories_TruncatedScanIsPartialEvenWithoutUndecidableSymbols()
+    public void GetVerifyAdvisories_OutputTruncationDoesNotChangeScanCompleteness()
     {
         var candidate = new DeadCodeEntry(
             Id: "unused",
@@ -127,12 +127,13 @@ public sealed class VerifyAdvisoryProjectorTests
         var result = GetVerifyAdvisoriesTool.Render(scan);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("status=partial; candidates=2", text, StringComparison.Ordinal);
+        Assert.StartsWith("status=complete; candidates=2", text, StringComparison.Ordinal);
+        Assert.Contains("listCompleteness=partial", text, StringComparison.Ordinal);
         Assert.Contains("shown=1; truncatedBy=1", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void GetVerifyAdvisories_RenderSortsConfidenceGloballyAcrossCompactGroups()
+    public void GetVerifyAdvisories_RenderUsesStableOrderWithoutConfidence()
     {
         static DeadCodeEntry Candidate(
             string project,
@@ -173,14 +174,14 @@ public sealed class VerifyAdvisoryProjectorTests
         var rows = text.Split('\n').Where(line => Regex.IsMatch(line, @"^\d+ \|", RegexOptions.CultureInvariant)).ToArray();
         Assert.Equal(
             [
-                "2 | Type.HighA |  | unreferenced | high",
-                "10 | Type.HighZ |  | unreferenced | high",
-                "1 | Type.LowA |  | unreferenced | low",
-                "3 | Type.LowB |  | unreferenced | low",
+                "1 | Type.LowA |  | unreferenced | static scan | ",
+                "2 | Type.HighA |  | unreferenced | static scan | ",
+                "3 | Type.LowB |  | unreferenced | static scan | ",
+                "10 | Type.HighZ |  | unreferenced | static scan | ",
             ],
             rows);
-        Assert.Equal(1, text.Split('\n').Count(line => line == "columns: line | symbol | symbolIdentifier | usage | confidence"));
-        Assert.Equal(2, text.Split('\n').Count(line => line == "project: A"));
+        Assert.Equal(1, text.Split('\n').Count(line => line == "columns: line | symbol | symbolIdentifier | usage | reason | countercheck"));
+        Assert.Equal(1, text.Split('\n').Count(line => line == "project: A"));
     }
 
     [Fact]
@@ -201,9 +202,10 @@ public sealed class VerifyAdvisoryProjectorTests
             testSolution.Solution,
             scopeFiles,
             CancellationToken.None,
-            handoffIdentity: CreateHandoffIdentity(testSolution.Solution));
+            settings: new(Identity: CreateHandoffIdentity(testSolution.Solution)));
 
-        Assert.Equal("complete", result.Completeness);
+        Assert.Equal("partial", result.Completeness);
+        Assert.Equal("unavailable", result.DeadCode!.Coverage!.ChangesBasis);
         Assert.Equal(await CollectPerFileTotalAsync(testSolution.Solution, scopeFiles), result.TotalCount);
         Assert.Contains(result.Entries, entry => entry.RuleOrCategory == "dead_code");
         Assert.Contains(result.Entries, entry => entry.RuleOrCategory.StartsWith("magic_value:", StringComparison.Ordinal));
@@ -233,7 +235,7 @@ public sealed class VerifyAdvisoryProjectorTests
             testSolution.Solution,
             scopeFiles,
             CancellationToken.None,
-            handoffIdentity: CreateHandoffIdentity(testSolution.Solution));
+            settings: new(Identity: CreateHandoffIdentity(testSolution.Solution)));
         var expectedTotal = await CollectPerFileTotalAsync(testSolution.Solution, scopeFiles);
 
         Assert.Equal(expectedTotal, combined.TotalCount);
@@ -259,15 +261,14 @@ public sealed class VerifyAdvisoryProjectorTests
             testSolution.Solution,
             scopeFiles,
             CancellationToken.None,
-            handoffIdentity: CreateHandoffIdentity(testSolution.Solution));
+            settings: new(Identity: CreateHandoffIdentity(testSolution.Solution)));
 
-        var razorEntries = result.Entries.Where(entry =>
-            entry.RuleOrCategory == "dead_code" && entry.Reason.Contains("Razor-Referenzen nicht entscheidbar", StringComparison.Ordinal)).ToList();
+        var razorEntries = result.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToList();
         Assert.NotEmpty(razorEntries);
         Assert.All(razorEntries, entry =>
         {
-            Assert.Equal("low", entry.Confidence);
-            Assert.Contains("Razor-Generierung/Projektladung gegenprüfen", entry.Reason, StringComparison.Ordinal);
+            Assert.Null(entry.Confidence);
+            Assert.DoesNotContain("Razor", entry.Reason, StringComparison.Ordinal);
         });
     }
 
@@ -341,8 +342,8 @@ public sealed class VerifyAdvisoryProjectorTests
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var identity = CreateHandoffIdentity(testSolution.Solution);
 
-        var changes = await VerifyAdvisoryProjector.CollectAsync(testSolution.Solution, scopeFiles, CancellationToken.None, handoffIdentity: identity);
-        var solution = await VerifyAdvisoryProjector.CollectAsync(testSolution.Solution, null, CancellationToken.None, handoffIdentity: identity);
+        var changes = await VerifyAdvisoryProjector.CollectAsync(testSolution.Solution, scopeFiles, CancellationToken.None, settings: new(Identity: identity));
+        var solution = await VerifyAdvisoryProjector.CollectAsync(testSolution.Solution, null, CancellationToken.None, settings: new(Identity: identity));
 
         Assert.Equal(changes.DeadCode?.Candidates, solution.DeadCode?.Candidates);
         Assert.Equal(changes.DeadCode?.TestOnly, solution.DeadCode?.TestOnly);
@@ -403,10 +404,10 @@ public sealed class VerifyAdvisoryProjectorTests
             .Cast<Match>()
             .Select(match => match.Value)
             .ToArray();
-        Assert.Equal(4, compactIds.Length);
+        Assert.Equal(2, compactIds.Length);
         Assert.Equal(compactIds.Length, compactIds.Distinct(StringComparer.Ordinal).Count());
 
-        var partialScan = scan with { Summary = scan.Summary with { Undecidable = 1 } };
+        var partialScan = scan with { Summary = scan.Summary with { Status = "partial", Undecidable = 1 } };
         var partial = GetVerifyAdvisoriesTool.Render(partialScan);
         var partialText = Assert.IsType<TextContentBlock>(Assert.Single(partial.Content)).Text;
         Assert.True(partialText.StartsWith("status=partial;", StringComparison.Ordinal));
@@ -416,11 +417,11 @@ public sealed class VerifyAdvisoryProjectorTests
             testSolution.Solution,
             null,
             CancellationToken.None,
-            handoffIdentity: identity);
+            settings: new(Identity: identity));
         var candidates = result.Entries.Where(entry => entry.RuleOrCategory == "dead_code").ToList();
 
-        Assert.Equal(4, candidates.Count);
-        Assert.Equal(4, candidates.Select(entry => entry.HandoffId).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(2, candidates.Count);
+        Assert.Equal(2, candidates.Select(entry => entry.HandoffId).Distinct(StringComparer.Ordinal).Count());
         var resolvedAssemblies = new HashSet<string>(StringComparer.Ordinal);
         foreach (var candidate in candidates)
         {

@@ -78,7 +78,7 @@ internal static class AnalysisToolRegistrations
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 GetVerifyAdvisoriesTool.ToolName,
-                "Liefert Dead-Code-Advisories. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Bei operation=running denselben Aufruf mit operationToken fortsetzen; danach optionale Folgeseiten mit continuationToken abrufen (Scan-Snapshot: 30 Minuten Leerlaufzeit). Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge. listCompleteness und truncatedBy nennen den Ausgabestatus. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
+                "Liefert Prüfkandidaten und konkrete Unentscheidbarkeitsdetails, keine Löschfreigabe oder Confidence. Neuer Scan: standardmäßig 60 Sekunden inklusive Vorbereitung, bei Zeitablauf partiell. Pflicht: targetPath (absoluter .sln/.slnx-Pfad), category=dead_code. Bei operation=running denselben Aufruf mit operationToken fortsetzen; danach optionale Folgeseiten mit continuationToken abrufen (Scan-Snapshot: 30 Minuten Leerlaufzeit). Bis 64 KiB (65.536 UTF-8-Bytes), nur ganze Einträge. scanCompleteness nennt die Analyseabdeckung; listCompleteness und truncatedBy ausschließlich den Ausgabestatus. Auch Verify-Token setzen denselben Snapshot ohne Neuscan fort. symbolIdentifier direkt an find_references, get_symbol_body oder get_feature_context übergeben. Kandidaten einzeln gegenprüfen.")));
     }
 
     private static void AddVerify(
@@ -103,7 +103,7 @@ internal static class AnalysisToolRegistrations
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool(
                 VerifyContract.ToolName,
-                "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution. Bei operation=running denselben Aufruf mit operationToken fortsetzen; das endgültige Gate-Ergebnis bleibt unverändert.")));
+                "Fester Source-Quality-Gate: pass nur bei Score 10.0 und 0 Lint-Verstößen. scope: changes (Default) oder solution. Bei operation=running denselben Aufruf mit operationToken fortsetzen; das endgültige Gate-Ergebnis bleibt unverändert. Dead-Code-Advisories in beiden Scopes, Referenzen solutionweit; changes berücksichtigt bisherige Ziele entfernter Nutzungen. Zusätzliches Budget 10 Sekunden, bei explizitem solution 60 Sekunden inklusive Vorbereitung. Standardcontent höchstens 8 KiB und 20 Gruppen; partielle Scanabdeckung und Ausgabekürzung getrennt interpretieren. Kandidaten und test_only sind keine Löschfreigabe.")));
     }
 
     private static void AddSearchPattern(

@@ -42,9 +42,9 @@ internal static class DeadCodeFilters
 
     internal static bool ShouldCheckMemberKind(ISymbol member, DeadCodeKindFilter kindFilter)
     {
-        if (member is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.Constructor })
+        if (member is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.ExplicitInterfaceImplementation })
             return MatchesKindFilter(member, kindFilter);
-        if (member is IPropertySymbol or IFieldSymbol or IEventSymbol)
+        if (member is IPropertySymbol { IsIndexer: false } || member is IFieldSymbol { ContainingType.TypeKind: not TypeKind.Enum })
             return MatchesKindFilter(member, kindFilter);
         return false;
     }

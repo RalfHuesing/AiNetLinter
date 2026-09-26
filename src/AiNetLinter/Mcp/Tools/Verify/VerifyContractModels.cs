@@ -115,7 +115,8 @@ internal sealed record VerifyEvidenceEntry(
     string? EvidenceBoundary = null,
     IReadOnlyList<string>? CounterIndicators = null,
     string? Usage = null,
-    int? TestReferences = null);
+    int? TestReferences = null,
+    int ReviewPriority = 2);
 
 /// <summary>
 /// Gemeinsames internes Antwortmodell für die einzige Content-Projektion von verify.

@@ -22,6 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Ref" Version="[10.0.0]" />
+    <None Include="$(NuGetPackageRoot)microsoft.windowsdesktop.app.ref/10.0.0/ref/net10.0/WindowsBase.dll"
+          Link="ReferenceFixtures/WindowsBase.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="AiNetLinter.TestKit" />
     <Using Include="AiNetLinter.Mcp.Assemblies.Analysis" />
@@ -30,6 +36,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AiNetLinter\AiNetLinter.csproj" />
     <ProjectReference Include="..\AiNetLinter.TestKit\AiNetLinter.TestKit.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

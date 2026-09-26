@@ -25,7 +25,7 @@ namespace AiNetLinter.Mcp.Tools.Verify;
 internal static class VerifyTool
 {
     internal const int EvidenceLimit = 20;
-    internal const int ResponseBudgetBytes = 4 * 1024;
+    internal const int ResponseBudgetBytes = 8 * 1024;
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer server,
@@ -71,8 +71,10 @@ internal static class VerifyTool
             solution,
             scope == VerifyScope.Changes ? projection.ScopeFiles : null,
             cancellationToken,
-            config,
-            server.HandoffSymbolIdentity);
+            new(config, server.HandoffSymbolIdentity, SolutionBudget: scope == VerifyScope.Solution));
+
+        if (advisory is { ScanSnapshot: { } snapshot, DeadCode: { } summary })
+            advisory = advisory with { DeadCode = summary with { ContinuationToken = GetVerifyAdvisoriesTool.Capture(server, snapshot) } };
 
         return VerifyResponseFormatter.Success(new VerifySuccessParameters(
             scope,
@@ -201,7 +203,7 @@ internal static class VerifyScopeProjector
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return changedPaths.Any(path =>
             structuralPaths.Contains(path.Replace('\\', '/'))
-            || string.Equals(Path.GetFileName(path), "ainetlinter-rules.json", StringComparison.OrdinalIgnoreCase));
+            || Path.GetExtension(path).ToLowerInvariant() is ".razor" or ".xaml" or ".js" or ".json");
     }
 }
 
@@ -279,7 +281,7 @@ internal static partial class VerifyResponseFormatter
         string truncationReason)
     {
         var text = Render(response, exclusions, gateTotalCount, advisory, truncationReason);
-        if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return new(text, ScopeProjected: false);
+        if (Encoding.UTF8.GetByteCount(text) <= advisory.BudgetBytes) return new(text, ScopeProjected: false);
 
         var compactScope = response.Scope with
         {
@@ -288,7 +290,7 @@ internal static partial class VerifyResponseFormatter
                 : $"changed_source_files:{response.Scope.Populations.Count}"],
         };
         text = Render(response with { Scope = compactScope }, exclusions, gateTotalCount, advisory, truncationReason);
-        return Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes
+        return Encoding.UTF8.GetByteCount(text) <= advisory.BudgetBytes
             ? new(text, ScopeProjected: true)
             : new(null, ScopeProjected: true);
     }
@@ -377,7 +379,7 @@ internal static partial class VerifyResponseFormatter
                 var razorStatus = entry.Reason.Contains("Razor-Referenzen nicht entscheidbar", StringComparison.Ordinal)
                     ? " razorEvidence=unavailable;"
                     : string.Empty;
-                lines.Add($"- category=dead_code; symbolIdentifier={entry.HandoffId}; ref={entry.SourcePath}:{entry.Line}; usage={entry.Usage}; confidence={entry.Confidence}; reason=no_production_static_reference;{(entry.TestReferences is > 0 ? $" testReferences={entry.TestReferences};" : string.Empty)}{razorStatus} countercheck=reflection,DI,generators,dynamic,markup/config,external_consumers");
+                lines.Add($"- category=dead_code; symbolIdentifier={entry.HandoffId}; ref={entry.SourcePath}:{entry.Line}; usage={entry.Usage}; reason={entry.Reason};{(entry.TestReferences is > 0 ? $" testReferences={entry.TestReferences};" : string.Empty)}{razorStatus} countercheck={string.Join(",", entry.CounterIndicators ?? [])}");
             }
             else
             {
@@ -394,9 +396,13 @@ internal static partial class VerifyResponseFormatter
         if (summary is null) return;
         var shown = evidence.Count(entry => entry.RuleOrCategory == "dead_code");
         int? truncatedBy = summary.Candidates is int candidates ? Math.Max(0, candidates - shown) : null;
-        lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; testOnly={ToCount(summary.TestOnly)}; unreferenced={ToCount(summary.Unreferenced)}; apiProtected={ToCount(summary.ApiProtected)}; undecidable={ToCount(summary.Undecidable)}; shown={shown}; truncatedBy={ToCount(truncatedBy)}; next={(summary.Candidates is > 0 ? "review_now" : "none")}");
+        lines.Add($"deadCode: status={summary.Status}; candidates={ToCount(summary.Candidates)}; testOnly={ToCount(summary.TestOnly)}; unreferenced={ToCount(summary.Unreferenced)}; apiProtected={ToCount(summary.ApiProtected)}; undecidable={ToCount(summary.Undecidable)}; shown={shown}; truncatedBy={ToCount(truncatedBy)}; next={(summary.Candidates is > 0 || summary.Undecidable is > 0 ? "review_now" : "none")}");
+        if (summary.UndecidableReasons is { Count: > 0 } reasons)
+            lines.Add($"deadCodeUncertain: {GetVerifyAdvisoriesTool.FormatReasons(reasons)}");
+        if (summary.Coverage is { } coverage)
+            lines.Add($"deadCodeScan: scanCompleteness={summary.Status}; requestedScope={coverage.RequestedScope}; processedDocuments={coverage.ProcessedDocuments}; openDocuments={coverage.OpenDocuments}; elapsedMs={coverage.ElapsedMilliseconds}; stopReason={coverage.StopReason}; changesBasis={coverage.ChangesBasis}; excludedKinds={coverage.ExcludedKinds}");
         if (summary.Candidates is > 0) lines.Add("deadCodeHint: Statischer Kandidat; Fehlalarm möglich. Vor Entfernen gegenprüfen.");
-        if (truncatedBy is > 0) lines.Add("deadCodeAdvisoryHint: get_verify_advisories(category=dead_code)");
+        if (truncatedBy is > 0 || summary.Undecidable is > 0) lines.Add($"deadCodeAdvisoryHint: get_verify_advisories(category=dead_code, continuationToken={summary.ContinuationToken ?? "none"})");
         if (summary.Cause is not null) lines.Add($"deadCodeCause: {summary.Cause}");
     }
 

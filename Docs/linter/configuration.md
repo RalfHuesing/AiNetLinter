@@ -844,28 +844,42 @@ Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regel
 }
 ```
 
-### Dead-Code-API-Oberfläche
+### Dead-Code-Advisory
 
-`DeadCode.DefaultApiSurface` legt die API-Policy für Projekte ohne passenden Projekt-Override fest. Der Produktdefault ist `closed_solution`; fehlt die Property, prüft `verify` auch öffentlich sichtbare APIs als Dead-Code-Kandidaten. Für Bibliotheken mit externen Nutzern kann `external_library` ausdrücklich gesetzt werden.
+`DeadCode.DefaultApiSurface` ist standardmäßig `closed_solution`: Auch öffentliche Symbole bleiben Prüfkandidaten. `external_library` schützt effektiv externe API einschließlich geschützter Erweiterungspunkte und Implementierungen externer Verträge. Die enthaltende Typkette zählt; ein öffentliches Member in einem verborgenen Typ ist nicht automatisch geschützt. Fehlende relevante Friend-Consumer werden als unentscheidbar ausgewiesen.
 
-- `external_library` schützt semantisch extern sichtbare Typen und Member vor Dead-Code-Kandidaten. Sichtbarkeit berücksichtigt auch die enthaltende Typkette.
-- `closed_solution` prüft auch öffentliche APIs. Kandidaten auf extern sichtbaren Symbolen erhalten `low` confidence.
-- Gültige Werte sind ausschließlich `closed_solution` und `external_library`. Ein explizit gesetzter anderer Wert, einschließlich `unknown`, ist ungültig und bricht `verify` für betroffene produktive Kandidatenprojekte mit `DEAD_CODE_API_SURFACE_NOT_CONFIGURED` ab.
-- Fehlt die globale Property, gilt der Produktdefault `closed_solution`. Ein fehlendes oder `null`-Projekt-Override erbt den globalen Wert.
+Gültig sind ausschließlich `closed_solution` und `external_library`. Explizit andere Werte führen für betroffene produktive Kandidatenprojekte zu `DEAD_CODE_API_SURFACE_NOT_CONFIGURED`. Fehlende globale Werte verwenden den Default. `ProjectOverrides.<Muster>.DeadCode.ApiSurface` überschreibt ihn; das erste passende Projekt-Override gewinnt. Fehlende/null Overrides erben. `PathOverrides` verändern diese Projektentscheidung nicht.
 
-Ein Projekt-Override ersetzt den globalen Wert. Die erste passende `ProjectOverrides`-Zeile gewinnt; ein Override ohne `DeadCode.ApiSurface` erbt den Default. `PathOverrides` haben keinen Einfluss auf diese Projektentscheidung.
+| Option unter `DeadCode` | Default | Wirkung |
+| --- | --- | --- |
+| `DefaultApiSurface` | `closed_solution` | API-Geltungsbereich |
+| `VerifyBudgetSeconds` | `10` | Zusätzliches Dead-Code-Budget bei normalem Verify, inklusive Vorbereitung |
+| `SolutionBudgetSeconds` | `60` | Explizites `verify(scope="solution")` und neuer vollständiger Advisory-Scan |
+| `MaxCandidateGroups` | `20` | Standardprojektion, begrenzt auf 1–20 Gruppen |
+| `MaxResponseBytes` | `8192` | Standardantwort, begrenzt auf 512–8192 UTF-8-Bytes; nur ganze Einträge |
+| `ProjectRoles` | `{}` | Exakter, groß-/kleinschreibungssensitiver Projektname → `production`, `test` oder `unknown` |
+
+Ein nichtpositives Zeitbudget beendet den Advisory ohne Negativbefund; das Gate-Budget bleibt unverändert. Ausgabelimits sparen keine Scanzeit. Fortsetzungen lesen denselben Snapshot, ohne erneut zu scannen.
+
+Die explizite Projektrolle hat Vorrang. Ohne Override wird `build_property.IsTestProject` aus den Roslyn-Projekteigenschaften ausgewertet, danach eine tatsächliche xUnit-/NUnit-/MSTest-Metadatenreferenz. Sonst gilt `production`. Ein Name oder Ordner `Test` macht keinen Test. Nicht trennbare gemischte Rollen mit `unknown` konfigurieren; nicht erkannte Rollenwerte werden ebenfalls unbekannt behandelt. Host-Aufrufe zählen standardmäßig produktiv. Testprojekte liefern Referenzen, keine Bereinigungskandidaten; ausschließlich testbenutzter Produktionscode bleibt `test_only`.
 
 ```json
 {
-  "DeadCode": { "DefaultApiSurface": "closed_solution" },
+  "DeadCode": {
+    "DefaultApiSurface": "closed_solution",
+    "VerifyBudgetSeconds": 10,
+    "SolutionBudgetSeconds": 60,
+    "MaxCandidateGroups": 20,
+    "MaxResponseBytes": 8192,
+    "ProjectRoles": { "Checks": "test", "MixedHost": "unknown" }
+  },
   "ProjectOverrides": {
-    "PublicSdk": { "DeadCode": { "ApiSurface": "external_library" } },
-    "Application": { "DeadCode": { "ApiSurface": "closed_solution" } }
+    "PublicSdk": { "DeadCode": { "ApiSurface": "external_library" } }
   }
 }
 ```
 
-Die mitgelieferte `ainetlinter-rules.json` setzt `closed_solution` ausdrücklich für diese Solution; der Wert entspricht zugleich dem Produktdefault.
+Die mitgelieferte `ainetlinter-rules.json` enthält diese Produktdefaults und eine leere Rollenmap. Confidence-Stufen entfallen im Dead-Code-Advisory. Konkrete Unterdrückungen, Unentscheidbarkeitsgründe, positive Gegenproben und bewusst ausgeschlossene Symbolarten stehen im [Dead-Code-Vertrag](../mcp/dead-code.md).
 
 ### StaticTestSentinel-Konfiguration
 

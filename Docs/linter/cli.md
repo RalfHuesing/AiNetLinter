@@ -164,31 +164,15 @@ verfügbar. Bis zu vier lange Analysen laufen parallel. Bei
 Scanergebnis für weitere Ausgabeseiten verwendet. Der Server nutzt diesen
 Abrufvertrag unabhängig davon, ob ein Client MCP-Progress-Meldungen unterstützt.
 
-`verify(targetPath)` liefert Dead-Code-Advisories für geänderte produktive
-Quelldateien; `verify(targetPath, scope: "solution")` untersucht alle
-produktiven Quelldateien. Beide Scopes suchen Referenzen solutionweit. Die
-knappe `deadCode`-Zusammenfassung zeigt vollständige Zähler und den Status
-`complete`, `partial` oder `unavailable`; `next=review_now` markiert Kandidaten
-als unmittelbar zu prüfen. Jeder Eintrag enthält einen `symbolIdentifier=h:...`
-für `find_references`. Dead-Code-Einträge stehen vor Magic-Value-Advisories.
-Sie sind statische Hinweise und ändern das Gate-Verdict, den Score und die
-Verstoßzahl nicht. Test-only bedeutet, dass keine produktive statische Referenz
-gefunden wurde; die angezeigten Testreferenzen bleiben sichtbar.
+`verify(targetPath)` ergänzt Prüfkandidaten für geänderte Deklarationen und bisherige Ziele entfernter Nutzungen; `scope: "solution"` untersucht zusätzlich ältere Kandidaten. Referenzen werden immer solutionweit einschließlich Testrollen und generierter Quellen geprüft. Entfernte Source-Dateien und Änderungen an Projekt-/Regelkonfiguration, Razor, XAML, JS oder JSON erweitern den Umfang konservativ. Fehlende Vergleichsbasis wird als Abdeckungslücke ausgewiesen.
 
-Die API-Policy für Dead-Code-Prüfungen verwendet standardmäßig
-`DeadCode.DefaultApiSurface: "closed_solution"`. Damit werden auch öffentlich
-sichtbare Symbole geprüft und entsprechende Kandidaten mit niedriger Confidence
-ausgegeben. Für Projekte mit externen API-Nutzern kann der Wert auf
-`external_library` gesetzt werden. Gültig sind ausschließlich
-`closed_solution` und `external_library`; ein fehlender Wert verwendet den
-Default `closed_solution`. Ein explizites `unknown` wird nicht migriert und ist
-wie jeder andere ungültige Wert. Ungültige Werte führen für
-betroffene produktive Kandidatenprojekte zu
-`DEAD_CODE_API_SURFACE_NOT_CONFIGURED`.
+Dead-Code-Advisories haben standardmäßig 10 Sekunden zusätzliches Budget, bei ausdrücklich angefordertem Solution-Scan 60 Sekunden. Maximal 20 Kandidatengruppen passen in die 8-KiB-Standardantwort. Zeit- und Ausgabelimits sind zentral unter `DeadCode` konfigurierbar und voneinander unabhängig. Advisories verändern weder Gate-Verdict noch Score oder Verstoßzahl.
 
-Vor einer Entfernung sind Reflection, DI, Generatoren, `dynamic`, Markup und
-Konfiguration sowie externe Consumer gegenzuprüfen. Ein Kandidat ist keine
-Löschentscheidung.
+`deadCode.status` bzw. `scanCompleteness` beschreiben die Analyse, `shown`/`truncatedBy` und `listCompleteness` die Ausgabe. `processedDocuments`, `openDocuments`, `elapsedMs`, `stopReason`, `changesBasis` und `excludedKinds` beschreiben die Abdeckung. Fachlich geprüfte `undecidable`-Fälle sind keine offene Scanarbeit. Ein partieller Scan mit null Kandidaten ist keine Entwarnung; die unbekannte Restmenge wird nicht als null interpretiert.
+
+Mit dem ausgegebenen `continuationToken` liest `get_verify_advisories(targetPath, category="dead_code", continuationToken=...)` weitere Kandidaten und Unentscheidbarkeitsdetails desselben Snapshots. Ohne Token beginnt ein neuer Scan. Eine vollständige letzte Ausgabeseite macht einen partiellen Scan nicht vollständig. `symbolIdentifier=h:...` bleibt direkt an Symboltools übergebbar.
+
+`test_only` bleibt ein nützliches Kandidatensignal. Bei Feldern/Properties nennt der Grund `no_production_read` sowie erkannte Schreibstellen und Testleser. Ein verwaister Typ wird mit seinen Membern gruppiert. Confidence-Werte sind keine Ausgabe dieses Advisorys. `closed_solution` ist der API-Default; `external_library` schützt effektiv externe API. Vor einer Entfernung sind die konkreten Gegenprüfhinweise und Laufzeit-/Vertragsbindungen zu prüfen. Siehe [Konfiguration](configuration.md#dead-code-advisory) und [Regeln samt Grenzen und Gegenproben](../mcp/dead-code.md).
 
 ### Workflow für Agenten
 

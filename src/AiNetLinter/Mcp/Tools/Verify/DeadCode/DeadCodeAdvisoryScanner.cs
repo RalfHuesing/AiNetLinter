@@ -43,16 +43,38 @@ internal static partial class DeadCodeAdvisoryScanner
         DeadCodeAdvisoryOptions args,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var context = new DeadCodeScanContext(solution, solutionDir, args, 0);
+        var config = args.Config?.DeadCode ?? new DeadCodeConfig();
+        var seconds = args.SolutionBudget ? config.SolutionBudgetSeconds : config.VerifyBudgetSeconds;
+        context.Progress.BudgetMilliseconds = Math.Max(0, (long)seconds) * 1000;
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (seconds <= 0) budget.Cancel();
+        else budget.CancelAfter(TimeSpan.FromSeconds(seconds));
         var candidateDocuments = CollectCandidateDocuments(solution, solutionDir, args);
-        var context = new DeadCodeScanContext(solution, solutionDir, args, candidateDocuments.Count);
-
-        foreach (var projectGroup in candidateDocuments.GroupBy(d => d.Project))
+        context.DocumentsInScope = candidateDocuments.Count;
+        try
         {
-            if (ct.IsCancellationRequested) break;
-            await ScanProjectAsync(projectGroup.Key, projectGroup, context, ct);
+            budget.Token.ThrowIfCancellationRequested();
+            await DeadCodeChangeScope.ExpandAsync(context, budget.Token);
+            candidateDocuments = CollectCandidateDocuments(solution, solutionDir, context.Args);
+            context.DocumentsInScope = candidateDocuments.Count;
+            context.UsageIndex = await DeadCodeUsageIndex.CreateAsync(solution, budget.Token, args.Config);
+            new DeadCodeIndirectUsage(context.UsageIndex).Collect(budget.Token);
+            await new DeadCodeMarkupUsage(context.UsageIndex).CollectAsync(solution, budget.Token, args.Config);
+            context.Progress.ReferencesComplete = context.UsageIndex.CoverageGaps.Count == 0;
+            if (!context.Progress.ReferencesComplete) return BuildScanResult(context);
+            foreach (var projectGroup in candidateDocuments.GroupBy(document => document.Project))
+            {
+                await ScanProjectAsync(projectGroup.Key, projectGroup, context, budget.Token);
+                if (context.Progress.BudgetExpired) break;
+            }
         }
-
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && budget.IsCancellationRequested)
+        {
+            context.Progress.BudgetExpired = true;
+        }
         ct.ThrowIfCancellationRequested();
         return BuildScanResult(context);
     }
@@ -75,7 +97,12 @@ internal static partial class DeadCodeAdvisoryScanner
         {
             foreach (var document in documents)
             {
-                if (ct.IsCancellationRequested) break;
+                ct.ThrowIfCancellationRequested();
+                if (context.Progress.ElapsedMilliseconds >= context.Progress.BudgetMilliseconds)
+                {
+                    context.Progress.BudgetExpired = true;
+                    return;
+                }
                 await ScanDocumentAsync(document, entryPoint, hasInternalsVisibleTo, context, ct);
             }
         }
@@ -100,8 +127,10 @@ internal static partial class DeadCodeAdvisoryScanner
         var declaredTypeNodes = syntaxRoot.DescendantNodes().Where(n => n is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax);
         foreach (var typeNode in declaredTypeNodes)
         {
+            ct.ThrowIfCancellationRequested();
             await ProcessTypeNodeAsync(typeNode, semanticModel, document, entryPoint, hasInternalsVisibleTo, context, ct);
         }
+        context.Progress.ProcessedDocuments++;
     }
 
     private static async Task ProcessTypeNodeAsync(
@@ -155,7 +184,8 @@ internal static partial class DeadCodeAdvisoryScanner
     {
         if (!ShouldCheckSymbol(typeSymbol, context.Args)
             || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint)
-            || DeadCodeSuppression.IsSuppressed(typeSymbol))
+            || DeadCodeSuppression.IsSuppressed(typeSymbol)
+            || typeSymbol.GetMembers().Any(DeadCodeWhitelist.IsCompilerRoot))
         {
             return false;
         }
@@ -166,38 +196,20 @@ internal static partial class DeadCodeAdvisoryScanner
             return false;
         }
 
-        var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context.Solution, ct);
+        var referenceAnalysis = await AnalyzeReferencesAsync(typeSymbol, context, ct);
         if (referenceAnalysis.IsUndecidable)
         {
-            context.UndecidableCount++;
+            RecordUncertainty(typeSymbol, document, context);
             return false;
         }
 
         var isDead = referenceAnalysis.IsDeadCandidate;
         if (!isDead) return false;
 
-        if (typeSymbol.IsStatic)
-        {
-            foreach (var member in typeSymbol.GetMembers())
-            {
-                if (member.IsImplicitlyDeclared) continue;
-                var memberIsDead = (await AnalyzeReferencesAsync(member, context.Solution, ct)).IsDeadCandidate;
-                if (!memberIsDead)
-                {
-                    return false;
-                }
-            }
-        }
-
-        if (typeSymbol.DeclaredAccessibility == Accessibility.Private)
-        {
-            context.DeadContainerTypes.Add(typeSymbol);
-            AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo, referenceAnalysis);
-            return true;
-        }
-
+        if (context.Args.Confidence == DeadCodeConfidenceFilter.High && ClassifyConfidence(typeSymbol, hasInternalsVisibleTo) != "high") return false;
+        context.DeadContainerTypes.Add(typeSymbol);
         AddDeadSymbol(context, typeSymbol, document, hasInternalsVisibleTo, referenceAnalysis);
-        return false;
+        return true;
     }
 
     private static async Task ScanTypeMembersAsync(
@@ -225,21 +237,23 @@ internal static partial class DeadCodeAdvisoryScanner
         CancellationToken ct)
     {
         if (member.IsImplicitlyDeclared) return;
-        if (!member.DeclaringSyntaxReferences.Any(r => typeNode.Span.Contains(r.Span))) return;
+        if (!member.DeclaringSyntaxReferences.Any(r => r.SyntaxTree == typeNode.SyntaxTree && typeNode.Span.Contains(r.Span))) return;
+        if (!context.ScannedMembers.Add(member)) return;
         if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint)) return;
         if (DeadCodeSuppression.IsSuppressed(member)) return;
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
+        context.ScannedCount++;
         if (IsApiProtected(member, document, context))
         {
             context.ApiProtectedCount++;
             return;
         }
 
-        var referenceAnalysis = await AnalyzeReferencesAsync(member, context.Solution, ct);
+        var referenceAnalysis = await AnalyzeReferencesAsync(member, context, ct);
         if (referenceAnalysis.IsUndecidable)
         {
-            context.UndecidableCount++;
+            RecordUncertainty(member, document, context);
             return;
         }
 
@@ -254,60 +268,29 @@ internal static partial class DeadCodeAdvisoryScanner
         if (context.Args.Config is null) return false;
         var config = ProjectConfigResolver.ResolveForProject(document.Project.Name, context.Args.Config);
         return string.Equals(config.DeadCode?.DefaultApiSurface, "external_library", StringComparison.Ordinal)
-            && DeadCodeApiSurfacePolicy.IsExternallyVisible(symbol);
+            && (DeadCodeApiSurfacePolicy.IsExternallyVisible(symbol)
+                || symbol.ContainingType is { } type && DeadCodeApiSurfacePolicy.IsExternallyVisible(type)
+                && GetImplementedInterfaceMembers(symbol).Any(DeadCodeApiSurfacePolicy.IsExternallyVisible));
     }
 
     private static async Task<SymbolReferenceAnalysis> AnalyzeReferencesAsync(
         ISymbol symbol,
-        Solution solution,
+        DeadCodeScanContext context,
         CancellationToken ct)
     {
-        var referenceSymbols = GetRelatedReferenceSymbols(symbol).ToArray();
-        var seenLocations = new HashSet<(DocumentId DocumentId, Microsoft.CodeAnalysis.Text.TextSpan Span)>();
-        var hasProductionReference = false;
-        var hasUnknownReference = false;
-        var testReferenceCount = 0;
-
-        foreach (var referenceSymbol in referenceSymbols)
-        {
-            var references = await SymbolFinder.FindReferencesAsync(referenceSymbol, solution, ct);
-            var declarations = referenceSymbol.DeclaringSyntaxReferences
-                .Select(reference => (reference.SyntaxTree, reference.Span))
-                .ToHashSet();
-
-            foreach (var location in references.SelectMany(reference => reference.Locations))
-            {
-                if (location.Location.SourceTree is { } sourceTree
-                    && declarations.Contains((sourceTree, location.Location.SourceSpan)))
-                {
-                    continue;
-                }
-
-                if (location.Document is { } referenceDocument
-                    && !seenLocations.Add((referenceDocument.Id, location.Location.SourceSpan)))
-                {
-                    continue;
-                }
-
-                switch (ClassifyReferenceRole(location.Document))
-                {
-                    case ReferenceRole.Production:
-                        hasProductionReference = true;
-                        break;
-                    case ReferenceRole.Test:
-                        testReferenceCount++;
-                        break;
-                    default:
-                        hasUnknownReference = true;
-                        break;
-                }
-            }
-        }
-
-        return new SymbolReferenceAnalysis(
-            HasProductionReference: hasProductionReference,
-            HasUnknownReference: hasUnknownReference,
-            TestReferenceCount: testReferenceCount);
+        ct.ThrowIfCancellationRequested();
+        if (DeadCodeApiSurfacePolicy.HasMissingFriend(symbol, context.Solution))
+            context.UsageIndex.MarkUnknown(symbol, "friend_consumer_missing");
+        var references = symbol is INamedTypeSymbol type
+            ? GetRelatedReferenceSymbols(symbol).Concat(type.GetMembers().SelectMany(GetRelatedReferenceSymbols))
+            : GetRelatedReferenceSymbols(symbol);
+        var analyses = references.Select(reference => context.UsageIndex.Analyze(reference,
+            symbol is INamedTypeSymbol ? DeadCodeUsageIndex.Key(symbol) : null)).ToArray();
+        return await Task.FromResult(new SymbolReferenceAnalysis(
+            analyses.Any(analysis => analysis.Production),
+            analyses.Any(analysis => analysis.Unknown),
+            analyses.Sum(analysis => analysis.Tests),
+            analyses.Sum(analysis => analysis.Writes)));
     }
 
     private static IEnumerable<ISymbol> GetRelatedReferenceSymbols(ISymbol symbol)
@@ -335,27 +318,7 @@ internal static partial class DeadCodeAdvisoryScanner
         }
     }
 
-    private static ReferenceRole ClassifyReferenceRole(Document? document)
-    {
-        if (document?.Project is null)
-        {
-            return ReferenceRole.Unknown;
-        }
-
-        if (TestDetector.IsTestProject(document.Project)
-            || (document.FilePath is not null && TestDetector.IsTestFile(document.FilePath)))
-        {
-            return ReferenceRole.Test;
-        }
-
-        return document.Project.SupportsCompilation && document.FilePath is not null
-            ? ReferenceRole.Production
-            : ReferenceRole.Unknown;
-    }
-
-    private enum ReferenceRole { Production, Test, Unknown }
-
-    private readonly record struct SymbolReferenceAnalysis(bool HasProductionReference, bool HasUnknownReference, int TestReferenceCount)
+    private readonly record struct SymbolReferenceAnalysis(bool HasProductionReference, bool HasUnknownReference, int TestReferenceCount, int WriteReferenceCount = 0)
     {
         public bool IsUndecidable => !HasProductionReference && HasUnknownReference;
         public bool IsDeadCandidate => !HasProductionReference && !HasUnknownReference;
@@ -447,7 +410,7 @@ internal static partial class DeadCodeAdvisoryScanner
 
     private static bool ShouldScanProject(Project project, DeadCodeAdvisoryOptions args)
     {
-        return project.SupportsCompilation && (args.IncludeTests || !TestDetector.IsTestProject(project));
+        return project.SupportsCompilation && (args.IncludeTests || DeadCodeProjectRole.Resolve(project, args.Config) != "test");
     }
 
     private static void AddCandidateDocuments(

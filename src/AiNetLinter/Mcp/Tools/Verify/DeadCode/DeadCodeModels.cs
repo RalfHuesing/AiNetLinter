@@ -67,7 +67,11 @@ internal sealed record DeadCodeAdvisoryOptions(
     int MaxResults = 50,
     IReadOnlySet<string>? ScopeFiles = null,
     Config? Config = null,
-    AiNetLinter.Mcp.AnalysisSymbolIdentity? HandoffIdentity = null)
+    AiNetLinter.Mcp.AnalysisSymbolIdentity? HandoffIdentity = null,
+    bool SolutionBudget = false,
+    Microsoft.CodeAnalysis.Solution? PreviousSolution = null,
+    TimeProvider? Clock = null,
+    string? RequestedScope = null)
 {
     public static bool IsKnownAccessibility(string? value) => value?.ToLowerInvariant() is "all" or "private" or "internal" or "public" or "private_internal";
     public static bool IsKnownConfidence(string? value) => value?.ToLowerInvariant() is "both" or "high" or "low";
@@ -139,7 +143,8 @@ internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("usage")] string Usage = "unreferenced",
     [property: JsonPropertyName("testReferences")] int TestReferences = 0,
     [property: JsonPropertyName("internalSymbolIdentifier")] string? InternalSymbolIdentifier = null,
-    [property: JsonIgnore] string? ProjectName = null);
+    [property: JsonIgnore] string? ProjectName = null,
+    int Priority = 2);
 
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
@@ -158,7 +163,9 @@ internal sealed record DeadCodeSummary(
     [property: JsonPropertyName("truncatedBy")] int TruncatedBy = 0,
     [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null,
     [property: JsonPropertyName("undecidable")] int Undecidable = 0,
-    [property: JsonPropertyName("apiProtected")] int ApiProtected = 0);
+    [property: JsonPropertyName("apiProtected")] int ApiProtected = 0,
+    DeadCodeScanCoverage? Coverage = null,
+    IReadOnlyDictionary<string, int>? UndecidableReasons = null);
 
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
@@ -177,7 +184,8 @@ internal sealed record DeadCodeScanResult(
     [property: JsonPropertyName("recommendedNextAction")] DeadCodeRecommendedNextAction RecommendedNextAction,
     [property: JsonPropertyName("isTruncated")] bool IsTruncated,
     [property: JsonPropertyName("resultType")] string ResultType = "candidate",
-    [property: JsonPropertyName("deletionClaim")] bool DeletionClaim = false);
+    [property: JsonPropertyName("deletionClaim")] bool DeletionClaim = false,
+    IReadOnlyList<DeadCodeEntry>? UndecidableSymbols = null);
 
 /// <summary>
 /// Konstante Standard-Limits fuer die Heuristik-Transparenz.
@@ -205,14 +213,36 @@ internal sealed class DeadCodeScanContext(
 {
     public Microsoft.CodeAnalysis.Solution Solution { get; } = solution;
     public string SolutionDir { get; } = solutionDir;
-    public DeadCodeAdvisoryOptions Args { get; } = args;
-    public int DocumentsInScope { get; } = documentsInScope;
+    public DeadCodeAdvisoryOptions Args { get; set; } = args;
+    public int DocumentsInScope { get; set; } = documentsInScope;
     public List<DeadCodeEntry> DeadSymbols { get; } = [];
     public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> DeadContainerTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public HashSet<Microsoft.CodeAnalysis.INamedTypeSymbol> ScannedTypes { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public RazorGeneratedEvidenceIndex RazorEvidenceIndex { get; set; } = RazorGeneratedEvidenceIndex.Empty;
+    public DeadCodeUsageIndex UsageIndex { get; set; } = new();
+    public HashSet<Microsoft.CodeAnalysis.ISymbol> ScannedMembers { get; } = new(Microsoft.CodeAnalysis.SymbolEqualityComparer.Default);
     public int ScannedCount { get; set; }
     public int UndecidableCount { get; set; }
     public int ApiProtectedCount { get; set; }
+    public DeadCodeScanProgress Progress { get; } = new(args.Clock);
+}
+
+internal sealed record DeadCodeScanCoverage(string RequestedScope, int ProcessedDocuments, int OpenDocuments,
+    long ElapsedMilliseconds, string StopReason, bool ReferencesComplete,
+    string ExcludedKinds = "constructors,accessors,operators,finalizers,enum_values,events,indexers,generated_declarations",
+    string ChangesBasis = "not_applicable");
+
+internal sealed class DeadCodeScanProgress(TimeProvider? clock = null)
+{
+    private readonly TimeProvider timer = clock ?? TimeProvider.System;
+    private readonly long startedAt = (clock ?? TimeProvider.System).GetTimestamp();
+    public int ProcessedDocuments { get; set; }
+    public bool BudgetExpired { get; set; }
+    public bool ReferencesComplete { get; set; }
+    public long ElapsedMilliseconds => (long)timer.GetElapsedTime(startedAt).TotalMilliseconds;
+    public long BudgetMilliseconds { get; set; }
+    public string ChangesBasis { get; set; } = "not_applicable";
+    public HashSet<string> PriorTargets { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, DeadCodeEntry> UncertainSymbols { get; } = new(StringComparer.Ordinal);
 }
