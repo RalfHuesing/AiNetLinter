@@ -8,6 +8,12 @@ Ein Agent soll seinen eigentlichen Entwicklungstask abschließen und dabei orden
 
 Das neue lokale Werkzeug soll solche möglichen Problemherde deterministisch finden und für Agent und Nutzer nachvollziehbar aufbereiten. Es blockiert keinen Build und erzwingt keine automatische Korrektur. Die Entscheidung über ein Finding entsteht im Review.
 
+Das Werkzeug beobachtet ein Repository über Zeit: Es findet mögliche Probleme, liefert die Grundlage für ein Review, hält dessen Entscheidung fest und legt einen akzeptierten Fall bei relevanten Codeänderungen erneut vor.
+
+## Arbeitsthese: Code für Agenten
+
+Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor allem für Menschen entstanden. Agenten haben ähnliche Bedürfnisse, aber möglicherweise andere Schwerpunkte. Code muss für sie zuverlässig verständlich und mit möglichst wenig Such- und Kontextaufwand erschließbar sein; bloße „Schönheit“ ist kein Selbstzweck. Wenn ein Agent für eine kleine Funktion Hunderte Navigationsschritte braucht, kann das ein ernstes Qualitätsproblem sein. Diese These soll die Auswahl und spätere Bewertung der Audit-Regeln leiten; sie ist noch keine belegte Regel.
+
 ## Bisher festgehalten
 
 - Etablierte Build-Linter sollen nur mit Regeln eingesetzt werden, bei denen ein Verstoß hinreichend eindeutig ist und eine direkte Korrektur keine eigentliche Ursache verdeckt.
@@ -15,22 +21,31 @@ Das neue lokale Werkzeug soll solche möglichen Problemherde deterministisch fin
 - Es konzentriert sich auf wenige, konkrete Muster, die in Agenten-Workflows häufig zu Qualitätsproblemen führen. Eine lange Methode kann dabei ein sinnvoller Hinweis sein, aber auch fachlich genau richtig.
 - **Reporting und Entscheidungsverlauf gehören zum ersten nutzbaren Stand.** Ein akzeptiertes Finding darf nicht bei jedem Lauf unverändert erneut als offene Arbeit erscheinen.
 - Zu einem Finding werden der ursächliche Quellcode, seine damaligen Messwerte, die Entscheidung und der Verlauf gespeichert. So lassen sich spätere Änderungen vergleichen und Regeln anhand tatsächlicher Reviews beurteilen.
+- Jedes gemeldete Finding erhält eine referenzierbare ID. Ein Agent meldet sein Review-Ergebnis strukturiert zu dieser ID zurück, beispielsweise `false-positive`; die Entscheidung soll nicht von frei formuliertem Text abhängen.
+- Findings, Quellcode-Snapshots und Review-Entscheidungen gehören zum jeweils analysierten Repository und werden dort unter Versionskontrolle aufbewahrt. Das konkrete Speicherformat ist noch offen.
 - Wird der für ein akzeptiertes Finding relevante Code geändert, kommt es erneut ins Review. Reine Formatierung und möglichst auch harmlose lokale Umbenennungen sollen keine erneute Meldung auslösen; fachliche Änderungen dürfen nicht übersehen werden.
 - „In diesem Fall in Ordnung“ und „Fehlalarm der Regel“ sind unterschiedliche Review-Ergebnisse. Beide sind für die spätere Bewertung der Regeln wichtig.
+- Spätere Auswertungen sollen zeigen, wie häufig eine Regel zu einer Änderung, bewusster Akzeptanz oder einem bestätigten Fehlalarm führt. Der Bau dieser Auswertung gehört noch nicht zum ersten Produktstand.
 - Die künftige Code-Navigation wird unabhängig evaluiert. Die Einstellung und Archivierung des bisherigen AiNetLinter ist die derzeitige Erwartung, noch kein vollzogener Schritt.
+
+## Vorläufige Richtung
+
+- Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
 
 ## Roadmap
 
 1. **Review-Vertrag festlegen:** Was ist ein Finding, welche Entscheidungen kann ein Review treffen, und wann wird ein bereits entschiedener Fall wieder offen? Dabei den gesamten Ablauf vom ersten Fund bis zum erneuten Review beschreiben.
-2. **Ersten vollständigen Durchlauf bauen:** Analyse, Markdown-Bericht, strukturierte Review-Entscheidung, Speicherung und erneuter Lauf mit Unterdrückung unveränderter akzeptierter Findings gehören zusammen in den ersten nutzbaren Stand.
+2. **Ersten vollständigen Durchlauf bauen:** Analyse, Markdown-Bericht, strukturierte Review-Entscheidung über die Finding-ID, Speicherung im Repository und erneuter Lauf mit Unterdrückung unveränderter akzeptierter Findings gehören zusammen in den ersten nutzbaren Stand.
 3. **Änderungen und Verlauf belastbar machen:** Identität eines Findings über Läufe hinweg, Vergleich des relevanten Codes, Quellcode-Snapshots und nachvollziehbare Historie festlegen. Besonders prüfen: Umbenennung, Verschiebung, Aufteilung und fachliche Erweiterung einer Methode.
 4. **Regeln anhand der Reviews schärfen:** Mit wenigen typischen Problemen beginnen. Erfassen, welche Findings zu Änderungen, bewusster Akzeptanz oder einer Korrektur der Regel führen. Schwellwerte und Regeln anhand dieser Daten weiterentwickeln.
 5. **Einführung und Ablösung planen:** Die passende lokale Schnittstelle wählen, bestehende harte Regeln einordnen und erst danach die Rolle des bisherigen AiNetLinter und seine Archivierung entscheiden.
 
 ## Offene Entscheidungen
 
-- Eine lokale CLI oder ein MCP-Server als primäre Schnittstelle; es soll zunächst nur einen Weg geben.
-- Ort und Format des dauerhaften Review-Verlaufs sowie die Art, wie ein Agent eine Entscheidung strukturiert einträgt.
+- Name des Werkzeugs. Der Arbeitstitel „Relaunch“ beschreibt nur das Vorhaben.
+- MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
+- Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
+- Stabilität einer Finding-ID über Codeänderungen, Umbenennungen und Verschiebungen hinweg.
 - Genaue Grenze zwischen harter technischer Regel und Review-Hinweis.
 - Welche wenigen Regeln den ersten vollständigen Durchlauf tragen.
 - Wie der Vergleich relevante Änderungen sicher erkennt, ohne bei bloßer Formatierung oder harmlosen Umbenennungen ständig neu zu melden.
