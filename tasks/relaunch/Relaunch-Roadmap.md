@@ -32,11 +32,14 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Die Umsetzung beginnt in einem neuen Repository. Passende Code-Bausteine aus AiNetLinter können gezielt übernommen werden.
 - Die konkrete Speicherung bleibt in Klärung. Im neuen Code wird sie von Anfang an über eine Schnittstelle vorgesehen; für den anfänglichen technischen Aufbau kann eine Implementierung noch nichts speichern. Ein nutzbarer Review-Durchlauf braucht später eine echte Speicherung der Entscheidungen.
 - Der lokale MCP-Server erhält zunächst ein Start-Tool mit genau einem Parameter: dem Pfad einer JSON-Konfiguration mit festem Dateinamen im analysierten Repository. Sie enthält Solution-Pfad, Regeln, Ausgabe- und Speicherverzeichnis. Ein zweites Tool fragt den Status eines gestarteten Reviews über ein Token ab; der einzelne Toolaufruf wartet nicht auf die ganze Analyse.
+- Alle Pfade zu Dateien und Verzeichnissen des analysierten Repositories stehen in Konfiguration, Findings, Berichten und Speicherständen relativ zum Repository, etwa `src/foo.cs`. Der absolute Pfad zur Konfigurationsdatei dient nur dazu, das Repository beim Aufruf zu finden.
+- Jede Regel ist ein eigenständiges Modul mit einem gemeinsamen Ausführungsvertrag. Sie bestimmt ihre Befunde, relevante Quellcode-Ausschnitte, konfigurierbare Parameter und Regelbeschreibung. Eine zentrale Registrierung und ein gemeinsamer Runner führen die aktivierten Regeln aus; Bericht, Finding-ID und Speicherung werden generisch verarbeitet. Die Regeln dürfen aus mehreren Dateien bestehen. Details stehen im [Startarchitektur-Entwurf](Startarchitektur.md).
+- Neben MCP gibt es einen CLI-Modus. Er erhält die nötigen Analyseparameter direkt, erzeugt zunächst Berichte und verwendet denselben Analyse- und Berichts-Kern. Der MCP-Zugang dient zusätzlich dem späteren strukturierten Review-Reporting.
 - Die künftige Code-Navigation wird unabhängig evaluiert. Die Einstellung und Archivierung des bisherigen AiNetLinter ist die derzeitige Erwartung, noch kein vollzogener Schritt.
 
 ## Vorläufige Richtung
 
-- Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
+- MCP ist der primäre Zugang für den Agenten; die CLI ist ein zweiter Zugang für Berichtsläufe.
 - Maßstab für den Neustart ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen.
 - Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen; der konkrete Vorschlag steht im [Reporting- und Speicherentwurf](Reporting-Speicherentwurf.md).
 - Eine gemeldete Behebung sollte erst als erledigt gelten, wenn ein vollständiger erneuter Scan bei gleicher Regel den Befund nicht mehr findet. Wiederholte Scans desselben unveränderten Findings sollten für spätere Statistiken nicht als neue Fälle zählen.
@@ -54,7 +57,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 ## Offene Entscheidungen
 
 - Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. `AiNetReview` ist derzeit der Favorit: Der Name bezeichnet den begleiteten Prozess, ohne ein automatisches Audit-Urteil zu versprechen. Offen ist, ob er zu stark nach PR-Review klingt; `AiNetAuditTool` bleibt eine Alternative. `CodeRadar` wurde verworfen. Exakte Google-Suchen am 27.09.2026 zeigten für `AiNetReview` und `AiNetAuditTool` keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
-- MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
+- Genaue CLI-Optionen und ob sie zusätzlich die Repository-JSON lesen kann; beide Zugänge müssen in dieselbe validierte Anfrage münden.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
 - Definition der späteren Kennzahlen: Regel-Treffer pro Scan, verschiedene Findings und erneut geöffnete Fälle sind unterschiedliche Größen.
 - Stabilität einer Finding-ID über Codeänderungen, Umbenennungen und Verschiebungen hinweg.
@@ -62,7 +65,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Welche wenigen Regeln den ersten vollständigen Durchlauf tragen.
 - Wie der Vergleich relevante Änderungen sicher erkennt, ohne bei bloßer Formatierung oder harmlosen Umbenennungen ständig neu zu melden.
 - Welche Teile des bisherigen AiNetLinter für den neuen Ablauf sinnvoll wiederverwendet werden können.
-- Ob die im Repository liegende Konfiguration absolute, gerätespezifische Pfade enthalten soll oder portable Pfade relativ zur Konfigurationsdatei. Der MCP-Parameter selbst kann in beiden Fällen ein absoluter Konfigurationspfad sein.
+- Welche Normalisierung je Regel eine relevante Änderung zuverlässig erkennt und wie Regelversion und wirksame Konfiguration in die Gültigkeit früherer Entscheidungen eingehen.
 
 ## Leitplanken für die weitere Diskussion
 
