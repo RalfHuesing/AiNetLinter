@@ -51,7 +51,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 
 ## Offene Entscheidungen
 
-- Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. `AiNetAudit` gefällt als Wortstamm, klingt allein aber so, als würde das Produkt den Audit selbst durchführen. `AiNetAuditTool` und `AiNetAuditKit` machen die unterstützende Rolle deutlicher; die Entscheidung steht aus. `CodeRadar` wurde verworfen. Eine exakte Google-Suche am 27.09.2026 zeigte für `AiNetAudit` und `AiNetAuditTool` keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
+- Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. `AiNetReview` ist derzeit der Favorit: Der Name bezeichnet den begleiteten Prozess, ohne ein automatisches Audit-Urteil zu versprechen. Offen ist, ob er zu stark nach PR-Review klingt; `AiNetAuditTool` bleibt eine Alternative. `CodeRadar` wurde verworfen. Exakte Google-Suchen am 27.09.2026 zeigten für `AiNetReview` und `AiNetAuditTool` keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
 - MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
 - Definition der späteren Kennzahlen: Regel-Treffer pro Scan, verschiedene Findings und erneut geöffnete Fälle sind unterschiedliche Größen.
