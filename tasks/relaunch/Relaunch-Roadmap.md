@@ -31,6 +31,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 ## Vorläufige Richtung
 
 - Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
+- Ein grundlegender Neustart des Produkts wird erwogen. Maßstab ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen. Vorhandene Roslyn-Bausteine können übernommen werden, wenn sie zu diesem Ablauf passen.
 
 ## Roadmap
 
@@ -42,13 +43,14 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 
 ## Offene Entscheidungen
 
-- Name des Werkzeugs. Der Arbeitstitel „Relaunch“ beschreibt nur das Vorhaben.
+- Name des Werkzeugs, derzeit nachrangig. Er soll AI und .NET erkennen lassen; `AiNetReviewTool` und `AiNetAuditTool` sind Beispiele, noch keine Entscheidung. `CodeRadar` wurde verworfen.
 - MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
 - Stabilität einer Finding-ID über Codeänderungen, Umbenennungen und Verschiebungen hinweg.
 - Genaue Grenze zwischen harter technischer Regel und Review-Hinweis.
 - Welche wenigen Regeln den ersten vollständigen Durchlauf tragen.
 - Wie der Vergleich relevante Änderungen sicher erkennt, ohne bei bloßer Formatierung oder harmlosen Umbenennungen ständig neu zu melden.
+- Welche Teile des bisherigen AiNetLinter für den neuen Ablauf sinnvoll wiederverwendet werden können.
 
 ## Leitplanken für die weitere Diskussion
 
