@@ -31,6 +31,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Spätere Auswertungen sollen zeigen, wie häufig eine Regel zu einer Änderung, bewusster Akzeptanz oder einem bestätigten Fehlalarm führt. Der Bau dieser Auswertung gehört noch nicht zum ersten Produktstand.
 - Die Umsetzung beginnt in einem neuen Repository. Passende Code-Bausteine aus AiNetLinter können gezielt übernommen werden.
 - Die konkrete Speicherung bleibt in Klärung. Im neuen Code wird sie von Anfang an über eine Schnittstelle vorgesehen; für den anfänglichen technischen Aufbau kann eine Implementierung noch nichts speichern. Ein nutzbarer Review-Durchlauf braucht später eine echte Speicherung der Entscheidungen.
+- Der lokale MCP-Server erhält zunächst ein Start-Tool mit genau einem Parameter: dem Pfad einer JSON-Konfiguration mit festem Dateinamen im analysierten Repository. Sie enthält Solution-Pfad, Regeln, Ausgabe- und Speicherverzeichnis. Ein zweites Tool fragt den Status eines gestarteten Reviews über ein Token ab; der einzelne Toolaufruf wartet nicht auf die ganze Analyse.
 - Die künftige Code-Navigation wird unabhängig evaluiert. Die Einstellung und Archivierung des bisherigen AiNetLinter ist die derzeitige Erwartung, noch kein vollzogener Schritt.
 
 ## Vorläufige Richtung
@@ -39,6 +40,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Maßstab für den Neustart ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen.
 - Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen; der konkrete Vorschlag steht im [Reporting- und Speicherentwurf](Reporting-Speicherentwurf.md).
 - Eine gemeldete Behebung sollte erst als erledigt gelten, wenn ein vollständiger erneuter Scan bei gleicher Regel den Befund nicht mehr findet. Wiederholte Scans desselben unveränderten Findings sollten für spätere Statistiken nicht als neue Fälle zählen.
+- Die konkrete Grundstruktur, der MCP-Lebenszyklus und geprüfte Vorlagen im bisherigen Code stehen im [Startarchitektur-Entwurf](Startarchitektur.md).
 
 ## Roadmap
 
@@ -60,6 +62,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Welche wenigen Regeln den ersten vollständigen Durchlauf tragen.
 - Wie der Vergleich relevante Änderungen sicher erkennt, ohne bei bloßer Formatierung oder harmlosen Umbenennungen ständig neu zu melden.
 - Welche Teile des bisherigen AiNetLinter für den neuen Ablauf sinnvoll wiederverwendet werden können.
+- Ob die im Repository liegende Konfiguration absolute, gerätespezifische Pfade enthalten soll oder portable Pfade relativ zur Konfigurationsdatei. Der MCP-Parameter selbst kann in beiden Fällen ein absoluter Konfigurationspfad sein.
 
 ## Leitplanken für die weitere Diskussion
 
