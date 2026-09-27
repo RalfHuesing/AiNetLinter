@@ -27,26 +27,29 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Wird der für ein akzeptiertes Finding relevante Code geändert, kommt es erneut ins Review. Reine Formatierung und möglichst auch harmlose lokale Umbenennungen sollen keine erneute Meldung auslösen; fachliche Änderungen dürfen nicht übersehen werden.
 - „In diesem Fall in Ordnung“ und „Fehlalarm der Regel“ sind unterschiedliche Review-Ergebnisse. Beide sind für die spätere Bewertung der Regeln wichtig.
 - Spätere Auswertungen sollen zeigen, wie häufig eine Regel zu einer Änderung, bewusster Akzeptanz oder einem bestätigten Fehlalarm führt. Der Bau dieser Auswertung gehört noch nicht zum ersten Produktstand.
+- Die Umsetzung beginnt in einem neuen Repository. Passende Code-Bausteine aus AiNetLinter können gezielt übernommen werden.
+- Die konkrete Speicherung bleibt in Klärung. Im neuen Code wird sie von Anfang an über eine Schnittstelle vorgesehen; für den anfänglichen technischen Aufbau kann eine Implementierung noch nichts speichern. Ein nutzbarer Review-Durchlauf braucht später eine echte Speicherung der Entscheidungen.
 - Die künftige Code-Navigation wird unabhängig evaluiert. Die Einstellung und Archivierung des bisherigen AiNetLinter ist die derzeitige Erwartung, noch kein vollzogener Schritt.
 
 ## Vorläufige Richtung
 
 - Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
-- Ein grundlegender Neustart des Produkts wird erwogen. Maßstab ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen. Vorhandene Roslyn-Bausteine können übernommen werden, wenn sie zu diesem Ablauf passen.
+- Maßstab für den Neustart ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen.
 - Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen; der konkrete Vorschlag steht im [Reporting- und Speicherentwurf](Reporting-Speicherentwurf.md).
 - Eine gemeldete Behebung sollte erst als erledigt gelten, wenn ein vollständiger erneuter Scan bei gleicher Regel den Befund nicht mehr findet. Wiederholte Scans desselben unveränderten Findings sollten für spätere Statistiken nicht als neue Fälle zählen.
 
 ## Roadmap
 
-1. **Review-Vertrag festlegen:** Was ist ein Finding, welche Entscheidungen kann ein Review treffen, und wann wird ein bereits entschiedener Fall wieder offen? Dabei den gesamten Ablauf vom ersten Fund bis zum erneuten Review beschreiben.
-2. **Ersten vollständigen Durchlauf bauen:** Analyse, Markdown-Bericht, strukturierte Review-Entscheidung über die Finding-ID, Speicherung im Repository und erneuter Lauf mit Unterdrückung unveränderter akzeptierter Findings gehören zusammen in den ersten nutzbaren Stand.
-3. **Änderungen und Verlauf belastbar machen:** Identität eines Findings über Läufe hinweg, Vergleich des relevanten Codes, Quellcode-Snapshots und nachvollziehbare Historie festlegen. Besonders prüfen: Umbenennung, Verschiebung, Aufteilung und fachliche Erweiterung einer Methode.
-4. **Regeln anhand der Reviews schärfen:** Mit wenigen typischen Problemen beginnen. Erfassen, welche Findings zu Änderungen, bewusster Akzeptanz oder einer Korrektur der Regel führen. Schwellwerte und Regeln anhand dieser Daten weiterentwickeln.
-5. **Einführung und Ablösung planen:** Die passende lokale Schnittstelle wählen, bestehende harte Regeln einordnen und erst danach die Rolle des bisherigen AiNetLinter und seine Archivierung entscheiden.
+1. **Review-Vertrag und Schnittstelle festlegen:** Was ist ein Finding, welche Entscheidungen kann ein Review treffen, und wann wird ein bereits entschiedener Fall wieder offen? Den primären Zugang für Agenten wählen und den Ablauf vom ersten Fund bis zum erneuten Review beschreiben.
+2. **Neues Repository aufsetzen:** Nur benötigte Analyse-Bausteine übernehmen und den Anschluss für die spätere Speicherung bereits vorsehen.
+3. **Ersten vollständigen Durchlauf bauen:** Analyse, Markdown-Bericht, strukturierte Review-Entscheidung über die Finding-ID, Speicherung im Repository und erneuter Lauf mit Unterdrückung unveränderter akzeptierter Findings gehören zusammen in den ersten nutzbaren Stand.
+4. **Änderungen und Verlauf belastbar machen:** Identität eines Findings über Läufe hinweg, Vergleich des relevanten Codes, Quellcode-Snapshots und nachvollziehbare Historie festlegen. Besonders prüfen: Umbenennung, Verschiebung, Aufteilung und fachliche Erweiterung einer Methode.
+5. **Regeln anhand der Reviews schärfen:** Mit wenigen typischen Problemen beginnen. Erfassen, welche Findings zu Änderungen, bewusster Akzeptanz oder einer Korrektur der Regel führen. Schwellwerte und Regeln anhand dieser Daten weiterentwickeln.
+6. **Einführung und Ablösung planen:** Bestehende harte Regeln einordnen und erst danach die Rolle des bisherigen AiNetLinter und seine Archivierung entscheiden.
 
 ## Offene Entscheidungen
 
-- Name des Werkzeugs, derzeit nachrangig. Er soll AI und .NET erkennen lassen; `AiNetReviewTool` und `AiNetAuditTool` sind Beispiele, noch keine Entscheidung. `CodeRadar` wurde verworfen.
+- Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. Aktuelle Kandidaten: `AiNetAudit`, `AiNetReview`, `AiNetAuditor`; `AiNetAuditTool` und `AiNetReviewTool` sind längere Varianten. `CodeRadar` wurde verworfen. Eine exakte Google-Suche am 27.09.2026 zeigte für die kurzen Kandidaten keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
 - MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
 - Definition der späteren Kennzahlen: Regel-Treffer pro Scan, verschiedene Findings und erneut geöffnete Fälle sind unterschiedliche Größen.
