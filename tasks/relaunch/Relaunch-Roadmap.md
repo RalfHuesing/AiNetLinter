@@ -10,6 +10,8 @@ Das neue lokale Werkzeug soll solche möglichen Problemherde deterministisch fin
 
 Das Werkzeug beobachtet ein Repository über Zeit: Es findet mögliche Probleme, liefert die Grundlage für ein Review, hält dessen Entscheidung fest und legt einen akzeptierten Fall bei relevanten Codeänderungen erneut vor.
 
+Den eigentlichen Audit führen Agent und Nutzer durch. Das Werkzeug liefert Befunde und Kontext, nimmt strukturierte Entscheidungen entgegen und verfolgt deren Gültigkeit über spätere Läufe.
+
 ## Arbeitsthese: Code für Agenten
 
 Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor allem für Menschen entstanden. Agenten haben ähnliche Bedürfnisse, aber möglicherweise andere Schwerpunkte. Code muss für sie zuverlässig verständlich und mit möglichst wenig Such- und Kontextaufwand erschließbar sein; bloße „Schönheit“ ist kein Selbstzweck. Wenn ein Agent für eine kleine Funktion Hunderte Navigationsschritte braucht, kann das ein ernstes Qualitätsproblem sein. Diese These soll die Auswahl und spätere Bewertung der Audit-Regeln leiten; sie ist noch keine belegte Regel.
@@ -49,7 +51,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 
 ## Offene Entscheidungen
 
-- Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. Aktuelle Kandidaten: `AiNetAudit`, `AiNetReview`, `AiNetAuditor`; `AiNetAuditTool` und `AiNetReviewTool` sind längere Varianten. `CodeRadar` wurde verworfen. Eine exakte Google-Suche am 27.09.2026 zeigte für die kurzen Kandidaten keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
+- Name des Werkzeugs für das neue Repository. Er soll AI und .NET erkennen lassen. `AiNetAudit` gefällt als Wortstamm, klingt allein aber so, als würde das Produkt den Audit selbst durchführen. `AiNetAuditTool` und `AiNetAuditKit` machen die unterstützende Rolle deutlicher; die Entscheidung steht aus. `CodeRadar` wurde verworfen. Eine exakte Google-Suche am 27.09.2026 zeigte für `AiNetAudit` und `AiNetAuditTool` keine klaren organischen Treffer; das ersetzt keine Prüfung von Marken oder Paketnamen.
 - MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
 - Definition der späteren Kennzahlen: Regel-Treffer pro Scan, verschiedene Findings und erneut geöffnete Fälle sind unterschiedliche Größen.
