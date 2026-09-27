@@ -23,6 +23,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Zu einem Finding werden der ursächliche Quellcode, seine damaligen Messwerte, die Entscheidung und der Verlauf gespeichert. So lassen sich spätere Änderungen vergleichen und Regeln anhand tatsächlicher Reviews beurteilen.
 - Jedes gemeldete Finding erhält eine referenzierbare ID. Ein Agent meldet sein Review-Ergebnis strukturiert zu dieser ID zurück, beispielsweise `false-positive`; die Entscheidung soll nicht von frei formuliertem Text abhängen.
 - Findings, Quellcode-Snapshots und Review-Entscheidungen gehören zum jeweils analysierten Repository und werden dort unter Versionskontrolle aufbewahrt. Das konkrete Speicherformat ist noch offen.
+- Es gibt keinen Status „später beheben“ und keine automatische Wiedervorlage nach einer Frist. Ein nicht bearbeitetes und nicht beantwortetes Finding bleibt offen und erscheint beim nächsten Review wieder.
 - Wird der für ein akzeptiertes Finding relevante Code geändert, kommt es erneut ins Review. Reine Formatierung und möglichst auch harmlose lokale Umbenennungen sollen keine erneute Meldung auslösen; fachliche Änderungen dürfen nicht übersehen werden.
 - „In diesem Fall in Ordnung“ und „Fehlalarm der Regel“ sind unterschiedliche Review-Ergebnisse. Beide sind für die spätere Bewertung der Regeln wichtig.
 - Spätere Auswertungen sollen zeigen, wie häufig eine Regel zu einer Änderung, bewusster Akzeptanz oder einem bestätigten Fehlalarm führt. Der Bau dieser Auswertung gehört noch nicht zum ersten Produktstand.
@@ -32,6 +33,8 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 
 - Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
 - Ein grundlegender Neustart des Produkts wird erwogen. Maßstab ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen. Vorhandene Roslyn-Bausteine können übernommen werden, wenn sie zu diesem Ablauf passen.
+- Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis: Git kann einzelne Fälle vergleichen und zusammenführen; spätere Auswertungen können diese Dateien lesen. Markdown bleibt Ausgabe für Reviews. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen.
+- Eine gemeldete Behebung sollte erst als erledigt gelten, wenn ein vollständiger erneuter Scan bei gleicher Regel den Befund nicht mehr findet. Wiederholte Scans desselben unveränderten Findings sollten für spätere Statistiken nicht als neue Fälle zählen.
 
 ## Roadmap
 
@@ -46,6 +49,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 - Name des Werkzeugs, derzeit nachrangig. Er soll AI und .NET erkennen lassen; `AiNetReviewTool` und `AiNetAuditTool` sind Beispiele, noch keine Entscheidung. `CodeRadar` wurde verworfen.
 - MCP-Server als primäre Schnittstelle bestätigen oder eine lokale CLI wählen; zunächst soll es nur einen primären Weg geben.
 - Konkretes, Git-taugliches Speicherformat für den repo-bezogenen Verlauf und genaue Menge der zulässigen Review-Ergebnisse.
+- Definition der späteren Kennzahlen: Regel-Treffer pro Scan, verschiedene Findings und erneut geöffnete Fälle sind unterschiedliche Größen.
 - Stabilität einer Finding-ID über Codeänderungen, Umbenennungen und Verschiebungen hinweg.
 - Genaue Grenze zwischen harter technischer Regel und Review-Hinweis.
 - Welche wenigen Regeln den ersten vollständigen Durchlauf tragen.
