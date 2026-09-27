@@ -1,43 +1,87 @@
-# Epic 4 – Umsetzung und Abnahme
+# Epic 4 – Aufbau, Tests und Abnahme
 
-Dieses Epic ordnet die Implementierung und definiert die prüfbaren Abnahmekriterien. Die Verträge der [Eingaben](01-Eingaben-und-Host.md), [Findings](02-Regel-und-Findings.md) und [Speicherung](03-Storage-und-Berichte.md) sind verbindlich; Tests dürfen keine davon still verändern.
+Dieses Epic legt Repository-Struktur, Abhängigkeitsrichtung und prüfbare Abnahme fest. [Eingaben](01-Eingaben-und-Host.md), [Regelvertrag](02-Regel-und-Findings.md) und [Speicherung](03-Storage-und-Berichte.md) definieren das Verhalten.
 
-## Reihenfolge
+## Projekt- und Dateistruktur
 
-1. Neues Repository mit `AiNetReview.slnx`, `src/AiNetReview.Core`, ausführbarem `src/AiNetReview`, `tests/AiNetReview.Tests` und `tests/AiNetReview.IntegrationTests` erstellen. .NET-10-SDK pinnen, Nullable und Warnungen als Fehler aktivieren, Build und Tests in CI ausführen. Die README erklärt MCP-Start, CLI-Aufruf und versionierbare Daten.
-2. Gemeinsame validierte Konfiguration, Roslyn-Solution-Lader, statische Regelregistry und Kataloggenerator implementieren. Ein `NoOpFindingStore` darf für diesen Zwischenschritt verwendet werden, muss `storage=disabled` melden und darf keine Entscheidung als gespeichert bestätigen.
-3. Die eine Startregel samt Score-Evidenz, Identität, Fingerprint, Source-Snapshot und Zustandsautomat implementieren.
-4. Vollständigen JSON-Store, atomare Veröffentlichung, Markdown-Berichte, CLI und drei MCP-Tools anschließen. Ab hier ist `NoOpFindingStore` nur noch Test-Double.
-5. Integration, Dogfooding und Lasttest durchführen. Das bisherige AiNetLinter wird durch diese Arbeit weder deaktiviert noch archiviert.
+Das neue Repository enthält genau diese vier Projekte; weitere Projekte brauchen einen konkreten Grund:
 
-Root-Namespaces sind `AiNetReview.Core` für Konfiguration, Roslyn, Regeln, Fingerprints, Zustände, Storage und Berichtsdaten sowie `AiNetReview` für CLI- und MCP-Adapter. Unter `AiNetReview.Core.Rules.MaxCognitiveComplexity` liegen ausschließlich die Dateien der Startregel. Der Core hängt nicht von CLI oder MCP ab; beide Adapter rufen denselben Runner auf. Test-Namespaces entsprechen ihren Projekt-Roots. Die Regelregistrierung und der Kataloggenerator liegen im Core.
+```text
+AiNetReview.slnx
+global.json
+Directory.Build.props
+README.md
+Docs/
+src/
+  AiNetReview.Core/
+    AiNetReview.Core.csproj
+    Configuration/      ReviewConfig, Validator
+    Analysis/           SolutionLoader, ReviewRunner, ReviewContext
+    Rules/              IReviewRule, RuleDescriptor, RuleRegistry
+      TemplateNoOp/     TemplateNoOpRule
+    Findings/           FindingDraft, FindingIdentity, FingerprintService, StateMachine
+    Storage/            IFindingStore, JsonFindingStore, Ereignis- und Manifestmodelle
+    Reporting/          MarkdownReportWriter
+    Catalog/            CatalogWriter
+  AiNetReview/
+    AiNetReview.csproj
+    Program.cs
+    Bootstrap/          ServiceRegistration
+    Cli/                ReviewCommand, CatalogCommand
+    Mcp/                ReviewTools, OperationStore
+tests/
+  AiNetReview.FastTests/
+    AiNetReview.FastTests.csproj
+    Configuration/ Analysis/ Rules/ Findings/ Storage/ Reporting/
+  AiNetReview.IntegrationTests/
+    AiNetReview.IntegrationTests.csproj
+    FixtureRules/       FixtureFindingRule
+    Fixtures/           kleine generierte C#-Solutions
+    Cli/ Mcp/ Storage/ Performance/
+```
 
-Als geprüfte Vorlagen aus AiNetLinter dienen [SourceFileCatalogLoader](../../../src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs) für MSBuild/Roslyn, [LongRunningToolCallStore](../../../src/AiNetLinter/Mcp/LongRunningToolCallStore.cs) für Polling, [DuplicateMethodCollector](../../../src/AiNetLinter/Core/DuplicateDetection/DuplicateMethodCollector.cs) für Syntax-Traversierung und [RuleRegistry](../../../src/AiNetLinter/Core/RuleRegistry.cs) für statische Registrierung. Die Regelvorlagen stehen in Epic 2. Es gibt keinen DI-Container, kein dynamisches Assembly-Laden, keine dynamische Regelsuche und keinen zusätzlichen Daemon. Die Vorlagen werden fachlich angepasst, nicht 1:1 kopiert.
+Alle C#-Namespaces spiegeln diesen Pfad ab: etwa `AiNetReview.Core.Configuration`, `AiNetReview.Core.Rules.TemplateNoOp`, `AiNetReview.Core.Storage`, `AiNetReview.Bootstrap`, `AiNetReview.Mcp`, `AiNetReview.FastTests.Findings` und `AiNetReview.IntegrationTests.FixtureRules`. Die Struktur darf innerhalb eines Bereichs wachsen, aber fachlich verschiedene Bereiche werden nicht in den Root-Namespace gelegt. Pro Datei steht normalerweise ein Haupttyp. Die Fixture-Regel bleibt ausschließlich im Testprojekt.
 
-## Automatische Tests
+`AiNetReview.Core` enthält keine Referenz auf den ausführbaren Host und keine MCP- oder CLI-Abhängigkeit. Der Host referenziert den Core und ist die einzige Composition Root. FastTests referenzieren den Core; IntegrationTests referenzieren Core und Host. `global.json` pinnt das .NET-10-SDK; `Directory.Build.props` aktiviert Nullable und Warnungen als Fehler. CI baut die Solution und führt FastTests und kleine IntegrationTests aus.
 
-Unit-Tests decken die Regel mit Grenzwerten `15` und `16`, langem linearem Mapper ohne Befund, verschachtelter Methode, Switch-Dispatcher, Null-Coalescing-Initialisierer, jeder definierten Art generierter Datei und mehreren Methoden in einer Datei ab. Evidenzbeiträge müssen sich zum Score summieren. Die Tests decken zudem generische Methoden, explizite Interface-Implementierungen, partielle Typen und doppelte Zuordnungsschlüssel ab.
+## DI und Regel-Erweiterung
 
-Fingerprint-Tests prüfen gleiche Hashes nach reiner Formatierung, Kommentaränderung und sicherer Umbenennung von Parametern/lokalen Variablen; unterschiedliche Hashes nach fachlicher Änderung, Literaländerung, `nameof`-Umbenennung und `CallerArgumentExpression`-Fall. Shadowing, Lambda-/lokale Funktionsparameter, Dekonstruktion, `out`- und Pattern-Variablen sowie der konservative Modus bei unklarer Bindung gehören dazu. Snapshots müssen vollständigen Quelltext mit UTF-8/LF enthalten.
+Der Host verwendet `Microsoft.Extensions.DependencyInjection` für die wenigen langlebigen Dienste: Solution-Lader, Runner, Registry, Store, FingerprintService, Berichts- und Katalogwriter sowie MCP-Operationsverwaltung. Die validierte Konfiguration wird pro Aufruf aus der JSON erzeugt und dem Runner als unveränderlicher Wert übergeben. Die Composition Root registriert genau eine produktive Regel explizit als `IReviewRule`: `TemplateNoOpRule`. `RuleRegistry` erhält `IEnumerable<IReviewRule>` und weist doppelte IDs sowie ungültige Deskriptoren beim Start zurück. Aktivierte Regeln werden aus dieser Registry anhand der JSON-Konfiguration gewählt und nach ID sortiert. Es gibt weder Assembly-Scanning noch dynamisches Nachladen.
 
-Zustandstests prüfen jede Zeile der Tabelle in Epic 2, identische und korrigierte Urteile, unterdrückte akzeptierte Fälle, Konfigurations- und Verhaltensversionswechsel, verschwundene und wiederkehrende Methoden sowie deaktivierte Regeln. Mindestens zwei Findings derselben Regel in **verschiedenen** Methoden müssen unabhängig behandelt werden. Ein abgebrochener oder inkonsistenter Scan darf keinen Run veröffentlichen. Beschädigte JSON-Dateien, doppelte Elternereignisse und zwei IDs für denselben Schlüssel müssen deterministisch fehlschlagen.
+`ServiceRegistration` trennt die Registrierung der gemeinsamen Dienste von der einzelnen produktiven Regelregistrierung. `Program` kombiniert beides und startet CLI oder MCP. Die CLI- und MCP-Adapter akzeptieren einen bereits gebauten Provider und ihre Ein-/Ausgabeströme; IntegrationTests bauen damit denselben Host-Kern mit `FixtureFindingRule`. Es gibt keine Testabzweigung in `Program` und keinen produktiven Schalter zum Laden von Testregeln.
 
-Integrationstests starten den echten CLI- und MCP-Prozess gegen kleine temporäre C#-Solutions und vergleichen Finding-IDs, Zustände, Counts und Berichtsinhalte. Sie prüfen Polling ohne Tool-Timeout, MCP-Neustart mit unbekanntem Token aber weiter nutzbarem Storage, konkurrierenden CLI/MCP-Aufruf, Stale-Verdikt nach Dateiveränderung, Lock-Freigabe nach Prozessabsturz, ungültige Solution, fehlende NuGet-Referenzen, Pfadflucht, Git-losen Ordner sowie `catalog` mit fehlendem `Docs`-Ordner. Für ungültige Quellen darf kein „0 Findings“-Erfolg entstehen.
+Konkrete Regeln und Dienste sind standardmäßig `sealed`. `IReviewRule` und kleine Dienst-Interfaces bilden die Austauschpunkte; keine abstrakte Regel-Basisklasse und keine Vererbungshierarchie. Wiederverwendete Roslyn- oder Fingerprint-Logik wird als Helfer oder injizierter Dienst komponiert. So bleiben Datenfluss und Aufrufziel beim Lesen sichtbar. DI dient auch dazu, in Tests `FixtureFindingRule` statt oder zusätzlich zu `TemplateNoOpRule` zu registrieren. Die Regel erhält Abhängigkeiten per Konstruktor; sie fragt keinen Service Locator ab. `ReviewContext` wird pro Run vom Runner erzeugt und ist kein globaler, veränderlicher DI-Dienst.
 
-## Lasttest
+Eine neue fachliche Regel benötigt einen Ordner unter `src/AiNetReview.Core/Rules/<Regelname>/`, gezielte FastTests und genau eine zusätzliche Registrierungszeile in `ServiceRegistration`. Sie liefert ihren Deskriptor, Optionen, Dokumentation und Finding-Entwürfe selbst. `catalog` erzeugt daraus Referenz und Beispiel-JSON; weder zentrale Schema-Switches noch regelbezogene Änderungen an CLI, MCP, Store oder Markdownwriter sind zulässig. Das Entfernen einer Regel löscht ihren Ordner, ihre Tests und ihre Registrierungszeile; Konfigurationen mit ihrer ID werden danach klar als `INVALID_INPUT` abgewiesen.
 
-Ein deterministischer Generator erzeugt zur Testlaufzeit in einem temporären Ordner eine C#-Solution mit mindestens 180.000 belegten Codezeilen, mehreren Projekten und einer Mischung aus linearen und komplexen Methoden. Als belegt zählt eine physische Zeile mit mindestens einem C#-Token außerhalb von Kommentartrivia; Leerzeilen und reine Kommentarzeilen zählen nicht. Die generierte Solution wird nicht eingecheckt. Der Lasttest läuft getrennt von der regulären PR-CI als Kategorie `Performance` und muss vor dem ersten Release auf einem Windows-Host mit mindestens 4 vCPU und 16 GiB RAM bestanden sein. Grenze: vollständiger Review in höchstens 10 Minuten und Peak-Private-Bytes des Prozesses höchstens 6 GiB. Gemessen werden Laufzeit, Peak-Speicher, Zahl analysierter Methoden und Zahl der Findings; der Test scheitert auch bei unvollständigem Roslyn-Load oder fehlendem Run-Manifest. Reguläre CI führt Build, Unit- und kleine Integrationstests bei jedem Commit aus.
+Geeignete, selektiv zu prüfende AiNetLinter-Vorlagen sind [SourceFileCatalogLoader](../../../src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs) für MSBuild/Roslyn, [LongRunningToolCallStore](../../../src/AiNetLinter/Mcp/LongRunningToolCallStore.cs) für Polling und [RuleRegistry](../../../src/AiNetLinter/Core/RuleRegistry.cs) für Registrierung. Die Vorlagen werden fachlich angepasst. Es gibt keinen zusätzlichen Daemon.
+
+## Umsetzung
+
+1. Vier Projekte, gemeinsame Build-Einstellungen, Composition Root, validierte Konfiguration und Solution-Lader anlegen.
+2. Regelvertrag, Registry, `template-noop` und Kataloggenerator anschließen. Ein sichtbarer `NoOpFindingStore` ist nur in diesem Zwischenschritt erlaubt und darf kein Urteil als gespeichert bestätigen.
+3. Generischen Finding-Abgleich, FingerprintService, JSON-Store und Markdown-Berichte mit der Test-Fixture implementieren. Ab hier ist `NoOpFindingStore` nur noch Test-Double.
+4. CLI und drei MCP-Tools an denselben Runner anschließen; Polling, Locking, Abbruch und Stale-Prüfung integrieren.
+5. FastTests, IntegrationTests, Dogfooding und Infrastrukturlasttest abschließen. Das bisherige AiNetLinter wird dadurch weder deaktiviert noch archiviert.
+
+## Testebenen
+
+`AiNetReview.FastTests` prüft Konfigurationsvalidierung, Registry-Duplikate, generische Finding-Identität, Fingerprint-Byteformat, jede Zeile des Zustandsautomaten, alle Store-Schemata, Konflikte, atomare Veröffentlichung und deterministische Markdown-Ausgabe. Die Tests verwenden kleine In-Memory- oder temporäre Finding-Entwürfe; zwei Findings derselben künstlichen Regel müssen unabhängig bleiben. Akzeptierte und falsche positive Fälle, Urteilskorrektur, wirksame Options- und Verhaltensversionsänderung, Resolving, Reopening und deaktivierte Regeln sind abgedeckt.
+
+`AiNetReview.IntegrationTests` ruft CLI- und MCP-Adapter mit injizierter `FixtureFindingRule` über ihre echten Protokoll- und Handlergrenzen auf und prüft Findings, Berichte, Polling, Verdicts, Server-Neustart, Locking und Stale-Erkennung. Zusätzlich startet es die unveränderte produktive EXE als Prozess: `review` mit `template-noop` muss einen vollständigen Null-Finding-Run erzeugen, `catalog` muss Vorlage und Doku erzeugen, `mcp` muss starten und Status liefern. Weitere Fälle sind ungültige Solution, fehlende Referenzen, Pfadflucht, Git-loses Ziel und Prozessabsturz. Der Testadapter erlaubt das Einsetzen einer Registry nur im Testprozess; die produktive CLI besitzt keinen Fixture-Schalter.
+
+Ein deterministischer Generator in `AiNetReview.IntegrationTests/Performance` erzeugt zur Testlaufzeit eine temporäre C#-Solution mit mindestens 180.000 belegten Codezeilen in mehreren Projekten. Belegt ist eine physische Zeile mit mindestens einem C#-Token außerhalb von Kommentartrivia. Der Test läuft als separate Kategorie `Performance` vor dem ersten Release auf Windows mit mindestens 4 vCPU und 16 GiB RAM. Die Infrastruktur muss mit `template-noop` in höchstens 10 Minuten und höchstens 6 GiB Peak-Private-Bytes vollständig laden, kompilieren und einen Run veröffentlichen. Gemessen werden Laufzeit, Peak-Speicher, Dokumente und analysierte Projekte. Dieser Test misst die Infrastruktur; jede später ergänzte fachliche Regel braucht bei Bedarf einen eigenen Lasttest. Reguläre CI führt die Performance-Kategorie nicht bei jedem Commit aus.
 
 ## Definition of Done
 
 Der erste nutzbare Stand ist fertig, wenn:
 
-- die einzige Regel `max-cognitive-complexity` mit `maxScore = 15` konfigurierbar ist und bei Score `> 15` nachvollziehbare Findings mit stabilen IDs erzeugt;
-- MCP und CLI dieselbe `ainetreview.json` verwenden und bei gleichem Quellstand dieselben Findings liefern;
-- `accepted` und `false-positive` dauerhaft gespeichert, bei unverändertem Code unterdrückt und bei fachlicher Änderung, wirksamer Konfigurationsänderung oder neuer Verhaltensversion erneut geöffnet werden;
-- reines Formatieren und sichere lokale Umbenennung nicht erneut öffnen, die in Epic 2 benannten konservativen Fälle aber schon;
-- vollständige Run-Pakete, Snapshots, Berichte und Entscheidungsereignisse exakt den Epic-3-Verträgen entsprechen und fehlgeschlagene Läufe keinen gültigen Zustand verändern;
-- alle oben genannten Unit-, Integrations- und Lasttests grün sind, das Werkzeug seine eigene Solution analysiert und `catalog` eine zur Registry passende Regelreferenz und JSON-Vorlage erzeugt;
+- die produktive Registry genau `template-noop` enthält, eine gültige `ainetreview.json` einen vollständigen Null-Finding-Run erzeugt und fehlgeschlagene Analysen nie als „0 Findings“ gelten;
+- eine neue Regel über `IReviewRule`, ihren Ordner und eine Registrierungszeile ergänzt werden kann, ohne Runner, Adapter, Store-Schema oder Berichtsgenerator zu ändern;
+- CLI und MCP dieselbe JSON und denselben Runner verwenden; MCP-Läufe ohne Tool-Timeout pollbar sind;
+- die Test-Fixture den vollständigen Zyklus `new → accepted/false-positive → reopened/updated → resolved` einschließlich Snapshot, Bericht und dauerhaftem Urteil nachweist;
+- vollständige Run-Pakete und Entscheidungsereignisse Epic 3 entsprechen und fehlgeschlagene Läufe keinen gültigen Zustand ändern;
+- FastTests, IntegrationTests und der separate Infrastrukturlasttest grün sind, das Tool seine eigene Solution erfolgreich analysiert und `catalog` zur Registry passende Dateien erzeugt;
 - der echte Store aktiv ist. `storage=disabled` erfüllt dieses DoD nie.
 
-Die Dokumentation gilt als implementierbar, wenn jedes Feld, jeder Zustand und jeder Fehlerfall aus den drei Vertrags-Epics in mindestens einem Testfall oder einer eindeutigen Validierungsregel vorkommt. Bei Widerspruch wird zuerst der Vertrag korrigiert und erst dann Code geschrieben.
+Die Dokumentation gilt als implementierbar, wenn jedes Feld, jeder Zustand und jeder Fehlerfall der drei Vertrags-Epics durch einen Test oder eine eindeutige Validierungsregel abgedeckt ist. Fachliche Regeln und deren Grenzwerte gehören ausdrücklich nicht zu diesem DoD.

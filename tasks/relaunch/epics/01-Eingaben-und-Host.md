@@ -15,12 +15,12 @@ Schema-Version 1 hat genau diese Felder:
   "outputDirectory": "audit-reporting",
   "storageDirectory": ".ainetreview",
   "rules": {
-    "max-cognitive-complexity": { "maxScore": 15 }
+    "template-noop": {}
   }
 }
 ```
 
-`schemaVersion` ist die Zahl `1`; alle drei Pfade sind nichtleere Strings. `rules` ist ein nichtleeres Objekt. Seine Keys müssen registrierte Regel-IDs sein. Jede Regelkonfiguration ist ein Objekt mit ausschließlich den im Regeldeskriptor benannten Feldern; fehlende Felder erhalten die dort definierten Defaults. In Version 1 hat die Startregel nur `maxScore`: positive ganze Zahl, Default `15`. Unbekannte oder doppelte JSON-Keys, unbekannte Regel-IDs, falsche Typen und unbekannte Schemaversionen sind `INVALID_INPUT`. Die wirksame Konfiguration umfasst die normalisierten Pfade sowie für jede aktive Regel das aus Defaults und JSON-Feldern gebildete, nach Key sortierte Optionsobjekt. MCP und CLI erzeugen aus derselben Datei dieselbe wirksame Konfiguration.
+`schemaVersion` ist die Zahl `1`; alle drei Pfade sind nichtleere Strings. `rules` ist ein nichtleeres Objekt. Seine Keys müssen registrierte Regel-IDs sein. Jede Regelkonfiguration ist ein Objekt mit ausschließlich den im Regeldeskriptor benannten Feldern; fehlende Felder erhalten die dort definierten Defaults. Die einzige produktive Startregel `template-noop` hat keine Parameter und daher nur `{}` als gültigen Wert. Unbekannte oder doppelte JSON-Keys, unbekannte Regel-IDs, falsche Typen und unbekannte Schemaversionen sind `INVALID_INPUT`. Die wirksame Konfiguration umfasst die normalisierten Pfade sowie für jede aktive Regel das aus Defaults und JSON-Feldern gebildete, nach Key sortierte Optionsobjekt. MCP und CLI erzeugen aus derselben Datei dieselbe wirksame Konfiguration.
 
 Interne Pfade verwenden `/`, beginnen nicht mit einem Laufwerksbuchstaben oder Separator und enthalten keine `..`-Segmente. Die Auflösung einschließlich Symlinks/Junctions muss innerhalb der Projektwurzel bleiben. `solution` zeigt auf eine vorhandene `.sln` oder `.slnx`. Ausgabe- und Speicherverzeichnis sind verschieden, dürfen weder ineinander liegen noch C#-Quellen der Solution enthalten und werden bei Bedarf angelegt. Eine eingebundene Quelldatei außerhalb der Projektwurzel macht den Scan unvollständig und damit fehlerhaft. Vor dem Regellauf muss jedes analysierte C#-Projekt eine Compilation ohne Roslyn-Diagnosen mit `Severity.Error` liefern; Lade-, Restore- und Kompilationsfehler ergeben `ANALYSIS_FAILED`. Persistierte Pfade und Tool-Ergebnisse verwenden ausschließlich repo-relative `/`-Pfade; lokale absolute Pfade erscheinen nur in Eingabeparametern und internen Diagnosen.
 
@@ -44,7 +44,7 @@ Jedes Tool liefert genau einen Text-Content-Block mit einem kompakten JSON-Objek
 
 ```text
 {"status":"running","completedRules":0,"totalRules":1}
-{"status":"completed","runId":"20260927T163802Z-a1b2c3d4","indexPath":"audit-reporting/20260927T163802Z-a1b2c3d4/index.md","ruleReports":["audit-reporting/20260927T163802Z-a1b2c3d4/rules/max-cognitive-complexity.md"],"counts":{"detected":1,"open":1,"new":1,"updated":0,"reopened":0,"accepted":0,"falsePositive":0,"resolved":0}}
+{"status":"completed","runId":"20260927T163802Z-a1b2c3d4","indexPath":"audit-reporting/20260927T163802Z-a1b2c3d4/index.md","ruleReports":["audit-reporting/20260927T163802Z-a1b2c3d4/rules/template-noop.md"],"counts":{"detected":0,"open":0,"new":0,"updated":0,"reopened":0,"accepted":0,"falsePositive":0,"resolved":0}}
 {"status":"failed","code":"ANALYSIS_FAILED","message":"Solution konnte nicht vollständig geladen werden."}
 {"status":"unknown"}
 ```
@@ -53,7 +53,7 @@ Die vier Zeilen sind vier alternative Antworten, kein einzelnes JSON-Dokument. `
 
 `report_review(configPath, findingId, fingerprint, verdict)` akzeptiert als `verdict` nur `accepted` oder `false-positive`. Erfolg liefert `{"decisionId":"D-<32 hex>","findingId":"F-<32 hex>","status":"accepted"}` beziehungsweise den anderen Status. Ein unbekanntes Finding ergibt `UNKNOWN_FINDING`, ein inzwischen geänderter Code- oder Konfigurationsstand `STALE_FINDING`, ein belegter Lock `BUSY`. Erfolg wird erst nach dauerhaft veröffentlichter Entscheidung gemeldet. Der Server lädt den Zustand bei jedem Aufruf frisch; ein vorheriger Operation-Token ist nicht nötig.
 
-Für die Stale-Prüfung muss das Finding in den `observations` des neuesten vollständigen Runs stehen. `report_review` vergleicht den übergebenen Fingerprint mit dieser Beobachtung, `solution` aus deren Manifest sowie `behaviorVersion` und `effectiveOptions` der betroffenen Regel mit der aktuellen JSON und SHA-256 der gesamten betroffenen Quelldatei mit dem beim Scan gespeicherten Byte-Hash. Eine deaktivierte Regel, ein inzwischen `resolved` stehendes Finding oder ein neuester Run ohne Beobachtung dieses Findings ergibt `STALE_FINDING`. Eine Änderung nur von `outputDirectory` ändert die fachliche Entscheidung nicht; ein anderes `storageDirectory` ist ein anderer Verlauf. Jede Dateiveränderung seit dem Scan verlangt einen neuen Lauf, auch wenn sie außerhalb der Methode liegt. Zeitstempel allein genügen nicht.
+Für die Stale-Prüfung muss das Finding in den `observations` des neuesten vollständigen Runs stehen. `report_review` vergleicht den übergebenen Fingerprint mit dieser Beobachtung, `solution` aus deren Manifest sowie `behaviorVersion` und `effectiveOptions` der betroffenen Regel mit der aktuellen JSON. Es berechnet außerdem SHA-256 über jede in `sourceFiles` gespeicherte Quelldatei und vergleicht die Byte-Hashes. Eine deaktivierte Regel, ein inzwischen `resolved` stehendes Finding oder ein neuester Run ohne Beobachtung dieses Findings ergibt `STALE_FINDING`. Eine Änderung nur von `outputDirectory` ändert die fachliche Entscheidung nicht; ein anderes `storageDirectory` ist ein anderer Verlauf. Jede Veränderung einer relevanten Quelldatei seit dem Scan verlangt einen neuen Lauf, auch wenn sie außerhalb des ursächlichen Ausschnitts liegt. Zeitstempel allein genügen nicht.
 
 ## Lock und Abbruch
 

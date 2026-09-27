@@ -14,15 +14,15 @@ Die Arbeitsthese lautet: Für Agenten ist Code schwer, wenn viele Entscheidungsw
 
 Der Produktname ist `AiNetReview`. Ein ausführbarer Host bietet lokalen MCP-Server und CLI über denselben Kern. Beide verwenden die im analysierten Projekt liegende `ainetreview.json`. Git ist keine Laufzeitvoraussetzung; die Speicherdateien sind für Versionierung geeignet. MCP kann zusätzlich zu Berichten strukturierte Urteile entgegennehmen.
 
-Der erste vollständige Stand enthält **genau eine** Regel: `max-cognitive-complexity` für benannte C#-Methoden. Sie ist ein Review-Signal für lokale Verzweigungs- und Verschachtelungslast, kein automatisches Qualitätsurteil und keine Gesamtmetrik agentischer Verständlichkeit. Die bekannte AiNetLinter-Implementierung und ihre Tests bilden die Vorlage; die neue Regel liefert zusätzlich nachvollziehbare Evidenz. Der vorhandene `AIContextFootprint` wird nicht unverändert übernommen: seine aktuelle Berechnung zählt unter anderem ganze Dateien und bildet tatsächliche Navigationsschritte nicht zuverlässig ab. Weitere Regeln gehören nicht zum ersten DoD.
+Der erste vollständige Stand enthält **keine fachliche Review-Regel**. Eine registrierte `template-noop`-Regel liefert bewusst keine Findings und zeigt den Erweiterungspunkt. Tests verwenden eine nur dort registrierte Fixture-Regel mit reproduzierbaren Findings, damit Reporting und Zustandswechsel bereits vollständig geprüft werden. Welche fachlichen Regeln sinnvoll sind, entscheiden wir erst anhand späterer Erfahrung. Die Architektur hält ihre Aufnahme auf eine Regelimplementierung, ihre Tests und eine Registrierungszeile begrenzt.
 
-Ein Finding erhält eine stabile ID, strukturierten Quellort, Messwerte, Evidenz, Fingerprint und Quellcode-Snapshot. Agenten melden `accepted` oder `false-positive`; ein verschwundener Befund wird erst durch vollständigen Scan `resolved`. Source-, Regel- oder Konfigurationsänderungen können eine alte Entscheidung wieder öffnen. Reine Formatierung und sicher erkannte lokale Umbenennungen tun das nicht. Das Speicherformat, die genaue Zustandsmaschine und Fehlerfälle stehen in den Epics.
+Ein Finding erhält eine stabile ID, strukturierten Quellort, Messwerte, Evidenz, Fingerprint und Quellcode-Snapshot. Agenten melden `accepted` oder `false-positive`; ein verschwundener Befund wird erst durch vollständigen Scan `resolved`. Eine Änderung des von der Regel gelieferten Vergleichsinhalts, ihrer wirksamen Optionen oder ihrer Verhaltensversion kann eine alte Entscheidung wieder öffnen. Wie Quellcode normalisiert wird, bestimmt die jeweilige fachliche Regel. Das Speicherformat, die genaue Zustandsmaschine und Fehlerfälle stehen in den Epics.
 
 ## Verbindliche Epics
 
 1. [Eingaben und Host](epics/01-Eingaben-und-Host.md): JSON, CLI, MCP, Pfade, Git-Unabhängigkeit und Lock.
-2. [Regel und Findings](epics/02-Regel-und-Findings.md): Regelvertrag, Startregel, Identität, Fingerprint und Zustandsautomat.
+2. [Regel und Findings](epics/02-Regel-und-Findings.md): Regelvertrag, Template-Regel, Identität, Fingerprint und Zustandsautomat.
 3. [Storage und Berichte](epics/03-Storage-und-Berichte.md): versionierbare JSON-Dateien, Snapshots, Konflikte, Retention und Markdown-Format.
-4. [Umsetzung und Abnahme](epics/04-Umsetzung-und-Abnahme.md): Reihenfolge, Testebenen, Lasttest und Definition of Done.
+4. [Umsetzung und Abnahme](epics/04-Umsetzung-und-Abnahme.md): Projekt- und Namespace-Struktur, DI, Testebenen, Lasttest und Definition of Done.
 
 Der frühe technische Aufbau darf einen sichtbaren `NoOpFindingStore` verwenden. Das [Produkt-DoD](epics/04-Umsetzung-und-Abnahme.md#definition-of-done) verlangt echte Speicherung, vollständiges Reporting, einen wiederholbaren Review-Zyklus und grüne Tests. Ein Implementierungsagent arbeitet die Epics in dieser Reihenfolge ab; Produktentscheidungen sind dort festgelegt.
