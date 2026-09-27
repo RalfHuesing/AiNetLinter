@@ -7,4 +7,6 @@ Diese Dateien ermöglichen es, die Diskussion in einem neuen Chat ohne erneute E
 
 Nach jeder inhaltlichen Klärung die Roadmap im selben Arbeitsgang fortschreiben. Eine Entscheidung steht dort nur an einer Stelle; überholte oder doppelte Aussagen werden angepasst. Eine Präferenz wird erst nach ausdrücklicher Klärung als Entscheidung geführt. Technische Details bei Bedarf vorübergehend separat notieren und später in das eine endgültige Konzept einarbeiten. Diese README beschreibt nur den Arbeitsablauf und enthält keine Produktentscheidungen.
 
+Vorläufige Detailentwürfe sind aus der Roadmap verlinkt. Bei einer Fortsetzung das Konzept und die Roadmap lesen, dann die für das aktuelle Thema verlinkten Entwürfe.
+
 Der Fokus bleibt auf dem neuen Audit- und Review-Werkzeug. Die Thesen über agentengerechten Code dienen der Orientierung, ersetzen aber keine konkrete Review-Evidenz.

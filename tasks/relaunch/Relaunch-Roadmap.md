@@ -33,7 +33,7 @@ Die heutigen Linter-Regeln und Entwicklungsabläufe sind über Jahrzehnte vor al
 
 - Ein lokal laufender MCP-Server ist derzeit gegenüber einer reinen CLI bevorzugt: Der Agent kann Findings direkt abrufen und Entscheidungen strukturiert zurückmelden. Die endgültige Wahl der primären Schnittstelle steht noch aus.
 - Ein grundlegender Neustart des Produkts wird erwogen. Maßstab ist der neue Review-Ablauf, nicht ein bestimmter Anteil neu geschriebener Codezeilen. Vorhandene Roslyn-Bausteine können übernommen werden, wenn sie zu diesem Ablauf passen.
-- Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis: Git kann einzelne Fälle vergleichen und zusammenführen; spätere Auswertungen können diese Dateien lesen. Markdown bleibt Ausgabe für Reviews. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen.
+- Für die repo-eigenen Daten erscheinen maschinenlesbare Textdateien pro Finding als gute Ausgangsbasis. SQLite wäre lokal bequem, verursacht als versionierte Binärdatei aber schwierige Diffs und Merges. Die Wahl ist noch offen; der konkrete Vorschlag steht im [Reporting- und Speicherentwurf](Reporting-Speicherentwurf.md).
 - Eine gemeldete Behebung sollte erst als erledigt gelten, wenn ein vollständiger erneuter Scan bei gleicher Regel den Befund nicht mehr findet. Wiederholte Scans desselben unveränderten Findings sollten für spätere Statistiken nicht als neue Fälle zählen.
 
 ## Roadmap
