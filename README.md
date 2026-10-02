@@ -1,5 +1,39 @@
 # AiNetLinter
 
+> [!WARNING]
+> **Projekt eingestellt: AiNetLinter ist obsolet und wird nicht weiterentwickelt.**
+>
+> Die Aufgaben werden in zwei eigenständigen Nachfolgeprojekten fortgeführt:
+>
+> - [AiNetCodeNavigator](https://github.com/RalfHuesing/AiNetCodeNavigator): semantische Code-Navigation und Codeverständnis während der Umsetzung eines Tasks.
+> - [AiNetReview](https://github.com/RalfHuesing/AiNetReview): nachgelagerte Code-Reviews und Audits als Grundlage für gezieltes Refactoring.
+>
+> Die folgende Dokumentation beschreibt den bisherigen Stand von AiNetLinter.
+
+## Warum AiNetLinter eingestellt wurde
+
+Code-Navigation und Code-Audits sind unterschiedliche Aufgaben. Navigation
+unterstützt einen Agenten unmittelbar dabei, den Code zu verstehen und den
+aktuellen Task korrekt fertigzustellen. Reviews und Audits benötigen dagegen
+einen umfassenden Blick auf das Gesamtsystem, um architektonischen und
+technischen Drift sowie technische Schulden zu erkennen.
+
+Feste Linter-Regeln als unmittelbare Quality Gates können in autonomer
+agentischer Entwicklung kontraproduktiv sein: Sie zwingen den Agenten zu
+lokalen Optimierungen, die für den aktuellen Auftrag keinen ausreichenden
+Nutzen haben. Dadurch wächst der Änderungsumfang und der Fokus verschiebt
+sich vom eigentlichen Task zur Erfüllung der Regeln. Lokale Regelkonformität
+ist zudem kein Beleg für eine insgesamt bessere Architektur.
+
+Deshalb trennen die Nachfolgeprojekte diese Verantwortlichkeiten bewusst:
+AiNetCodeNavigator begleitet die Umsetzung kontinuierlich. AiNetReview
+unterstützt eigenständige, nachgelagerte Reviews und Audits, die von Zeit zu
+Zeit bewusst beauftragt werden. Refactoring erfolgt auf dieser Grundlage mit
+einem 360-Grad-Blick auf die Codebasis, statt während jedes Tasks durch feste
+Linter-Regeln erzwungen zu werden.
+
+## Bisheriger Funktionsumfang
+
 AiNetLinter ist ein Roslyn-basierter MCP-Server und CLI-Linter für C#-Solutions
 und lokale .NET-Assemblies. Der MCP-Server stellt Coding-Agents semantischen
 Codekontext, Auswirkungsanalysen, Metriken und regelbasierte Befunde bereit; die
